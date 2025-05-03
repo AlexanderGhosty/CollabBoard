@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/internal/websocket"
 	"context"
 	"log"
 	"time"
@@ -51,6 +52,15 @@ func main() {
 			c.JSON(200, user)
 		})
 	}
+
+	// init WebSocket hub
+	hub := websocket.NewHub()
+	go hub.Run()
+
+	// WS route (no auth middleware – inside handler)
+	r.GET("/ws/board/:id", func(c *gin.Context) {
+		websocket.ServeBoardWS(c, hub, queries, cfg.JWTSecret)
+	})
 
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("server failed: %v", err)
