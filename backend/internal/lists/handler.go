@@ -42,7 +42,7 @@ func listHandler(svc *Service) gin.HandlerFunc {
 		boardID, _ := strconv.Atoi(c.Param("boardId"))
 		userID := int32(c.GetInt("userID"))
 
-		lsts, err := svc.ListByBoard(c, userID, int32(boardID))
+		lsts, err := svc.ListByBoard(c.Request.Context(), userID, int32(boardID))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -69,7 +69,7 @@ func updateListHandler(svc *Service) gin.HandlerFunc {
 		if req.Position != nil {
 			p.Position = *req.Position
 		}
-		lst, err := svc.Update(c, userID, p)
+		lst, err := svc.Update(c.Request.Context(), userID, p)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -83,7 +83,7 @@ func deleteListHandler(svc *Service) gin.HandlerFunc {
 		id, _ := strconv.Atoi(c.Param("id"))
 		userID := int32(c.GetInt("userID"))
 
-		if err := svc.Delete(c, userID, int32(id)); err != nil {
+		if err := svc.Delete(c.Request.Context(), userID, int32(id)); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

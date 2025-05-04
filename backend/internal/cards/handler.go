@@ -44,7 +44,7 @@ func listCardsHandler(svc *Service) gin.HandlerFunc {
 		listID, _ := strconv.Atoi(c.Param("listId"))
 		userID := int32(c.GetInt("userID"))
 
-		cs, err := svc.ListByList(c, userID, int32(listID))
+		cs, err := svc.ListByList(c.Request.Context(), userID, int32(listID))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -84,7 +84,7 @@ func updateCardHandler(svc *Service) gin.HandlerFunc {
 			p.ListID = *req.ListID
 		}
 
-		card, err := svc.Update(c, userID, p)
+		card, err := svc.Update(c.Request.Context(), userID, p)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -98,7 +98,7 @@ func deleteCardHandler(svc *Service) gin.HandlerFunc {
 		id, _ := strconv.Atoi(c.Param("id"))
 		userID := int32(c.GetInt("userID"))
 
-		if err := svc.Delete(c, userID, int32(id)); err != nil {
+		if err := svc.Delete(c.Request.Context(), userID, int32(id)); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

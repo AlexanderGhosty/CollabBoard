@@ -11,15 +11,17 @@ import (
 
 func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g := r.Group("/boards")
+
 	g.POST("", createBoardHandler(svc))
 	g.GET("", listBoardsHandler(svc))
-	g.GET("/:id", getBoardHandler(svc))
-	g.PUT("/:id", updateBoardHandler(svc))
-	g.DELETE("/:id", deleteBoardHandler(svc))
 
-	g.GET("/:id/members", listMembersHandler(svc))
-	g.POST("/:id/members", addMemberHandler(svc))
-	g.DELETE("/:id/members/:userId", deleteMemberHandler(svc))
+	g.GET("/:boardId", getBoardHandler(svc))
+	g.PUT("/:boardId", updateBoardHandler(svc))
+	g.DELETE("/:boardId", deleteBoardHandler(svc))
+
+	g.GET("/:boardId/members", listMembersHandler(svc))
+	g.POST("/:boardId/members", addMemberHandler(svc))
+	g.DELETE("/:boardId/members/:userId", deleteMemberHandler(svc))
 }
 
 func createBoardHandler(svc *Service) gin.HandlerFunc {
@@ -55,7 +57,7 @@ func listBoardsHandler(svc *Service) gin.HandlerFunc {
 
 func updateBoardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
 		var req struct {
 			Name string `json:"name" binding:"required"`
 		}
@@ -64,7 +66,7 @@ func updateBoardHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 		userID := int32(c.GetInt("userID"))
-		board, err := svc.UpdateBoard(c.Request.Context(), userID, db.UpdateBoardParams{ID: int32(id), Name: req.Name})
+		board, err := svc.UpdateBoard(c.Request.Context(), userID, db.UpdateBoardParams{ID: int32(boardID), Name: req.Name})
 		if err != nil {
 			if errors.Is(err, ErrForbidden) {
 				c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
@@ -79,9 +81,9 @@ func updateBoardHandler(svc *Service) gin.HandlerFunc {
 
 func deleteBoardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
 		userID := int32(c.GetInt("userID"))
-		if err := svc.DeleteBoard(c.Request.Context(), userID, int32(id)); err != nil {
+		if err := svc.DeleteBoard(c.Request.Context(), userID, int32(boardID)); err != nil {
 			if errors.Is(err, ErrForbidden) {
 				c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			} else {
@@ -95,10 +97,10 @@ func deleteBoardHandler(svc *Service) gin.HandlerFunc {
 
 func getBoardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
 		userID := int32(c.GetInt("userID"))
 
-		b, err := svc.GetBoard(c, userID, int32(id))
+		b, err := svc.GetBoard(c.Request.Context(), userID, int32(boardID))
 		if err != nil {
 			status := http.StatusInternalServerError
 			if errors.Is(err, ErrForbidden) {
@@ -113,10 +115,10 @@ func getBoardHandler(svc *Service) gin.HandlerFunc {
 
 func listMembersHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
 		userID := int32(c.GetInt("userID"))
 
-		mems, err := svc.ListMembers(c, userID, int32(id))
+		mems, err := svc.ListMembers(c.Request.Context(), userID, int32(boardID))
 		if err != nil {
 			status := http.StatusInternalServerError
 			if errors.Is(err, ErrForbidden) {
@@ -131,7 +133,7 @@ func listMembersHandler(svc *Service) gin.HandlerFunc {
 
 func addMemberHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		boardID, _ := strconv.Atoi(c.Param("id"))
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
 		userID := int32(c.GetInt("userID"))
 
 		var req struct {
@@ -142,7 +144,7 @@ func addMemberHandler(svc *Service) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		mb, err := svc.AddMember(c, userID, int32(boardID), req.UserID, req.Role)
+		mb, err := svc.AddMember(c.Request.Context(), userID, int32(boardID), req.UserID, req.Role)
 		if err != nil {
 			status := http.StatusInternalServerError
 			if errors.Is(err, ErrForbidden) {
@@ -157,11 +159,11 @@ func addMemberHandler(svc *Service) gin.HandlerFunc {
 
 func deleteMemberHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		boardID, _ := strconv.Atoi(c.Param("id"))
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
 		memberID, _ := strconv.Atoi(c.Param("userId"))
 		userID := int32(c.GetInt("userID"))
 
-		if err := svc.RemoveMember(c, userID, int32(boardID), int32(memberID)); err != nil {
+		if err := svc.RemoveMember(c.Request.Context(), userID, int32(boardID), int32(memberID)); err != nil {
 			status := http.StatusInternalServerError
 			if errors.Is(err, ErrForbidden) {
 				status = http.StatusForbidden

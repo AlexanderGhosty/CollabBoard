@@ -1,6 +1,9 @@
 package main
 
 import (
+	"backend/internal/boards"
+	"backend/internal/cards"
+	"backend/internal/lists"
 	"backend/internal/websocket"
 	"context"
 	"log"
@@ -45,6 +48,24 @@ func main() {
 
 	// Example protected group – extend later for boards/lists/cards
 	api := r.Group("/api")
+
+	api.Use(middleware.Auth(cfg.JWTSecret))
+
+	hub := websocket.NewHub()
+	go hub.Run()
+
+	boardsRepo := boards.NewRepository(queries)
+	boardsSvc := boards.NewService(boardsRepo, hub)
+	boards.RegisterRoutes(api, boardsSvc)
+
+	listsRepo := lists.NewRepository(queries)
+	listsSvc := lists.NewService(listsRepo, queries, hub)
+	lists.RegisterRoutes(api, listsSvc)
+
+	cardsRepo := cards.NewRepository(queries)
+	cardsSvc := cards.NewService(cardsRepo, queries, hub)
+	cards.RegisterRoutes(api, cardsSvc)
+
 	api.Use(middleware.Auth(cfg.JWTSecret))
 	{
 		api.GET("/me", func(c *gin.Context) {
@@ -52,10 +73,6 @@ func main() {
 			c.JSON(200, user)
 		})
 	}
-
-	// init WebSocket hub
-	hub := websocket.NewHub()
-	go hub.Run()
 
 	// WS route (no auth middleware – inside handler)
 	r.GET("/ws/board/:id", func(c *gin.Context) {
