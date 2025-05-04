@@ -5,16 +5,16 @@ BIN_DIR       := $(BACKEND_DIR)/bin
 MIGRATION_DIR := $(BACKEND_DIR)/internal/db/migrations
 GO            := go
 
-.PHONY: backend lint docker-up docker-down migrate-up migrate-down
+.PHONY: backend docker-up docker-down migrate-up migrate-down lint test format
 
 backend:
 	@echo "→ Building $(APP_NAME)…"
 	@mkdir -p $(BIN_DIR)
 	$(GO) build -o $(BIN_DIR)/$(APP_NAME) $(SERVER_PKG)
 
-lint:
-	@echo "→ Running go vet…"
-	$(GO) vet ./...
+# lint:
+# 	@echo "→ Running go vet…"
+# 	$(GO) vet ./...
 
 docker-up:
 	@echo "→ docker‑compose up --build -d"
@@ -35,3 +35,14 @@ migrate-down:
 		echo "DB_URL is not set"; exit 1; \
 	fi
 	migrate -source "file://$(MIGRATION_DIR)" -database "$(DB_URL)" -verbose down
+
+test:
+	@echo "→ Running backend tests…"
+	cd backend && $(GO) test ./... -cover
+
+lint:
+	@echo "→ Running golangci-lint…"
+	golangci-lint run ./...
+
+format:
+	go fmt ./... && go vet ./...
