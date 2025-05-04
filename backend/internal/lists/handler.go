@@ -1,6 +1,7 @@
 package lists
 
 import (
+	db "backend/internal/db/sqlc"
 	"net/http"
 	"strconv"
 
@@ -36,4 +37,56 @@ func createListHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
-// listHandler, updateListHandler, deleteListHandler omitted for brevity
+func listHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
+		userID := int32(c.GetInt("userID"))
+
+		lsts, err := svc.ListByBoard(c, userID, int32(boardID))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, lsts)
+	}
+}
+
+func updateListHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, _ := strconv.Atoi(c.Param("id"))
+		userID := int32(c.GetInt("userID"))
+
+		var req struct {
+			Title    string `json:"title"`
+			Position *int32 `json:"position"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		p := db.UpdateListParams{ID: int32(id), Title: req.Title}
+		if req.Position != nil {
+			p.Position = *req.Position
+		}
+		lst, err := svc.Update(c, userID, p)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, lst)
+	}
+}
+
+func deleteListHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, _ := strconv.Atoi(c.Param("id"))
+		userID := int32(c.GetInt("userID"))
+
+		if err := svc.Delete(c, userID, int32(id)); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "list deleted"})
+	}
+}

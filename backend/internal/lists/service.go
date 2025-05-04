@@ -30,4 +30,47 @@ func (s *Service) Create(ctx context.Context, userID, boardID int32, title strin
 	return lst, err
 }
 
-// Update, Delete, ListByBoard similar – broadcast on success
+func (s *Service) ListByBoard(ctx context.Context, userID, boardID int32) ([]db.List, error) {
+	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	}); err != nil {
+		return nil, errors.New("not a member")
+	}
+	return s.repo.ListByBoard(ctx, boardID)
+}
+
+func (s *Service) Update(ctx context.Context, userID int32, arg db.UpdateListParams) (db.List, error) {
+	lst, err := s.q.GetListByID(ctx, arg.ID)
+	if err != nil {
+		return db.List{}, err
+	}
+	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: lst.BoardID, UserID: userID,
+	}); err != nil {
+		return db.List{}, errors.New("not a member")
+	}
+	updated, err := s.repo.Update(ctx, arg)
+	if err == nil {
+		s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "list_updated", Data: updated})
+	}
+	return updated, err
+}
+
+func (s *Service) Delete(ctx context.Context, userID, listID int32) error {
+	lst, err := s.q.GetListByID(ctx, listID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: lst.BoardID, UserID: userID,
+	}); err != nil {
+		return errors.New("not a member")
+	}
+	if err := s.repo.Delete(ctx, listID); err != nil {
+		return err
+	}
+	s.hub.Broadcast(lst.BoardID, websocket.EventMessage{
+		Event: "list_deleted", Data: map[string]int32{"id": listID},
+	})
+	return nil
+}

@@ -93,4 +93,82 @@ func deleteBoardHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
-// listMembersHandler, addMemberHandler, deleteMemberHandler omitted for brevity
+func getBoardHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, _ := strconv.Atoi(c.Param("id"))
+		userID := int32(c.GetInt("userID"))
+
+		b, err := svc.GetBoard(c, userID, int32(id))
+		if err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, ErrForbidden) {
+				status = http.StatusForbidden
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, b)
+	}
+}
+
+func listMembersHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, _ := strconv.Atoi(c.Param("id"))
+		userID := int32(c.GetInt("userID"))
+
+		mems, err := svc.ListMembers(c, userID, int32(id))
+		if err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, ErrForbidden) {
+				status = http.StatusForbidden
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, mems)
+	}
+}
+
+func addMemberHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		boardID, _ := strconv.Atoi(c.Param("id"))
+		userID := int32(c.GetInt("userID"))
+
+		var req struct {
+			UserID int32  `json:"userId" binding:"required"`
+			Role   string `json:"role"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		mb, err := svc.AddMember(c, userID, int32(boardID), req.UserID, req.Role)
+		if err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, ErrForbidden) {
+				status = http.StatusForbidden
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusCreated, mb)
+	}
+}
+
+func deleteMemberHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		boardID, _ := strconv.Atoi(c.Param("id"))
+		memberID, _ := strconv.Atoi(c.Param("userId"))
+		userID := int32(c.GetInt("userID"))
+
+		if err := svc.RemoveMember(c, userID, int32(boardID), int32(memberID)); err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, ErrForbidden) {
+				status = http.StatusForbidden
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "member removed"})
+	}
+}

@@ -1,6 +1,8 @@
 package cards
 
 import (
+	db "backend/internal/db/sqlc"
+	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
 	"strconv"
 
@@ -37,4 +39,69 @@ func createCardHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
-// listCardsHandler, updateCardHandler, deleteCardHandler omitted for brevity
+func listCardsHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		listID, _ := strconv.Atoi(c.Param("listId"))
+		userID := int32(c.GetInt("userID"))
+
+		cs, err := svc.ListByList(c, userID, int32(listID))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, cs)
+	}
+}
+
+func updateCardHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, _ := strconv.Atoi(c.Param("id"))
+		userID := int32(c.GetInt("userID"))
+
+		var req struct {
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Position    *int32 `json:"position"`
+			ListID      *int32 `json:"listId"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		p := db.UpdateCardParams{
+			ID:    int32(id),
+			Title: req.Title,
+			Description: pgtype.Text{
+				String: req.Description,
+				Valid:  true,
+			},
+		}
+		if req.Position != nil {
+			p.Position = *req.Position
+		}
+		if req.ListID != nil {
+			p.ListID = *req.ListID
+		}
+
+		card, err := svc.Update(c, userID, p)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, card)
+	}
+}
+
+func deleteCardHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, _ := strconv.Atoi(c.Param("id"))
+		userID := int32(c.GetInt("userID"))
+
+		if err := svc.Delete(c, userID, int32(id)); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "card deleted"})
+	}
+}

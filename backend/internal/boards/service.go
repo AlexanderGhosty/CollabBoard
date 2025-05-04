@@ -62,5 +62,63 @@ func (s *Service) DeleteBoard(ctx context.Context, userID, boardID int32) error 
 	return nil
 }
 
-// !!! other member‑related methods omitted for brevity
-// !!!
+func (s *Service) GetBoard(ctx context.Context, userID, boardID int32) (db.Board, error) {
+	if _, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	}); err != nil {
+		return db.Board{}, ErrForbidden
+	}
+	return s.repo.Get(ctx, boardID)
+}
+
+func (s *Service) ListMembers(ctx context.Context, userID, boardID int32) ([]db.ListBoardMembersRow, error) {
+	if _, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	}); err != nil {
+		return nil, ErrForbidden
+	}
+	return s.repo.ListMembers(ctx, boardID)
+}
+
+func (s *Service) AddMember(
+	ctx context.Context, userID, boardID, newUserID int32, role string,
+) (db.BoardMember, error) {
+	owner, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	})
+	if err != nil || owner.Role != "owner" {
+		return db.BoardMember{}, ErrForbidden
+	}
+	if role == "" {
+		role = "member"
+	}
+	m, err := s.repo.AddMember(ctx, db.AddBoardMemberParams{
+		BoardID: boardID, UserID: newUserID, Role: role,
+	})
+	if err == nil {
+		s.hub.Broadcast(boardID, websocket.EventMessage{
+			Event: "member_added", Data: m,
+		})
+	}
+	return m, err
+}
+
+func (s *Service) RemoveMember(
+	ctx context.Context, userID, boardID, memberID int32,
+) error {
+	owner, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	})
+	if err != nil || owner.Role != "owner" {
+		return ErrForbidden
+	}
+	if err := s.repo.DeleteMember(ctx, db.DeleteBoardMemberParams{
+		BoardID: boardID, UserID: memberID,
+	}); err != nil {
+		return err
+	}
+	s.hub.Broadcast(boardID, websocket.EventMessage{
+		Event: "member_removed", Data: map[string]int32{"userId": memberID},
+	})
+	return nil
+}
