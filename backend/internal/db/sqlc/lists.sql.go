@@ -34,6 +34,21 @@ func (q *Queries) CreateList(ctx context.Context, arg CreateListParams) (List, e
 	return i, err
 }
 
+const decListPosAfter = `-- name: DecListPosAfter :exec
+UPDATE lists SET position = position - 1
+WHERE board_id = $1 AND position >  $2
+`
+
+type DecListPosAfterParams struct {
+	BoardID  int32
+	Position int32
+}
+
+func (q *Queries) DecListPosAfter(ctx context.Context, arg DecListPosAfterParams) error {
+	_, err := q.db.Exec(ctx, decListPosAfter, arg.BoardID, arg.Position)
+	return err
+}
+
 const deleteList = `-- name: DeleteList :exec
 DELETE FROM lists
 WHERE id = $1
@@ -61,6 +76,21 @@ func (q *Queries) GetListByID(ctx context.Context, id int32) (List, error) {
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const incListPosAfter = `-- name: IncListPosAfter :exec
+UPDATE lists SET position = position + 1
+WHERE board_id = $1 AND position >= $2
+`
+
+type IncListPosAfterParams struct {
+	BoardID  int32
+	Position int32
+}
+
+func (q *Queries) IncListPosAfter(ctx context.Context, arg IncListPosAfterParams) error {
+	_, err := q.db.Exec(ctx, incListPosAfter, arg.BoardID, arg.Position)
+	return err
 }
 
 const listListsByBoard = `-- name: ListListsByBoard :many

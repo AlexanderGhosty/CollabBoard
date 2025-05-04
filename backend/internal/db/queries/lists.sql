@@ -20,6 +20,14 @@ SET title = $2, position = $3
 WHERE id = $1
     RETURNING id, board_id, title, position, created_at;
 
+-- name: IncListPosAfter :exec
+UPDATE lists SET position = position + 1
+WHERE board_id = $1 AND position >= $2;
+
+-- name: DecListPosAfter :exec
+UPDATE lists SET position = position - 1
+WHERE board_id = $1 AND position >  $2;
+
 -- name: DeleteList :exec
 DELETE FROM lists
 WHERE id = $1;

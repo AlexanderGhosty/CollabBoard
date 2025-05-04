@@ -13,6 +13,7 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g.POST("", createListHandler(svc))
 	g.GET("", listHandler(svc))
 	g.PUT("/:id", updateListHandler(svc))
+	g.PUT("/:id/move", moveListHandler(svc))
 	g.DELETE("/:id", deleteListHandler(svc))
 }
 
@@ -70,6 +71,26 @@ func updateListHandler(svc *Service) gin.HandlerFunc {
 			p.Position = *req.Position
 		}
 		lst, err := svc.Update(c.Request.Context(), userID, p)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, lst)
+	}
+}
+
+func moveListHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, _ := strconv.Atoi(c.Param("id"))
+		var req struct {
+			Position int32 `json:"position" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		userID := int32(c.GetInt("userID"))
+		lst, err := svc.Move(c.Request.Context(), userID, int32(id), req.Position)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

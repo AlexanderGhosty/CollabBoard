@@ -43,6 +43,21 @@ func (q *Queries) CreateCard(ctx context.Context, arg CreateCardParams) (Card, e
 	return i, err
 }
 
+const decCardPosAfter = `-- name: DecCardPosAfter :exec
+UPDATE cards SET position = position - 1
+WHERE list_id = $1 AND position >  $2
+`
+
+type DecCardPosAfterParams struct {
+	ListID   int32
+	Position int32
+}
+
+func (q *Queries) DecCardPosAfter(ctx context.Context, arg DecCardPosAfterParams) error {
+	_, err := q.db.Exec(ctx, decCardPosAfter, arg.ListID, arg.Position)
+	return err
+}
+
 const deleteCard = `-- name: DeleteCard :exec
 DELETE FROM cards
 WHERE id = $1
@@ -71,6 +86,21 @@ func (q *Queries) GetCardByID(ctx context.Context, id int32) (Card, error) {
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const incCardPosAfter = `-- name: IncCardPosAfter :exec
+UPDATE cards SET position = position + 1
+WHERE list_id = $1 AND position >= $2
+`
+
+type IncCardPosAfterParams struct {
+	ListID   int32
+	Position int32
+}
+
+func (q *Queries) IncCardPosAfter(ctx context.Context, arg IncCardPosAfterParams) error {
+	_, err := q.db.Exec(ctx, incCardPosAfter, arg.ListID, arg.Position)
+	return err
 }
 
 const listCardsByList = `-- name: ListCardsByList :many

@@ -20,3 +20,9 @@ func (r *Repository) Delete(ctx context.Context, id int32) error { return r.q.De
 func (r *Repository) ListByList(ctx context.Context, listID int32) ([]db.Card, error) {
 	return r.q.ListCardsByList(ctx, listID)
 }
+func (r *Repository) ShiftRight(ctx context.Context, listID, from int32) error {
+	return r.q.IncCardPosAfter(ctx, db.IncCardPosAfterParams{ListID: listID, Position: from})
+}
+func (r *Repository) ShiftLeft(ctx context.Context, listID, from int32) error {
+	return r.q.DecCardPosAfter(ctx, db.DecCardPosAfterParams{ListID: listID, Position: from})
+}

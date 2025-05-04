@@ -23,6 +23,7 @@ func (s *Service) Create(ctx context.Context, userID, boardID int32, title strin
 	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
 		return db.List{}, errors.New("not a member")
 	}
+	_ = s.repo.ShiftRight(ctx, boardID, position)
 	lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: position})
 	if err == nil {
 		s.hub.Broadcast(boardID, websocket.EventMessage{Event: "list_created", Data: lst})
@@ -73,4 +74,21 @@ func (s *Service) Delete(ctx context.Context, userID, listID int32) error {
 		Event: "list_deleted", Data: map[string]int32{"id": listID},
 	})
 	return nil
+}
+
+func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.List, error) {
+	lst, _ := s.q.GetListByID(ctx, listID)
+	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
+		return db.List{}, errors.New("not a member")
+	}
+
+	_ = s.repo.ShiftLeft(ctx, lst.BoardID, lst.Position)
+
+	_ = s.repo.ShiftRight(ctx, lst.BoardID, newPos)
+
+	updated, err := s.repo.Update(ctx, db.UpdateListParams{ID: listID, Position: newPos})
+	if err == nil {
+		s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "list_moved", Data: updated})
+	}
+	return updated, err
 }

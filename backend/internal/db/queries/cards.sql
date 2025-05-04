@@ -23,6 +23,14 @@ SET title = $2,
 WHERE id = $1
     RETURNING id, list_id, title, description, position, created_at;
 
+-- name: IncCardPosAfter :exec
+UPDATE cards SET position = position + 1
+WHERE list_id = $1 AND position >= $2;
+
+-- name: DecCardPosAfter :exec
+UPDATE cards SET position = position - 1
+WHERE list_id = $1 AND position >  $2;
+
 -- name: DeleteCard :exec
 DELETE FROM cards
 WHERE id = $1;

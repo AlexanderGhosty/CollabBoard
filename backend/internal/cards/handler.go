@@ -14,6 +14,7 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g.POST("", createCardHandler(svc))
 	g.GET("", listCardsHandler(svc))
 	g.PUT("/:id", updateCardHandler(svc))
+	g.PUT("/:id/move", moveCardHandler(svc))
 	g.DELETE("/:id", deleteCardHandler(svc))
 }
 
@@ -89,6 +90,39 @@ func updateCardHandler(svc *Service) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		c.JSON(http.StatusOK, card)
+	}
+}
+
+func moveCardHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid card id"})
+			return
+		}
+
+		var req struct {
+			ListID   *int32 `json:"listId"`
+			Position int32  `json:"position" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		userID := int32(c.GetInt("userID"))
+
+		var dstListID int32
+		if req.ListID != nil {
+			dstListID = *req.ListID
+		}
+		card, err := svc.Move(c.Request.Context(), userID, int32(id), dstListID, req.Position)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusOK, card)
 	}
 }
