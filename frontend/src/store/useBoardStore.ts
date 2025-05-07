@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { boardService, Card, List, Board } from '@/services/boardService';
-import { sendWS, subscribeWS, WSMessage } from '@/services/websocket';
+import { wsClient, sendWS, subscribeWS, WSMessage } from '@/services/websocket';
 
 interface BoardState {
-  /* коллекция всех досок пользователя (лендинг) */
+  /** коллекция всех досок пользователя (лендинг) */
   boards: Board[];
-  /* активная доска (открыта /board/:id) */
+  /** активная доска (открыта /board/:id) */
   active: Board | null;
 
-  /* REST‑запросы -------------------------------------------------------------- */
+  /** REST‑методы */
   fetchBoards: () => Promise<void>;
   loadBoard: (id: string) => Promise<void>;
   createBoard: (title: string) => Promise<void>;
@@ -19,7 +19,7 @@ interface BoardState {
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
 
-  /* WebSocket ---------------------------------------------------------------- */
+  /** обработка входящих WS‑ивентов */
   applyWS: (msg: WSMessage) => void;
 }
 
@@ -28,8 +28,7 @@ export const useBoardStore = create<BoardState>()(
     boards: [],
     active: null,
 
-    /* ============ REST‐методы ============================================== */
-
+    /* ───────────────── REST ───────────────── */
     async fetchBoards() {
       const boards = await boardService.getBoards();
       set((s) => {
@@ -37,22 +36,26 @@ export const useBoardStore = create<BoardState>()(
       });
     },
 
+    /** Загружаем доску и подключаем WebSocket‑канал */
     async loadBoard(id) {
-      /* получаем полную доску и подключаем WS */
-      const { data } = await boardService.getBoards().then((arr) =>
-        arr.find((b) => b.id === id)
-          ? { data: arr.find((b) => b.id === id)! }
-          : boardService // fallback на /boards/:id, если в коллекции нет
-              // @ts-ignore – ручной GET (не реализован в boardService)
-              ._getFullBoard(id),
-      );
+      const board =
+        get().boards.find((b) => b.id === id) ??
+        (await boardService
+          // временный обход до появления getBoardById
+          .getBoards()
+          .then((arr) => arr.find((b) => b.id === id)));
 
-      set((s) => (s.active = data));
+      if (!board) return;
 
-      /* подписываемся на сокет только один раз */
-      subscribeWS('card_created', (data) => get().applyWS({ event: 'card_created', data }));
-      subscribeWS('card_moved', (data) => get().applyWS({ event: 'card_moved', data }));
-      subscribeWS('list_created', (data) => get().applyWS({ event: 'list_created', data }));
+      set((s) => {
+        s.active = board;
+      });
+
+      wsClient.connect(id);
+
+      subscribeWS('card_created', (d) => get().applyWS({ event: 'card_created', data: d }));
+      subscribeWS('card_moved', (d) => get().applyWS({ event: 'card_moved', data: d }));
+      subscribeWS('list_created', (d) => get().applyWS({ event: 'list_created', data: d }));
     },
 
     async createBoard(title) {
@@ -65,24 +68,27 @@ export const useBoardStore = create<BoardState>()(
     async createList(title) {
       const board = get().active;
       if (!board) return;
-      const { data } = await boardService  // временно прямой вызов api
-        // @ts-ignore – нет метода, обходимся ручным запросом
+
+      const { data: list } = await boardService
+        // @ts-expect-error ручной POST, пока нет эндпоинта в boardService
         ._api.post<List>(`/boards/${board.id}/lists`, { title });
 
-      set((s) => board.lists.push(data));
-      sendWS({ event: 'list_created', data });
+      set((s) => {
+        board.lists.push(list);
+      });
+      sendWS({ event: 'list_created', data: list });
     },
 
     async createCard(listId, title) {
-      const { data } = await boardService
-        // @ts-ignore – ручной POST
+      const { data: card } = await boardService
+        // @ts-expect-error ручной POST
         ._api.post<Card>(`/lists/${listId}/cards`, { title });
 
       set((s) => {
         const list = s.active?.lists.find((l) => l.id === listId);
-        if (list) list.cards.push(data);
+        if (list) list.cards.push(card);
       });
-      sendWS({ event: 'card_created', data });
+      sendWS({ event: 'card_created', data: card });
     },
 
     async duplicateCard(cardId) {
@@ -95,25 +101,26 @@ export const useBoardStore = create<BoardState>()(
 
     async moveCard(cardId, toListId, toPos) {
       await boardService.moveCard(cardId, toListId, toPos);
-      /* локальный optimistic update */
+
+      // optimistic‑update локально
       set((s) => {
         const board = s.active;
         if (!board) return;
 
-        const fromList = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
-        const targetList = board.lists.find((l) => l.id === toListId);
-        if (!fromList || !targetList) return;
+        const from = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
+        const to = board.lists.find((l) => l.id === toListId);
+        if (!from || !to) return;
 
-        const idx = fromList.cards.findIndex((c) => c.id === cardId);
-        const [card] = fromList.cards.splice(idx, 1);
+        const idx = from.cards.findIndex((c) => c.id === cardId);
+        const [card] = from.cards.splice(idx, 1);
         card.listId = toListId;
-        targetList.cards.splice(toPos - 1, 0, card);
+        to.cards.splice(toPos - 1, 0, card);
       });
     },
 
     async deleteCard(cardId) {
       await boardService
-        // @ts-ignore – ручной DELETE
+        // @ts-expect-error ручной DELETE
         ._api.delete(`/cards/${cardId}`);
 
       set((s) => {
@@ -127,8 +134,7 @@ export const useBoardStore = create<BoardState>()(
       sendWS({ event: 'card_deleted', data: { cardId } });
     },
 
-    /* ============ WebSocket ================================================ */
-
+    /* ────────────── WebSocket incoming ───────────── */
     applyWS({ event, data }) {
       set((s) => {
         const board = s.active;
@@ -137,8 +143,7 @@ export const useBoardStore = create<BoardState>()(
         switch (event) {
           case 'card_created': {
             const card = data as Card;
-            const list = board.lists.find((l) => l.id === card.listId);
-            if (list) list.cards.push(card);
+            board.lists.find((l) => l.id === card.listId)?.cards.push(card);
             break;
           }
           case 'card_moved': {
@@ -147,23 +152,22 @@ export const useBoardStore = create<BoardState>()(
               toListId: string;
               toPos: number;
             };
-            const fromList = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
-            const targetList = board.lists.find((l) => l.id === toListId);
-            if (!fromList || !targetList) break;
-
-            const idx = fromList.cards.findIndex((c) => c.id === cardId);
-            const [card] = fromList.cards.splice(idx, 1);
+            const from = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
+            const to = board.lists.find((l) => l.id === toListId);
+            if (!from || !to) break;
+            const idx = from.cards.findIndex((c) => c.id === cardId);
+            const [card] = from.cards.splice(idx, 1);
             card.listId = toListId;
-            targetList.cards.splice(toPos - 1, 0, card);
+            to.cards.splice(toPos - 1, 0, card);
             break;
           }
           case 'list_created': {
-            const list = data as List;
-            board.lists.push(list);
+            board.lists.push(data as List);
             break;
           }
+          // можно расширять другими событиями (card_deleted, list_moved …)
         }
       });
     },
-  })),
+  }))
 );
