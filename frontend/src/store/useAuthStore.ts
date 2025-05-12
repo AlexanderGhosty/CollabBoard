@@ -3,7 +3,11 @@ import { persist } from 'zustand/middleware';
 import { api } from '@/services/api';
 
 /** Данные, которые бэкенд возвращает после авторизации / регистрации */
-type User = { id: string; email: string };
+type User = {
+  id: string | number; // Accept both string and number types for ID
+  name: string;
+  email: string;
+};
 
 interface AuthState {
   /** JWT access‑токен */
@@ -13,7 +17,7 @@ interface AuthState {
   /** Авторизация */
   login: (email: string, password: string) => Promise<void>;
   /** Регистрация */
-  register: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   /** Выход из системы */
   logout: () => void;
 }
@@ -26,12 +30,22 @@ export const useAuthStore = create<AuthState>()(
 
       async login(email, password) {
         const { data } = await api.post('/auth/login', { email, password });
-        set({ token: data.token, user: data.user });
+        // Ensure user.id is converted to string for consistency in the frontend
+        const user = {
+          ...data.user,
+          id: String(data.user.id)
+        };
+        set({ token: data.token, user });
       },
 
-      async register(email, password) {
-        const { data } = await api.post('/auth/register', { email, password });
-        set({ token: data.token, user: data.user });
+      async register(name, email, password) {
+        const { data } = await api.post('/auth/register', { name, email, password });
+        // Ensure user.id is converted to string for consistency in the frontend
+        const user = {
+          ...data.user,
+          id: String(data.user.id)
+        };
+        set({ token: data.token, user });
       },
 
       logout() {
