@@ -89,11 +89,4 @@ export const boardService = {
     await api.delete(ENDPOINTS.cards(cardId));
     sendWS({ event: 'card_deleted', data: { cardId } });
   },
-
-  /** Дублировать карточку */
-  async duplicateCard(cardId: string): Promise<Card> {
-    const { data } = await api.post<Card>(ENDPOINTS.dup(cardId));
-    sendWS({ event: 'card_created', data });
-    return data;
-  },
 };

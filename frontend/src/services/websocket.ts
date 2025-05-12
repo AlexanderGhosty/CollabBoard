@@ -63,10 +63,10 @@ class WebSocketClient {
     this.subscriptions.get(event)!.add(handler);
     return () => this.subscriptions.get(event)!.delete(handler); // unsubscribe
   }
- 
+
   private openSocket() {
     const token = useAuthStore.getState().token;
-    const url = `${import.meta.env.VITE_WS_URL}?boardId=${this.boardId}&token=${token}`;
+    const url = `${import.meta.env.VITE_WS_URL}/${this.boardId}?token=${token}`;
     this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {

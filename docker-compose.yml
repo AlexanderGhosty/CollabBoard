@@ -47,7 +47,8 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: "http://localhost:${API_PORT}"
+      VITE_API_URL: "http://localhost:${API_PORT}/api"
+      VITE_WS_URL: "ws://localhost:${API_PORT}/ws/board"
     depends_on:
       api:
         condition: service_started
