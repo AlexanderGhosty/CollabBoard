@@ -15,6 +15,8 @@ const ENDPOINTS = {
   boards: '/boards',
   board:  (id: string)        => `/boards/${id}`,
   lists:  (boardId: string)   => `/boards/${boardId}/lists`,
+  list:   (listId: string)    => `/lists/${listId}`,
+  moveList: (listId: string)  => `/lists/${listId}/move`,
   cards:  (listId: string)    => `/lists/${listId}/cards`,
   move:   (cardId: string)    => `/cards/${cardId}/move`,
   dup:    (cardId: string)    => `/cards/${cardId}/duplicate`,
@@ -50,7 +52,7 @@ export const boardService = {
 
   /** Переместить карточку (между списками или внутри списка) */
   async moveCard(cardId: string, toListId: string, toPos: number): Promise<void> {
-    await api.post(ENDPOINTS.move(cardId), { toListId, toPos });
+    await api.post(ENDPOINTS.move(cardId), { listId: toListId, position: toPos });
     sendWS({ event: 'card_moved', data: { cardId, toListId, toPos } });
   },
 
@@ -61,6 +63,13 @@ export const boardService = {
       position
     });
     sendWS({ event: 'list_created', data });
+    return data;
+  },
+
+  /** Переместить список (изменить порядок) */
+  async moveList(listId: string, position: number): Promise<List> {
+    const { data } = await api.post<List>(ENDPOINTS.moveList(listId), { position });
+    sendWS({ event: 'list_moved', data });
     return data;
   },
 
@@ -79,5 +88,12 @@ export const boardService = {
   async deleteCard(cardId: string): Promise<void> {
     await api.delete(ENDPOINTS.cards(cardId));
     sendWS({ event: 'card_deleted', data: { cardId } });
+  },
+
+  /** Дублировать карточку */
+  async duplicateCard(cardId: string): Promise<Card> {
+    const { data } = await api.post<Card>(ENDPOINTS.dup(cardId));
+    sendWS({ event: 'card_created', data });
+    return data;
   },
 };

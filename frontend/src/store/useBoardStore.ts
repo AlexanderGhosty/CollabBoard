@@ -14,6 +14,7 @@ interface BoardState {
   loadBoard: (id: string) => Promise<void>;
   createBoard: (name: string) => Promise<void>;
   createList: (title: string) => Promise<void>;
+  moveList: (listId: string, position: number) => Promise<void>;
   createCard: (listId: string, title: string, description?: string) => Promise<void>;
   duplicateCard: (cardId: string) => Promise<void>;
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
@@ -58,9 +59,10 @@ export const useBoardStore = create<BoardState>()(
 
       wsClient.connect(id);
 
-      subscribeWS('card_created', (d) => get().applyWS({ event: 'card_created', data: d }));
-      subscribeWS('card_moved', (d) => get().applyWS({ event: 'card_moved', data: d }));
-      subscribeWS('list_created', (d) => get().applyWS({ event: 'list_created', data: d }));
+      subscribeWS('card_created', (d: any) => get().applyWS({ event: 'card_created', data: d }));
+      subscribeWS('card_moved', (d: any) => get().applyWS({ event: 'card_moved', data: d }));
+      subscribeWS('list_created', (d: any) => get().applyWS({ event: 'list_created', data: d }));
+      subscribeWS('list_moved', (d: any) => get().applyWS({ event: 'list_moved', data: d }));
     },
 
     async createBoard(name) {
@@ -76,7 +78,7 @@ export const useBoardStore = create<BoardState>()(
 
       // Calculate position for the new list (at the end)
       const position = board.lists.length > 0
-        ? Math.max(...board.lists.map(list => list.position)) + 1
+        ? Math.max(...board.lists.map((list: List) => list.position)) + 1
         : 1;
 
       const list = await boardService.createList(board.id, title, position);
@@ -84,6 +86,38 @@ export const useBoardStore = create<BoardState>()(
       set((s) => {
         if (s.active) {
           s.active.lists.push(list);
+        }
+      });
+    },
+
+    async moveList(listId, position) {
+      const board = get().active;
+      if (!board) return;
+
+      await boardService.moveList(listId, position);
+
+      // Optimistic update locally
+      set((s) => {
+        if (!s.active) return;
+
+        // Find the list to move
+        const listIndex = s.active.lists.findIndex((l: List) => l.id === listId);
+        if (listIndex === -1) return;
+
+        // Get the list
+        const [list] = s.active.lists.splice(listIndex, 1);
+
+        // Update its position
+        list.position = position;
+
+        // Re-insert at the correct position based on the new position value
+        const insertIndex = s.active.lists.findIndex((l: List) => l.position > position);
+        if (insertIndex === -1) {
+          // If no list has a higher position, add to the end
+          s.active.lists.push(list);
+        } else {
+          // Otherwise insert at the correct position
+          s.active.lists.splice(insertIndex, 0, list);
         }
       });
     },
@@ -111,7 +145,7 @@ export const useBoardStore = create<BoardState>()(
     async duplicateCard(cardId) {
       const card = await boardService.duplicateCard(cardId);
       set((s) => {
-        const list = s.active?.lists.find((l) => l.id === card.listId);
+        const list = s.active?.lists.find((l: List) => l.id === card.listId);
         if (list) list.cards.push(card);
       });
     },
@@ -124,11 +158,11 @@ export const useBoardStore = create<BoardState>()(
         const board = s.active;
         if (!board) return;
 
-        const from = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
-        const to = board.lists.find((l) => l.id === toListId);
+        const from = board.lists.find((l: List) => l.cards.some((c: Card) => c.id === cardId));
+        const to = board.lists.find((l: List) => l.id === toListId);
         if (!from || !to) return;
 
-        const idx = from.cards.findIndex((c) => c.id === cardId);
+        const idx = from.cards.findIndex((c: Card) => c.id === cardId);
         const [card] = from.cards.splice(idx, 1);
         card.listId = toListId;
         to.cards.splice(toPos - 1, 0, card);
@@ -177,6 +211,17 @@ export const useBoardStore = create<BoardState>()(
           }
           case 'list_created': {
             board.lists.push(data as List);
+            break;
+          }
+          case 'list_moved': {
+            const movedList = data as List;
+            // Find and update the list with the new position
+            const listIndex = board.lists.findIndex((l: List) => l.id === movedList.id);
+            if (listIndex !== -1) {
+              board.lists[listIndex].position = movedList.position;
+              // Sort lists by position
+              board.lists.sort((a: List, b: List) => a.position - b.position);
+            }
             break;
           }
           case 'card_deleted': {

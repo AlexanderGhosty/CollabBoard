@@ -3,6 +3,7 @@ package cards
 import (
 	"context"
 	"errors"
+
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "backend/internal/db/sqlc"
@@ -137,4 +138,62 @@ func (s *Service) Move(ctx context.Context, userID, cardID, dstListID, newPos in
 		Data:  updated,
 	})
 	return updated, nil
+}
+
+func (s *Service) Duplicate(ctx context.Context, userID, cardID int32) (db.Card, error) {
+	// Get the original card
+	origCard, err := s.q.GetCardByID(ctx, cardID)
+	if err != nil {
+		return db.Card{}, err
+	}
+
+	// Get the list to check permissions and calculate position
+	list, err := s.q.GetListByID(ctx, origCard.ListID)
+	if err != nil {
+		return db.Card{}, err
+	}
+
+	// Check if user is a member of the board
+	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: list.BoardID, UserID: userID,
+	}); err != nil {
+		return db.Card{}, errors.New("not a member")
+	}
+
+	// Get the highest position in the list
+	cards, err := s.repo.ListByList(ctx, list.ID)
+	if err != nil {
+		return db.Card{}, err
+	}
+
+	// Calculate new position (at the end of the list)
+	var newPosition int32 = 1
+	if len(cards) > 0 {
+		for _, c := range cards {
+			if c.Position > newPosition {
+				newPosition = c.Position
+			}
+		}
+		newPosition++ // Place after the last card
+	}
+
+	// Create a duplicate card with the same content but new position
+	newCard, err := s.repo.Create(ctx, db.CreateCardParams{
+		ListID:      origCard.ListID,
+		Title:       origCard.Title + " (copy)",
+		Description: origCard.Description,
+		Position:    newPosition,
+	})
+
+	if err != nil {
+		return db.Card{}, err
+	}
+
+	// Broadcast the event
+	s.hub.Broadcast(list.BoardID, websocket.EventMessage{
+		Event: "card_created",
+		Data:  newCard,
+	})
+
+	return newCard, nil
 }

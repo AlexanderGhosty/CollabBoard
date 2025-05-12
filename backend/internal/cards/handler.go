@@ -2,9 +2,10 @@ package cards
 
 import (
 	db "backend/internal/db/sqlc"
-	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
 	"strconv"
+
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,6 +17,10 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g.PUT("/:id", updateCardHandler(svc))
 	g.PUT("/:id/move", moveCardHandler(svc))
 	g.DELETE("/:id", deleteCardHandler(svc))
+
+	// Card operations that don't need list context
+	cardGroup := r.Group("/cards")
+	cardGroup.POST("/:id/duplicate", duplicateCardHandler(svc))
 }
 
 func createCardHandler(svc *Service) gin.HandlerFunc {
@@ -137,5 +142,25 @@ func deleteCardHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "card deleted"})
+	}
+}
+
+func duplicateCardHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid card id"})
+			return
+		}
+
+		userID := int32(c.GetInt("userID"))
+
+		card, err := svc.Duplicate(c.Request.Context(), userID, int32(id))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, card)
 	}
 }
