@@ -8,7 +8,7 @@ export default function BoardHeader() {
 
   return (
     <header className="mb-4 flex items-center justify-between">
-      <h2 className="text-2xl font-bold text-zinc-800">{board.title}</h2>
+      <h2 className="text-2xl font-bold text-zinc-800">{board.name}</h2>
       <Button variant="secondary" onClick={() => store.createList('Новый список')}>＋ Список</Button>
     </header>
   );

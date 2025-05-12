@@ -12,9 +12,9 @@ interface BoardState {
   /** REST‑методы */
   fetchBoards: () => Promise<void>;
   loadBoard: (id: string) => Promise<void>;
-  createBoard: (title: string) => Promise<void>;
+  createBoard: (name: string) => Promise<void>;
   createList: (title: string) => Promise<void>;
-  createCard: (listId: string, title: string) => Promise<void>;
+  createCard: (listId: string, title: string, description?: string) => Promise<void>;
   duplicateCard: (cardId: string) => Promise<void>;
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
@@ -38,12 +38,17 @@ export const useBoardStore = create<BoardState>()(
 
     /** Загружаем доску и подключаем WebSocket‑канал */
     async loadBoard(id) {
-      const board =
-        get().boards.find((b) => b.id === id) ??
-        (await boardService
-          // временный обход до появления getBoardById
-          .getBoards()
-          .then((arr) => arr.find((b) => b.id === id)));
+      // Try to find board in the cache first, otherwise fetch it from the API
+      let board = get().boards.find((b) => b.id === id);
+
+      if (!board) {
+        try {
+          board = await boardService.getBoardById(id);
+        } catch (error) {
+          console.error("Failed to load board:", error);
+          return;
+        }
+      }
 
       if (!board) return;
 
@@ -58,8 +63,8 @@ export const useBoardStore = create<BoardState>()(
       subscribeWS('list_created', (d) => get().applyWS({ event: 'list_created', data: d }));
     },
 
-    async createBoard(title) {
-      const board = await boardService.createBoard(title);
+    async createBoard(name) {
+      const board = await boardService.createBoard(name);
       set((s) => {
         s.boards.push(board);
       });
@@ -69,26 +74,38 @@ export const useBoardStore = create<BoardState>()(
       const board = get().active;
       if (!board) return;
 
-      const { data: list } = await boardService
-        // @ts-expect-error ручной POST, пока нет эндпоинта в boardService
-        ._api.post<List>(`/boards/${board.id}/lists`, { title });
+      // Calculate position for the new list (at the end)
+      const position = board.lists.length > 0
+        ? Math.max(...board.lists.map(list => list.position)) + 1
+        : 1;
+
+      const list = await boardService.createList(board.id, title, position);
 
       set((s) => {
-        board.lists.push(list);
+        if (s.active) {
+          s.active.lists.push(list);
+        }
       });
-      sendWS({ event: 'list_created', data: list });
     },
 
-    async createCard(listId, title) {
-      const { data: card } = await boardService
-        // @ts-expect-error ручной POST
-        ._api.post<Card>(`/lists/${listId}/cards`, { title });
+    async createCard(listId, title, description = '') {
+      const board = get().active;
+      if (!board) return;
+
+      const list = board.lists.find((l: List) => l.id === listId);
+      if (!list) return;
+
+      // Calculate position for the new card (at the end)
+      const position = list.cards.length > 0
+        ? Math.max(...list.cards.map((card: Card) => card.position)) + 1
+        : 1;
+
+      const card = await boardService.createCard(listId, title, description, position);
 
       set((s) => {
-        const list = s.active?.lists.find((l) => l.id === listId);
+        const list = s.active?.lists.find((l: List) => l.id === listId);
         if (list) list.cards.push(card);
       });
-      sendWS({ event: 'card_created', data: card });
     },
 
     async duplicateCard(cardId) {
@@ -119,19 +136,16 @@ export const useBoardStore = create<BoardState>()(
     },
 
     async deleteCard(cardId) {
-      await boardService
-        // @ts-expect-error ручной DELETE
-        ._api.delete(`/cards/${cardId}`);
+      await boardService.deleteCard(cardId);
 
       set((s) => {
         const board = s.active;
         if (!board) return;
-        board.lists.forEach((l) => {
-          const idx = l.cards.findIndex((c) => c.id === cardId);
+        board.lists.forEach((l: List) => {
+          const idx = l.cards.findIndex((c: Card) => c.id === cardId);
           if (idx !== -1) l.cards.splice(idx, 1);
         });
       });
-      sendWS({ event: 'card_deleted', data: { cardId } });
     },
 
     /* ────────────── WebSocket incoming ───────────── */
@@ -143,7 +157,7 @@ export const useBoardStore = create<BoardState>()(
         switch (event) {
           case 'card_created': {
             const card = data as Card;
-            board.lists.find((l) => l.id === card.listId)?.cards.push(card);
+            board.lists.find((l: List) => l.id === card.listId)?.cards.push(card);
             break;
           }
           case 'card_moved': {
@@ -152,10 +166,10 @@ export const useBoardStore = create<BoardState>()(
               toListId: string;
               toPos: number;
             };
-            const from = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
-            const to = board.lists.find((l) => l.id === toListId);
+            const from = board.lists.find((l: List) => l.cards.some((c: Card) => c.id === cardId));
+            const to = board.lists.find((l: List) => l.id === toListId);
             if (!from || !to) break;
-            const idx = from.cards.findIndex((c) => c.id === cardId);
+            const idx = from.cards.findIndex((c: Card) => c.id === cardId);
             const [card] = from.cards.splice(idx, 1);
             card.listId = toListId;
             to.cards.splice(toPos - 1, 0, card);
@@ -165,7 +179,20 @@ export const useBoardStore = create<BoardState>()(
             board.lists.push(data as List);
             break;
           }
-          // можно расширять другими событиями (card_deleted, list_moved …)
+          case 'card_deleted': {
+            const { cardId } = data as { cardId: string };
+            board.lists.forEach((l: List) => {
+              const idx = l.cards.findIndex((c: Card) => c.id === cardId);
+              if (idx !== -1) l.cards.splice(idx, 1);
+            });
+            break;
+          }
+          case 'board_created':
+          case 'board_updated': {
+            // These events are handled at the board list level
+            break;
+          }
+          // можно расширять другими событиями (list_moved …)
         }
       });
     },

@@ -4,12 +4,18 @@ import { sendWS } from '@/services/websocket';
 /** Типы сущностей (минимально‑необходимые) */
 export type Card  = { id: string; listId: string; title: string; position: number };
 export type List  = { id: string; boardId: string; title: string; position: number; cards: Card[] };
-export type Board = { id: string; title: string; lists: List[] };
+export type Board = {
+  id: string;
+  name: string;  // Changed from 'title' to 'name' to match backend
+  ownerId?: string; // Added to match backend
+  lists: List[]
+};
 
 const ENDPOINTS = {
   boards: '/boards',
   board:  (id: string)        => `/boards/${id}`,
-  cards:  (id: string)        => `/cards/${id}`,
+  lists:  (boardId: string)   => `/boards/${boardId}/lists`,
+  cards:  (listId: string)    => `/lists/${listId}/cards`,
   move:   (cardId: string)    => `/cards/${cardId}/move`,
   dup:    (cardId: string)    => `/cards/${cardId}/duplicate`,
 };
@@ -21,9 +27,15 @@ export const boardService = {
     return data;
   },
 
+  /** Получить доску по ID */
+  async getBoardById(id: string): Promise<Board> {
+    const { data } = await api.get<Board>(ENDPOINTS.board(id));
+    return data;
+  },
+
   /** Создать доску */
-  async createBoard(title: string): Promise<Board> {
-    const { data } = await api.post<Board>(ENDPOINTS.boards, { title });
+  async createBoard(name: string): Promise<Board> {
+    const { data } = await api.post<Board>(ENDPOINTS.boards, { name });
     // Рассылаем событие owner‑клиентам
     sendWS({ event: 'board_created', data });
     return data;
@@ -40,5 +52,32 @@ export const boardService = {
   async moveCard(cardId: string, toListId: string, toPos: number): Promise<void> {
     await api.post(ENDPOINTS.move(cardId), { toListId, toPos });
     sendWS({ event: 'card_moved', data: { cardId, toListId, toPos } });
+  },
+
+  /** Создать список */
+  async createList(boardId: string, title: string, position: number): Promise<List> {
+    const { data } = await api.post<List>(ENDPOINTS.lists(boardId), {
+      title,
+      position
+    });
+    sendWS({ event: 'list_created', data });
+    return data;
+  },
+
+  /** Создать карточку */
+  async createCard(listId: string, title: string, description: string = '', position: number): Promise<Card> {
+    const { data } = await api.post<Card>(ENDPOINTS.cards(listId), {
+      title,
+      description,
+      position
+    });
+    sendWS({ event: 'card_created', data });
+    return data;
+  },
+
+  /** Удалить карточку */
+  async deleteCard(cardId: string): Promise<void> {
+    await api.delete(ENDPOINTS.cards(cardId));
+    sendWS({ event: 'card_deleted', data: { cardId } });
   },
 };
