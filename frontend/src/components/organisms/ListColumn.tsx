@@ -1,4 +1,5 @@
-import { SortableContext, useDroppable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { List } from '@/services/boardService';
 import CardItem from '@/components/molecules/CardItem';

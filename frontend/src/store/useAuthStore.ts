@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { api } from '@/services/api';
+import { authApi } from '@/services/api';
 
 /** Данные, которые бэкенд возвращает после авторизации / регистрации */
 type User = {
@@ -29,7 +29,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
 
       async login(email, password) {
-        const { data } = await api.post('/auth/login', { email, password });
+        const { data } = await authApi.post('/auth/login', { email, password });
         // Ensure user.id is converted to string for consistency in the frontend
         const user = {
           ...data.user,
@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       async register(name, email, password) {
-        const { data } = await api.post('/auth/register', { name, email, password });
+        const { data } = await authApi.post('/auth/register', { name, email, password });
         // Ensure user.id is converted to string for consistency in the frontend
         const user = {
           ...data.user,
