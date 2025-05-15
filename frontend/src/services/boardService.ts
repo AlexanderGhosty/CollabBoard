@@ -25,22 +25,51 @@ const ENDPOINTS = {
 export const boardService = {
   /** Получить все доски текущего пользователя */
   async getBoards(): Promise<Board[]> {
-    const { data } = await api.get<Board[]>(ENDPOINTS.boards);
-    return data;
+    const { data } = await api.get<any[]>(ENDPOINTS.boards);
+    // Ensure all IDs are strings
+    return data.map(board => ({
+      ...board,
+      id: String(board.id),
+      boardId: board.boardId ? String(board.boardId) : undefined,
+      ownerId: board.ownerId ? String(board.ownerId) : undefined,
+      lists: board.lists || []
+    }));
   },
 
   /** Получить доску по ID */
   async getBoardById(id: string): Promise<Board> {
-    const { data } = await api.get<Board>(ENDPOINTS.board(id));
-    return data;
+    const { data } = await api.get<any>(ENDPOINTS.board(id));
+    // Ensure all IDs are strings
+    return {
+      ...data,
+      id: String(data.id),
+      ownerId: data.ownerId ? String(data.ownerId) : undefined,
+      lists: (data.lists || []).map((list: any) => ({
+        ...list,
+        id: String(list.id),
+        boardId: String(list.boardId),
+        cards: (list.cards || []).map((card: any) => ({
+          ...card,
+          id: String(card.id),
+          listId: String(card.listId)
+        }))
+      }))
+    };
   },
 
   /** Создать доску */
   async createBoard(name: string): Promise<Board> {
-    const { data } = await api.post<Board>(ENDPOINTS.boards, { name });
+    const { data } = await api.post<any>(ENDPOINTS.boards, { name });
+    // Ensure all IDs are strings
+    const board = {
+      ...data,
+      id: String(data.id),
+      ownerId: data.ownerId ? String(data.ownerId) : undefined,
+      lists: data.lists || []
+    };
     // Рассылаем событие owner‑клиентам
-    sendWS({ event: 'board_created', data });
-    return data;
+    sendWS({ event: 'board_created', data: board });
+    return board;
   },
 
   /** Дублировать карточку */

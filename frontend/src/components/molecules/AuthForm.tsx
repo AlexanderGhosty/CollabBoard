@@ -57,6 +57,7 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
           placeholder="Имя"
           value={form.name}
           error={err.name}
+          autoComplete="name"
           onChange={(e) => set({ ...form, name: e.target.value })}
         />
       )}
