@@ -45,8 +45,13 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handle();
+  };
+
   return (
-    <div className="flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       {mode === 'register' && (
         <Input
           placeholder="Имя"
@@ -57,8 +62,10 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
       )}
       <Input
         placeholder="E‑mail"
+        type="email"
         value={form.email}
         error={err.email}
+        autoComplete={mode === 'login' ? 'username' : 'email'}
         onChange={(e) => set({ ...form, email: e.target.value })}
       />
       <Input
@@ -66,11 +73,12 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
         type="password"
         value={form.password}
         error={err.password}
+        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
         onChange={(e) => set({ ...form, password: e.target.value })}
       />
-      <Button variant="primary" loading={loading} onClick={handle}>
+      <Button type="submit" variant="primary" loading={loading}>
         {mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
       </Button>
-    </div>
+    </form>
   );
 }

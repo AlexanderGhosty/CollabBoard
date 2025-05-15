@@ -44,15 +44,21 @@ export default function BoardsPage() {
       </header>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {boards.map((b) => (
-          <Link
-            key={b.id}
-            to={`/board/${b.id}`}
-            className="rounded-2xl border border-zinc-200 bg-white p-5 shadow transition-colors hover:bg-zinc-50"
-          >
-            <h2 className="text-xl font-semibold text-zinc-800">{b.name}</h2>
-          </Link>
-        ))}
+        {boards && boards.length > 0 ? (
+          boards.map((b) => (
+            <Link
+              key={b.id}
+              to={`/board/${b.id}`}
+              className="rounded-2xl border border-zinc-200 bg-white p-5 shadow transition-colors hover:bg-zinc-50"
+            >
+              <h2 className="text-xl font-semibold text-zinc-800">{b.name}</h2>
+            </Link>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-8 text-zinc-500">
+            У вас пока нет досок. Создайте первую доску, используя форму выше.
+          </div>
+        )}
       </section>
     </main>
   );

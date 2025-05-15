@@ -31,10 +31,17 @@ export const useBoardStore = create<BoardState>()(
 
     /* ───────────────── REST ───────────────── */
     async fetchBoards() {
-      const boards = await boardService.getBoards();
-      set((s) => {
-        s.boards = boards;
-      });
+      try {
+        const boards = await boardService.getBoards();
+        set((s) => {
+          s.boards = boards || [];
+        });
+      } catch (error) {
+        console.error("Failed to fetch boards:", error);
+        set((s) => {
+          s.boards = [];
+        });
+      }
     },
 
     /** Загружаем доску и подключаем WebSocket‑канал */
