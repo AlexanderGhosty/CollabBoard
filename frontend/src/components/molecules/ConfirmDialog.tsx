@@ -25,11 +25,39 @@ export default function ConfirmDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      dialogRef.current?.showModal();
-    } else {
-      dialogRef.current?.close();
+    const dialog = dialogRef.current;
+
+    if (isOpen && dialog) {
+      // Only call showModal if the dialog is not already open
+      if (!dialog.open) {
+        try {
+          dialog.showModal();
+        } catch (error) {
+          console.error('Error opening confirm dialog:', error);
+          // If showModal fails, try to reset the dialog state
+          dialog.close();
+          // Try again after a short delay
+          setTimeout(() => {
+            if (!dialog.open) {
+              try {
+                dialog.showModal();
+              } catch (innerError) {
+                console.error('Failed to open confirm dialog after retry:', innerError);
+              }
+            }
+          }, 10);
+        }
+      }
+    } else if (dialog) {
+      dialog.close();
     }
+
+    // Clean up function to ensure dialog is closed when component unmounts
+    return () => {
+      if (dialog && dialog.open) {
+        dialog.close();
+      }
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;

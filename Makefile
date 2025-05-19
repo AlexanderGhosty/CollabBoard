@@ -17,11 +17,9 @@ backend:
 # 	$(GO) vet ./...
 
 docker-up:
-	@echo "→ docker‑compose up --build -d"
 	docker-compose up --build -d
 
 docker-down:
-	@echo "→ docker‑compose down"
 	docker-compose down
 
 migrate-up:

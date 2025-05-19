@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/services/boardService';
 import Button from '@/components/atoms/Button';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
+import CardDetailModal from '@/components/molecules/CardDetailModal';
 import { useBoardStore } from '@/store/useBoardStore';
 
 export interface CardItemProps {
@@ -12,7 +13,28 @@ export interface CardItemProps {
 
 export default function CardItem({ card }: CardItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const deleteCard = useBoardStore(state => state.deleteCard);
+
+  // Refs for tracking drag vs click
+  const dragTimeoutRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
+  const mouseDownPosRef = useRef({ x: 0, y: 0 });
+  const clickAllowedRef = useRef(true);
+
+  // Constants for drag detection
+  const DRAG_THRESHOLD_PX = 5; // Minimum pixels moved to consider it a drag
+  const DRAG_TIMEOUT_MS = 300; // Longer timeout to better detect intentional clicks
+
+  // Clean up timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      if (dragTimeoutRef.current !== null) {
+        clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const { attributes, listeners, setNodeRef, transform, transition } = useDraggable({
     id: card.id,
@@ -40,6 +62,142 @@ export default function CardItem({ card }: CardItemProps) {
     setShowDeleteConfirm(false);
   };
 
+  const handleCardClick = (e: React.MouseEvent | React.TouchEvent) => {
+    // If we're dragging, don't open the modal
+    if (isDraggingRef.current) {
+      return;
+    }
+
+    // Stop propagation to prevent other events
+    e.stopPropagation();
+
+    // Prevent default to avoid any browser-specific behaviors
+    e.preventDefault();
+
+    // Open the detail modal
+    setShowDetailModal(true);
+  };
+
+  // Track touch events for mobile devices
+  const [touchStartPos, setTouchStartPos] = useState({ x: 0, y: 0 });
+  const [isTouchDragging, setIsTouchDragging] = useState(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setTouchStartPos({ x: touch.clientX, y: touch.clientY });
+      setIsTouchDragging(false);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartPos.x;
+      const dy = touch.clientY - touchStartPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // If moved more than threshold, consider it a drag
+      if (distance > DRAG_THRESHOLD_PX) {
+        setIsTouchDragging(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isTouchDragging) {
+      // This was a tap, not a drag
+      handleCardClick(e);
+    }
+
+    // Reset state
+    setIsTouchDragging(false);
+  };
+
+  // Modify the listeners to detect drag vs click
+  const modifiedListeners = {
+    ...listeners,
+    onMouseDown: (e: React.MouseEvent) => {
+      // Store the initial mouse position
+      mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+
+      // Reset flags
+      isDraggingRef.current = false;
+      clickAllowedRef.current = true;
+
+      // Call the original onMouseDown handler
+      if (listeners.onMouseDown) {
+        listeners.onMouseDown(e);
+      }
+
+      // Set a timeout to detect if this is a drag or a click
+      // This is a fallback - we'll primarily use distance moved
+      dragTimeoutRef.current = window.setTimeout(() => {
+        isDraggingRef.current = true;
+      }, DRAG_TIMEOUT_MS);
+    },
+    onMouseMove: (e: React.MouseEvent) => {
+      // If we're already dragging or click isn't allowed, just call the original handler
+      if (isDraggingRef.current || !clickAllowedRef.current) {
+        if (listeners.onMouseMove) {
+          listeners.onMouseMove(e);
+        }
+        return;
+      }
+
+      // Calculate distance moved
+      const dx = e.clientX - mouseDownPosRef.current.x;
+      const dy = e.clientY - mouseDownPosRef.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // If moved more than threshold, consider it a drag
+      if (distance > DRAG_THRESHOLD_PX) {
+        isDraggingRef.current = true;
+        clickAllowedRef.current = false;
+
+        // Clear the timeout since we've determined it's a drag
+        if (dragTimeoutRef.current !== null) {
+          clearTimeout(dragTimeoutRef.current);
+          dragTimeoutRef.current = null;
+        }
+      }
+
+      // Call the original onMouseMove handler
+      if (listeners.onMouseMove) {
+        listeners.onMouseMove(e);
+      }
+    },
+    onMouseUp: (e: React.MouseEvent) => {
+      // Call the original onMouseUp handler
+      if (listeners.onMouseUp) {
+        listeners.onMouseUp(e);
+      }
+
+      // Clear the timeout
+      if (dragTimeoutRef.current !== null) {
+        clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = null;
+      }
+
+      // Calculate final distance moved
+      const dx = e.clientX - mouseDownPosRef.current.x;
+      const dy = e.clientY - mouseDownPosRef.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // If we haven't moved much and we're not dragging, this is a click
+      if (distance <= DRAG_THRESHOLD_PX && !isDraggingRef.current && clickAllowedRef.current) {
+        // Small delay to ensure we don't interfere with any drag operations
+        setTimeout(() => {
+          handleCardClick(e);
+        }, 10);
+      }
+
+      // Reset flags
+      isDraggingRef.current = false;
+      clickAllowedRef.current = true;
+    }
+  };
+
   return (
     <>
       <div className="relative group">
@@ -62,14 +220,31 @@ export default function CardItem({ card }: CardItemProps) {
         <div
           ref={setNodeRef}
           style={style}
-          {...listeners}
+          {...modifiedListeners}
           {...attributes}
-          className="rounded-2xl bg-white p-3 shadow hover:bg-zinc-50"
+          className="rounded-2xl bg-white p-3 shadow hover:bg-zinc-50 cursor-pointer"
+          onClick={(e) => {
+            // If we're not dragging, handle the click
+            // This is a backup click handler in case the mouse events don't trigger properly
+            if (!isDraggingRef.current && clickAllowedRef.current) {
+              handleCardClick(e);
+            }
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <p className="text-sm text-zinc-800 break-words pr-6">{card.title}</p>
+          {card.description && (
+            <div className="mt-2 text-xs text-zinc-500">
+              <span className="inline-block mr-1">📝</span>
+              Has description
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Delete confirmation dialog */}
       <ConfirmDialog
         isOpen={showDeleteConfirm}
         title="Удалить карточку"
@@ -78,6 +253,13 @@ export default function CardItem({ card }: CardItemProps) {
         variant="danger"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      {/* Card detail modal */}
+      <CardDetailModal
+        card={card}
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
       />
     </>
   );

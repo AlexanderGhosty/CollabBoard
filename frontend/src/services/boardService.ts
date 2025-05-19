@@ -3,7 +3,13 @@ import { sendWS } from '@/services/websocket';
 import { useBoardStore } from '@/store/useBoardStore';
 
 /** Типы сущностей (минимально‑необходимые) */
-export type Card  = { id: string; listId: string; title: string; position: number };
+export type Card  = {
+  id: string;
+  listId: string;
+  title: string;
+  description?: string;
+  position: number
+};
 export type List  = { id: string; boardId: string; title: string; position: number; cards: Card[] };
 export type Board = {
   id: string;
@@ -90,6 +96,12 @@ export const boardService = {
           id: String(card.ID || card.id),
           listId: String(card.ListID || card.listId || list.id),
           title: card.Title || card.title || '',
+          // Handle the description field which could be a string or a pgtype.Text structure
+          description: typeof card.Description === 'string'
+            ? card.Description
+            : (card.Description?.String !== undefined
+              ? card.Description.String
+              : (card.description || '')),
           position: card.Position || card.position || 0
         }));
       } catch (error) {
@@ -222,6 +234,12 @@ export const boardService = {
         id: String(data.ID || data.id || Date.now()),
         listId: String(data.ListID || data.listId || listId),
         title: data.Title || data.title || title,
+        // Handle the description field which could be a string or a pgtype.Text structure
+        description: typeof data.Description === 'string'
+          ? data.Description
+          : (data.Description?.String !== undefined
+            ? data.Description.String
+            : (data.description || description)),
         position: data.Position || data.position || position
       };
 
@@ -242,6 +260,37 @@ export const boardService = {
       sendWS({ event: 'card_deleted', data: { cardId } });
     } catch (error) {
       console.error("Error deleting card:", error);
+      throw error;
+    }
+  },
+
+  /** Обновить карточку */
+  async updateCard(cardId: string, listId: string, updates: { title?: string; description?: string }): Promise<Card> {
+    try {
+      console.log(`Updating card ${cardId} in list ${listId}:`, updates);
+
+      const { data } = await api.put<any>(ENDPOINTS.card(listId, cardId), updates);
+
+      console.log("Raw updated card data from API:", data);
+
+      // Normalize the response to ensure it has the expected lowercase property names
+      const normalizedCard: Card = {
+        id: String(data.ID || data.id || cardId),
+        listId: String(data.ListID || data.listId || listId),
+        title: data.Title || data.title || updates.title || '',
+        // Handle the description field which could be a string or a pgtype.Text structure
+        description: typeof data.Description === 'string'
+          ? data.Description
+          : (data.Description?.String !== undefined
+            ? data.Description.String
+            : (data.description || updates.description || '')),
+        position: data.Position || data.position || 0
+      };
+
+      sendWS({ event: 'card_updated', data: normalizedCard });
+      return normalizedCard;
+    } catch (error) {
+      console.error("Error updating card:", error);
       throw error;
     }
   },

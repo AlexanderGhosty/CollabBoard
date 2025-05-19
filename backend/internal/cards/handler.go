@@ -75,6 +75,13 @@ func updateCardHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 
+		// Get the original card to retrieve its current values
+		originalCard, err := svc.q.GetCardByID(c.Request.Context(), int32(id))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve original card: " + err.Error()})
+			return
+		}
+
 		p := db.UpdateCardParams{
 			ID:    int32(id),
 			Title: req.Title,
@@ -82,7 +89,12 @@ func updateCardHandler(svc *Service) gin.HandlerFunc {
 				String: req.Description,
 				Valid:  true,
 			},
+			// Use the original card's values as defaults
+			Position: originalCard.Position,
+			ListID:   originalCard.ListID,
 		}
+
+		// Override with request values if provided
 		if req.Position != nil {
 			p.Position = *req.Position
 		}
@@ -118,10 +130,19 @@ func moveCardHandler(svc *Service) gin.HandlerFunc {
 
 		userID := int32(c.GetInt("userID"))
 
-		var dstListID int32
+		// Get the original card to retrieve its current list ID
+		originalCard, err := svc.q.GetCardByID(c.Request.Context(), int32(id))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve original card: " + err.Error()})
+			return
+		}
+
+		// Use the original list ID if not provided in the request
+		dstListID := originalCard.ListID
 		if req.ListID != nil {
 			dstListID = *req.ListID
 		}
+
 		card, err := svc.Move(c.Request.Context(), userID, int32(id), dstListID, req.Position)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

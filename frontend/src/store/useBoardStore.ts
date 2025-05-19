@@ -17,6 +17,7 @@ interface BoardState {
   moveList: (listId: string, position: number) => Promise<void>;
   deleteList: (listId: string) => Promise<void>;
   createCard: (listId: string, title: string, description?: string) => Promise<void>;
+  updateCard: (cardId: string, updates: { title?: string; description?: string }) => Promise<void>;
   duplicateCard: (cardId: string) => Promise<void>;
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
@@ -99,6 +100,7 @@ export const useBoardStore = create<BoardState>()(
 
         // Subscribe to WebSocket events
         subscribeWS('card_created', (d: any) => get().applyWS({ event: 'card_created', data: d }));
+        subscribeWS('card_updated', (d: any) => get().applyWS({ event: 'card_updated', data: d }));
         subscribeWS('card_moved', (d: any) => get().applyWS({ event: 'card_moved', data: d }));
         subscribeWS('card_deleted', (d: any) => get().applyWS({ event: 'card_deleted', data: d }));
         subscribeWS('list_created', (d: any) => get().applyWS({ event: 'list_created', data: d }));
@@ -243,6 +245,45 @@ export const useBoardStore = create<BoardState>()(
       }
     },
 
+    async updateCard(cardId, updates) {
+      const board = get().active;
+      if (!board) return;
+
+      // Find the list that contains the card
+      const list = board.lists.find((l: List) => l.cards.some((c: Card) => c.id === cardId));
+      if (!list) {
+        console.error(`Could not find list containing card ${cardId}`);
+        return;
+      }
+
+      try {
+        const updatedCard = await boardService.updateCard(cardId, list.id, updates);
+
+        // Update the card in the store
+        set((s) => {
+          if (!s.active) return;
+
+          // Find the list that contains the card
+          const listToUpdate = s.active.lists.find((l: List) => l.id === list.id);
+          if (!listToUpdate) return;
+
+          // Find the card index
+          const cardIndex = listToUpdate.cards.findIndex((c: Card) => c.id === cardId);
+          if (cardIndex === -1) return;
+
+          // Update the card
+          listToUpdate.cards[cardIndex] = {
+            ...listToUpdate.cards[cardIndex],
+            ...updatedCard
+          };
+
+          console.log(`Updated card ${cardId} in list ${list.id}`);
+        });
+      } catch (error) {
+        console.error(`Error updating card ${cardId}:`, error);
+      }
+    },
+
     async duplicateCard(cardId) {
       const card = await boardService.duplicateCard(cardId);
       set((s) => {
@@ -331,18 +372,50 @@ export const useBoardStore = create<BoardState>()(
 
         switch (event) {
           case 'card_created': {
-            const card = data as Card;
-            const list = board.lists.find((l: List) => l.id === card.listId);
+            // Handle the raw data from the backend which might have uppercase property names
+            // and pgtype.Text structure for description
+            const rawData = data as any;
 
-            if (list) {
-              // Check if a card with this ID already exists to prevent duplicates
-              const cardExists = list.cards.some(c => c.id === card.id);
-              if (!cardExists) {
-                list.cards.push(card);
-                console.log(`Added new card ${card.id} to list ${card.listId}`);
-              } else {
-                console.log(`Card ${card.id} already exists in list ${card.listId}, skipping`);
-              }
+            // Extract the required fields with fallbacks for different formats
+            const cardId = String(rawData.ID || rawData.id || '');
+            const listId = String(rawData.ListID || rawData.listId || '');
+
+            // Log the raw data for debugging
+            console.log("Received card_created event with data:", rawData);
+
+            if (!cardId || !listId) {
+              console.error("Received card_created event with missing ID or listId:", rawData);
+              break;
+            }
+
+            // Find the list for this card
+            const list = board.lists.find((l: List) => l.id === listId);
+            if (!list) {
+              console.error(`Could not find list ${listId} for new card ${cardId}`);
+              break;
+            }
+
+            // Create a normalized card object with proper property handling
+            const normalizedCard: Card = {
+              id: cardId,
+              listId: listId,
+              title: rawData.Title || rawData.title || '',
+              // Handle the description field which could be a string or a pgtype.Text structure
+              description: typeof rawData.Description === 'string'
+                ? rawData.Description
+                : (rawData.Description?.String !== undefined
+                  ? rawData.Description.String
+                  : (rawData.description || '')),
+              position: rawData.Position || rawData.position || 0
+            };
+
+            // Check if a card with this ID already exists to prevent duplicates
+            const cardExists = list.cards.some(c => c.id === cardId);
+            if (!cardExists) {
+              list.cards.push(normalizedCard);
+              console.log(`Added new card ${cardId} to list ${listId}`);
+            } else {
+              console.log(`Card ${cardId} already exists in list ${listId}, skipping`);
             }
             break;
           }
@@ -451,6 +524,61 @@ export const useBoardStore = create<BoardState>()(
             }
             break;
           }
+          case 'card_updated': {
+            // Handle the raw data from the backend which might have uppercase property names
+            // and pgtype.Text structure for description
+            const rawData = data as any;
+
+            // Extract the required fields with fallbacks for different formats
+            const cardId = String(rawData.ID || rawData.id || '');
+            const listId = String(rawData.ListID || rawData.listId || '');
+
+            // Log the raw data for debugging
+            console.log("Received card_updated event with data:", rawData);
+
+            if (!cardId || !listId) {
+              console.error("Received card_updated event with missing ID or listId:", rawData);
+              break;
+            }
+
+            // Find the list containing the card
+            const list = board.lists.find((l: List) => l.id === listId);
+            if (!list) {
+              console.error(`Could not find list ${listId} for updated card ${cardId}`);
+              break;
+            }
+
+            // Find the card index
+            const cardIndex = list.cards.findIndex((c: Card) => c.id === cardId);
+            if (cardIndex === -1) {
+              console.error(`Could not find card ${cardId} in list ${list.id}`);
+              break;
+            }
+
+            // Create a normalized card object with proper property handling
+            const normalizedCard: Card = {
+              id: cardId,
+              listId: listId,
+              title: rawData.Title || rawData.title || list.cards[cardIndex].title,
+              // Handle the description field which could be a string or a pgtype.Text structure
+              description: typeof rawData.Description === 'string'
+                ? rawData.Description
+                : (rawData.Description?.String !== undefined
+                  ? rawData.Description.String
+                  : (rawData.description || list.cards[cardIndex].description || '')),
+              position: rawData.Position || rawData.position || list.cards[cardIndex].position
+            };
+
+            // Update the card
+            list.cards[cardIndex] = {
+              ...list.cards[cardIndex],
+              ...normalizedCard
+            };
+
+            console.log(`Updated card ${cardId} in list ${list.id} via WebSocket with:`, normalizedCard);
+            break;
+          }
+
           case 'card_deleted': {
             // Handle both formats: { cardId } or { id }
             const cardId = (data as any).cardId || (data as any).id;
