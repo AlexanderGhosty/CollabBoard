@@ -21,10 +21,10 @@ export default function BoardTemplate() {
 
     // Get the list being moved
     const movingList = board.lists[oldIdx];
-    
+
     // Calculate the new position
     let newPosition: number;
-    
+
     if (newIdx === 0) {
       // Moving to the beginning
       newPosition = board.lists[0].position / 2;
@@ -37,21 +37,27 @@ export default function BoardTemplate() {
       const nextPosition = board.lists[newIdx].position;
       newPosition = (prevPosition + nextPosition) / 2;
     }
-    
+
     // Update the UI optimistically
     store.setState((s) => {
       s.active!.lists = arrayMove(board.lists, oldIdx, newIdx);
     });
-    
+
     // Call the API to persist the change
     store.moveList(movingList.id, newPosition);
   };
 
+  // Ensure all lists have valid IDs for keys
+  const listsWithValidIds = board.lists.filter(list => list && list.id);
+
+  // Extract IDs for SortableContext
+  const listIds = listsWithValidIds.map(list => list.id);
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={board.lists.map((l) => l.id)} strategy={horizontalListSortingStrategy}>
+      <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {board.lists.map((list) => (
+          {listsWithValidIds.map((list) => (
             <ListColumn key={list.id} list={list} />
           ))}
         </div>

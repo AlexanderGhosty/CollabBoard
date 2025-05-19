@@ -26,14 +26,29 @@ export const boardService = {
   /** Получить все доски текущего пользователя */
   async getBoards(): Promise<Board[]> {
     const { data } = await api.get<any[]>(ENDPOINTS.boards);
-    // Ensure all IDs are strings
-    return data.map(board => ({
-      ...board,
-      id: String(board.id),
-      boardId: board.boardId ? String(board.boardId) : undefined,
-      ownerId: board.ownerId ? String(board.ownerId) : undefined,
-      lists: board.lists || []
-    }));
+    console.log("Raw board data from API:", data); // Debug log
+
+    // Ensure all IDs are strings and handle the BoardID field from backend
+    return data.map(board => {
+      // The backend returns BoardID instead of id
+      const boardId = board.BoardID || board.boardId || board.id;
+      // The backend returns Name or name
+      const boardName = board.Name || board.name;
+
+      if (!boardId) {
+        console.error("Board without ID received:", board);
+      }
+
+      return {
+        ...board,
+        // Use BoardID as the primary id field if available
+        id: boardId ? String(boardId) : undefined,
+        // Ensure name is properly set
+        name: boardName,
+        ownerId: board.OwnerID ? String(board.OwnerID) : (board.ownerId ? String(board.ownerId) : undefined),
+        lists: board.lists || []
+      };
+    }).filter(board => board.id); // Filter out boards without IDs
   },
 
   /** Получить доску по ID */
@@ -87,12 +102,23 @@ export const boardService = {
 
   /** Создать список */
   async createList(boardId: string, title: string, position: number): Promise<List> {
-    const { data } = await api.post<List>(ENDPOINTS.lists(boardId), {
+    const { data } = await api.post<any>(ENDPOINTS.lists(boardId), {
       title,
       position
     });
-    sendWS({ event: 'list_created', data });
-    return data;
+
+    // Ensure the list has the correct structure with a cards array
+    const list: List = {
+      ...data,
+      id: String(data.id),
+      boardId: String(data.board_id || data.boardId || boardId),
+      title: data.title,
+      position: data.position,
+      cards: []
+    };
+
+    sendWS({ event: 'list_created', data: list });
+    return list;
   },
 
   /** Переместить список (изменить порядок) */

@@ -46,6 +46,12 @@ export const useBoardStore = create<BoardState>()(
 
     /** Загружаем доску и подключаем WebSocket‑канал */
     async loadBoard(id) {
+      // Validate the board ID
+      if (!id) {
+        console.error("Attempted to load board with undefined ID");
+        return;
+      }
+
       // Try to find board in the cache first, otherwise fetch it from the API
       let board = get().boards.find((b) => b.id === id);
 
@@ -59,6 +65,12 @@ export const useBoardStore = create<BoardState>()(
       }
 
       if (!board) return;
+
+      // Ensure the board has a valid ID
+      if (!board.id) {
+        console.error("Board loaded without a valid ID:", board);
+        return;
+      }
 
       set((s) => {
         s.active = board;
@@ -89,6 +101,17 @@ export const useBoardStore = create<BoardState>()(
         : 1;
 
       const list = await boardService.createList(board.id, title, position);
+
+      // Ensure the list has a cards array and valid ID
+      if (!list.cards) {
+        list.cards = [];
+      }
+
+      // Validate that the list has an ID
+      if (!list.id) {
+        console.error("Created list without ID:", list);
+        return;
+      }
 
       set((s) => {
         if (s.active) {
@@ -217,7 +240,25 @@ export const useBoardStore = create<BoardState>()(
             break;
           }
           case 'list_created': {
-            board.lists.push(data as List);
+            const newList = data as List;
+
+            // Ensure the list has a cards array
+            if (!newList.cards) {
+              newList.cards = [];
+            }
+
+            // Validate that the list has an ID
+            if (!newList.id) {
+              console.error("Received list without ID via WebSocket:", newList);
+              break;
+            }
+
+            // Convert ID to string if it's a number
+            if (typeof newList.id === 'number') {
+              newList.id = String(newList.id);
+            }
+
+            board.lists.push(newList);
             break;
           }
           case 'list_moved': {

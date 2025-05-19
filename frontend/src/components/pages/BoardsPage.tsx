@@ -45,19 +45,26 @@ export default function BoardsPage() {
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {boards && boards.length > 0 ? (
-          boards.map((b) => {
-            // Ensure board ID is a string
-            const boardId = String(b.id);
-            return (
-              <Link
-                key={boardId}
-                to={`/board/${boardId}`}
-                className="rounded-2xl border border-zinc-200 bg-white p-5 shadow transition-colors hover:bg-zinc-50"
-              >
-                <h2 className="text-xl font-semibold text-zinc-800">{b.name}</h2>
-              </Link>
-            );
-          })
+          boards
+            .filter(b => b && b.id) // Filter out boards without IDs
+            .map((b) => {
+              // Ensure board ID is a string and not undefined
+              const boardId = b.id ? String(b.id) : null;
+              if (!boardId) {
+                console.error("Board with undefined ID:", b);
+                return null; // Skip this board
+              }
+              return (
+                <Link
+                  key={boardId}
+                  to={`/board/${boardId}`}
+                  className="rounded-2xl border border-zinc-200 bg-white p-5 shadow transition-colors hover:bg-zinc-50"
+                >
+                  <h2 className="text-xl font-semibold text-zinc-800">{b.name}</h2>
+                </Link>
+              );
+            })
+            .filter(Boolean) // Remove null entries
         ) : (
           <div className="col-span-full text-center py-8 text-zinc-500">
             У вас пока нет досок. Создайте первую доску, используя форму выше.
