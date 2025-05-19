@@ -15,6 +15,7 @@ interface BoardState {
   createBoard: (name: string) => Promise<void>;
   createList: (title: string) => Promise<void>;
   moveList: (listId: string, position: number) => Promise<void>;
+  deleteList: (listId: string) => Promise<void>;
   createCard: (listId: string, title: string, description?: string) => Promise<void>;
   duplicateCard: (cardId: string) => Promise<void>;
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
@@ -99,8 +100,10 @@ export const useBoardStore = create<BoardState>()(
         // Subscribe to WebSocket events
         subscribeWS('card_created', (d: any) => get().applyWS({ event: 'card_created', data: d }));
         subscribeWS('card_moved', (d: any) => get().applyWS({ event: 'card_moved', data: d }));
+        subscribeWS('card_deleted', (d: any) => get().applyWS({ event: 'card_deleted', data: d }));
         subscribeWS('list_created', (d: any) => get().applyWS({ event: 'list_created', data: d }));
         subscribeWS('list_moved', (d: any) => get().applyWS({ event: 'list_moved', data: d }));
+        subscribeWS('list_deleted', (d: any) => get().applyWS({ event: 'list_deleted', data: d }));
 
         console.log(`Board ${id} loaded successfully with ${board.lists.length} lists`);
       } catch (error) {
@@ -267,6 +270,28 @@ export const useBoardStore = create<BoardState>()(
       });
     },
 
+    async deleteList(listId) {
+      const board = get().active;
+      if (!board) return;
+
+      try {
+        await boardService.deleteList(listId);
+
+        // Update the UI after successful deletion
+        set((s) => {
+          if (!s.active) return;
+
+          const listIndex = s.active.lists.findIndex((l: List) => l.id === listId);
+          if (listIndex !== -1) {
+            console.log(`Removing list ${listId} from board ${s.active.id}`);
+            s.active.lists.splice(listIndex, 1);
+          }
+        });
+      } catch (error) {
+        console.error(`Error deleting list ${listId}:`, error);
+      }
+    },
+
     async deleteCard(cardId) {
       const board = get().active;
       if (!board) return;
@@ -322,18 +347,55 @@ export const useBoardStore = create<BoardState>()(
             break;
           }
           case 'card_moved': {
-            const { cardId, toListId, toPos } = data as {
-              cardId: string;
-              toListId: string;
-              toPos: number;
-            };
+            // Handle both formats:
+            // 1. { cardId, toListId, toPos } from frontend-initiated moves
+            // 2. { ID, ListID, Position } from backend-initiated moves
+            const rawData = data as any;
+
+            // Extract card ID (handle both formats)
+            const cardId = String(rawData.cardId || rawData.ID || '');
+
+            // Extract destination list ID (handle both formats)
+            const toListId = String(rawData.toListId || rawData.ListID || '');
+
+            // Extract new position (handle both formats)
+            const toPos = rawData.toPos || rawData.Position || 0;
+
+            console.log(`WebSocket card_moved: Card ${cardId} to list ${toListId} at position ${toPos}`);
+
+            if (!cardId || !toListId) {
+              console.error("Received card_moved event with missing data:", rawData);
+              break;
+            }
+
+            // Find source list (the list that currently contains the card)
             const from = board.lists.find((l: List) => l.cards.some((c: Card) => c.id === cardId));
+
+            // Find destination list
             const to = board.lists.find((l: List) => l.id === toListId);
-            if (!from || !to) break;
+
+            if (!from || !to) {
+              console.error(`Could not find source or destination list for card ${cardId}`);
+              break;
+            }
+
+            // Find the card in the source list
             const idx = from.cards.findIndex((c: Card) => c.id === cardId);
+            if (idx === -1) {
+              console.error(`Could not find card ${cardId} in source list ${from.id}`);
+              break;
+            }
+
+            // Remove the card from the source list
             const [card] = from.cards.splice(idx, 1);
+
+            // Update the card's list ID
             card.listId = toListId;
+
+            // Insert the card at the new position in the destination list
             to.cards.splice(toPos - 1, 0, card);
+
+            console.log(`Card ${cardId} moved from list ${from.id} to list ${to.id} at position ${toPos}`);
             break;
           }
           case 'list_created': {
@@ -390,11 +452,35 @@ export const useBoardStore = create<BoardState>()(
             break;
           }
           case 'card_deleted': {
-            const { cardId } = data as { cardId: string };
+            // Handle both formats: { cardId } or { id }
+            const cardId = (data as any).cardId || (data as any).id;
+            if (!cardId) {
+              console.error("Received card_deleted event without cardId:", data);
+              break;
+            }
+
             board.lists.forEach((l: List) => {
-              const idx = l.cards.findIndex((c: Card) => c.id === cardId);
-              if (idx !== -1) l.cards.splice(idx, 1);
+              const idx = l.cards.findIndex((c: Card) => c.id === String(cardId));
+              if (idx !== -1) {
+                console.log(`Removing card ${cardId} from list ${l.id} via WebSocket`);
+                l.cards.splice(idx, 1);
+              }
             });
+            break;
+          }
+          case 'list_deleted': {
+            // Handle both formats: { listId } or { id }
+            const listId = (data as any).listId || (data as any).id;
+            if (!listId) {
+              console.error("Received list_deleted event without listId:", data);
+              break;
+            }
+
+            const listIndex = board.lists.findIndex((l: List) => l.id === String(listId));
+            if (listIndex !== -1) {
+              console.log(`Removing list ${listId} from board ${board.id} via WebSocket`);
+              board.lists.splice(listIndex, 1);
+            }
             break;
           }
           case 'board_created':
@@ -402,7 +488,7 @@ export const useBoardStore = create<BoardState>()(
             // These events are handled at the board list level
             break;
           }
-          // можно расширять другими событиями (list_moved …)
+          // можно расширять другими событиями
         }
       });
     },

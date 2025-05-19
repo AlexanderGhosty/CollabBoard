@@ -1,5 +1,6 @@
 import { api } from '@/services/api';
 import { sendWS } from '@/services/websocket';
+import { useBoardStore } from '@/store/useBoardStore';
 
 /** Типы сущностей (минимально‑необходимые) */
 export type Card  = { id: string; listId: string; title: string; position: number };
@@ -146,15 +147,8 @@ export const boardService = {
 
       console.log("Card moved successfully");
 
-      // Send WebSocket event to notify other clients
-      sendWS({
-        event: 'card_moved',
-        data: {
-          cardId,
-          toListId,
-          toPos
-        }
-      });
+      // No need to send WebSocket event here anymore
+      // The backend will broadcast the event to all clients including this one
     } catch (error) {
       console.error("Error moving card:", error);
       throw error;
@@ -248,6 +242,38 @@ export const boardService = {
       sendWS({ event: 'card_deleted', data: { cardId } });
     } catch (error) {
       console.error("Error deleting card:", error);
+      throw error;
+    }
+  },
+
+  /** Удалить список */
+  async deleteList(listId: string): Promise<void> {
+    try {
+      console.log(`Deleting list ${listId}`);
+
+      // Find the board ID for this list
+      const board = useBoardStore.getState().active;
+      if (!board) {
+        throw new Error("No active board found");
+      }
+
+      const list = board.lists.find(l => l.id === listId);
+      if (!list) {
+        throw new Error(`List with ID ${listId} not found in active board`);
+      }
+
+      const boardId = list.boardId;
+      console.log(`Found list ${listId} in board ${boardId}`);
+
+      // Use the correct endpoint format: /boards/:boardId/lists/:id
+      const deleteEndpoint = `${ENDPOINTS.lists(boardId)}/${listId}`;
+      console.log(`Using delete endpoint: ${deleteEndpoint}`);
+
+      await api.delete(deleteEndpoint);
+      console.log("List deleted successfully");
+      sendWS({ event: 'list_deleted', data: { listId } });
+    } catch (error) {
+      console.error("Error deleting list:", error);
       throw error;
     }
   },

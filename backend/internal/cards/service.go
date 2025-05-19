@@ -133,9 +133,14 @@ func (s *Service) Move(ctx context.Context, userID, cardID, dstListID, newPos in
 	if err != nil {
 		return db.Card{}, err
 	}
+	// Send WebSocket event in the format expected by the frontend
 	s.hub.Broadcast(srcList.BoardID, websocket.EventMessage{
 		Event: "card_moved",
-		Data:  updated,
+		Data: map[string]any{
+			"cardId":   updated.ID,
+			"toListId": updated.ListID,
+			"toPos":    updated.Position,
+		},
 	})
 	return updated, nil
 }
