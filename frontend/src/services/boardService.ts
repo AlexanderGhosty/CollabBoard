@@ -17,7 +17,7 @@ const ENDPOINTS = {
   lists:  (boardId: string)   => `/boards/${boardId}/lists`,
   list:   (listId: string)    => `/lists/${listId}`,
   moveList: (listId: string)  => `/lists/${listId}/move`,
-  cards:  (listId: string)    => `/lists/${listId}/cards`,
+  cards:  (listId: string | number) => `/lists/${listId}/cards`,
   move:   (cardId: string)    => `/cards/${cardId}/move`,
   dup:    (cardId: string)    => `/cards/${cardId}/duplicate`,
 };
@@ -107,36 +107,75 @@ export const boardService = {
       position
     });
 
+    console.log("Raw list data from API:", data); // Debug log
+
     // Ensure the list has the correct structure with a cards array
     const list: List = {
       ...data,
-      id: String(data.id),
-      boardId: String(data.board_id || data.boardId || boardId),
-      title: data.title,
-      position: data.position,
+      // Handle both uppercase and lowercase property names
+      id: String(data.ID || data.id || Date.now()),
+      boardId: String(data.BoardID || data.board_id || data.boardId || boardId),
+      title: data.Title || data.title || title,
+      position: data.Position || data.position || position,
       cards: []
     };
 
-    sendWS({ event: 'list_created', data: list });
+    // Add a flag to the WebSocket data to indicate this was created locally
+    // This could be used by other clients to handle the event differently
+    const wsData = {
+      ...list,
+      _locallyCreated: true
+    };
+
+    sendWS({ event: 'list_created', data: wsData });
     return list;
   },
 
   /** Переместить список (изменить порядок) */
   async moveList(listId: string, position: number): Promise<List> {
-    const { data } = await api.post<List>(ENDPOINTS.moveList(listId), { position });
-    sendWS({ event: 'list_moved', data });
-    return data;
+    const { data } = await api.post<any>(ENDPOINTS.moveList(listId), { position });
+
+    // Normalize the response to ensure it has the expected lowercase property names
+    const normalizedList: List = {
+      id: String(data.ID || data.id || listId),
+      boardId: String(data.BoardID || data.boardId || data.board_id || ''),
+      title: data.Title || data.title || '',
+      position: data.Position || data.position || position,
+      cards: data.cards || []
+    };
+
+    sendWS({ event: 'list_moved', data: normalizedList });
+    return normalizedList;
   },
 
   /** Создать карточку */
   async createCard(listId: string, title: string, description: string = '', position: number): Promise<Card> {
-    const { data } = await api.post<Card>(ENDPOINTS.cards(listId), {
-      title,
-      description,
-      position
-    });
-    sendWS({ event: 'card_created', data });
-    return data;
+    // Log the request parameters for debugging
+    console.log("Creating card with params:", { listId, title, description, position });
+
+    try {
+      const { data } = await api.post<any>(ENDPOINTS.cards(listId), {
+        title,
+        description,
+        position
+      });
+
+      console.log("Raw card data from API:", data);
+
+      // Normalize the response to ensure it has the expected lowercase property names
+      const normalizedCard: Card = {
+        id: String(data.ID || data.id || Date.now()),
+        listId: String(data.ListID || data.listId || listId),
+        title: data.Title || data.title || title,
+        position: data.Position || data.position || position
+      };
+
+      sendWS({ event: 'card_created', data: normalizedCard });
+      return normalizedCard;
+    } catch (error) {
+      console.error("Error creating card:", error);
+      throw error;
+    }
   },
 
   /** Удалить карточку */

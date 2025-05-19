@@ -101,6 +101,7 @@ export const useBoardStore = create<BoardState>()(
         : 1;
 
       const list = await boardService.createList(board.id, title, position);
+      console.log("List created via API:", list);
 
       // Ensure the list has a cards array and valid ID
       if (!list.cards) {
@@ -115,7 +116,14 @@ export const useBoardStore = create<BoardState>()(
 
       set((s) => {
         if (s.active) {
-          s.active.lists.push(list);
+          // Check if a list with this ID already exists (extra safety check)
+          const listExists = s.active.lists.some(l => l.id === list.id);
+          if (!listExists) {
+            s.active.lists.push(list);
+            console.log(`Added new list ${list.id} to board ${board.id} from API response`);
+          } else {
+            console.log(`List ${list.id} already exists in board ${board.id}, not adding duplicate`);
+          }
         }
       });
     },
@@ -156,20 +164,56 @@ export const useBoardStore = create<BoardState>()(
       const board = get().active;
       if (!board) return;
 
-      const list = board.lists.find((l: List) => l.id === listId);
-      if (!list) return;
+      console.log(`Looking for list with ID: ${listId} in board lists:`, board.lists);
+
+      // Find the list by ID, handling both string and number comparisons
+      const list = board.lists.find((l: List) =>
+        l.id === listId ||
+        String(l.id) === String(listId) ||
+        (l.id && parseInt(l.id) === parseInt(listId))
+      );
+
+      if (!list) {
+        console.error(`List with ID ${listId} not found in board ${board.id}`);
+        return;
+      }
+
+      console.log(`Found list:`, list);
 
       // Calculate position for the new card (at the end)
       const position = list.cards.length > 0
         ? Math.max(...list.cards.map((card: Card) => card.position)) + 1
         : 1;
 
-      const card = await boardService.createCard(listId, title, description, position);
+      try {
+        // Ensure listId is passed as a string
+        const card = await boardService.createCard(String(list.id), title, description, position);
+        console.log(`Card created successfully:`, card);
 
-      set((s) => {
-        const list = s.active?.lists.find((l: List) => l.id === listId);
-        if (list) list.cards.push(card);
-      });
+        set((s) => {
+          if (!s.active) return;
+
+          // Find the list again using the same flexible matching
+          const updatedList = s.active.lists.find((l: List) =>
+            l.id === listId ||
+            String(l.id) === String(listId) ||
+            (l.id && parseInt(l.id) === parseInt(listId))
+          );
+
+          if (updatedList) {
+            // Check if card already exists to prevent duplicates
+            const cardExists = updatedList.cards.some(c => c.id === card.id);
+            if (!cardExists) {
+              updatedList.cards.push(card);
+              console.log(`Added card ${card.id} to list ${updatedList.id}`);
+            } else {
+              console.log(`Card ${card.id} already exists in list ${updatedList.id}, not adding duplicate`);
+            }
+          }
+        });
+      } catch (error) {
+        console.error(`Error creating card in list ${listId}:`, error);
+      }
     },
 
     async duplicateCard(cardId) {
@@ -221,7 +265,18 @@ export const useBoardStore = create<BoardState>()(
         switch (event) {
           case 'card_created': {
             const card = data as Card;
-            board.lists.find((l: List) => l.id === card.listId)?.cards.push(card);
+            const list = board.lists.find((l: List) => l.id === card.listId);
+
+            if (list) {
+              // Check if a card with this ID already exists to prevent duplicates
+              const cardExists = list.cards.some(c => c.id === card.id);
+              if (!cardExists) {
+                list.cards.push(card);
+                console.log(`Added new card ${card.id} to list ${card.listId}`);
+              } else {
+                console.log(`Card ${card.id} already exists in list ${card.listId}, skipping`);
+              }
+            }
             break;
           }
           case 'card_moved': {
@@ -240,35 +295,55 @@ export const useBoardStore = create<BoardState>()(
             break;
           }
           case 'list_created': {
-            const newList = data as List;
+            const rawList = data as any;
 
-            // Ensure the list has a cards array
-            if (!newList.cards) {
-              newList.cards = [];
+            // Map uppercase property names from backend to lowercase expected by frontend
+            const newList: List = {
+              // Use ID, id, or generate a fallback
+              id: String(rawList.ID || rawList.id || Date.now()),
+              // Use BoardID, boardId, or active board's id
+              boardId: String(rawList.BoardID || rawList.boardId || rawList.board_id || board.id),
+              // Use Title, title
+              title: rawList.Title || rawList.title || '',
+              // Use Position, position
+              position: rawList.Position || rawList.position || 0,
+              // Initialize empty cards array
+              cards: []
+            };
+
+            console.log("Mapped list from WebSocket:", newList);
+
+            // Check if a list with this ID already exists to prevent duplicates
+            const listExists = board.lists.some(list => list.id === newList.id);
+            if (!listExists) {
+              board.lists.push(newList);
+              console.log("Added new list from WebSocket event");
+            } else {
+              console.log("List already exists, skipping WebSocket event");
             }
-
-            // Validate that the list has an ID
-            if (!newList.id) {
-              console.error("Received list without ID via WebSocket:", newList);
-              break;
-            }
-
-            // Convert ID to string if it's a number
-            if (typeof newList.id === 'number') {
-              newList.id = String(newList.id);
-            }
-
-            board.lists.push(newList);
             break;
           }
           case 'list_moved': {
-            const movedList = data as List;
+            const rawList = data as any;
+
+            // Map uppercase property names from backend to lowercase expected by frontend
+            const listId = String(rawList.ID || rawList.id || '');
+            const position = rawList.Position || rawList.position || 0;
+
+            if (!listId) {
+              console.error("Received moved list without ID via WebSocket:", rawList);
+              break;
+            }
+
             // Find and update the list with the new position
-            const listIndex = board.lists.findIndex((l: List) => l.id === movedList.id);
+            const listIndex = board.lists.findIndex((l: List) => l.id === listId);
             if (listIndex !== -1) {
-              board.lists[listIndex].position = movedList.position;
+              console.log(`Updating position of list ${listId} to ${position}`);
+              board.lists[listIndex].position = position;
               // Sort lists by position
               board.lists.sort((a: List, b: List) => a.position - b.position);
+            } else {
+              console.log(`List with ID ${listId} not found, cannot update position`);
             }
             break;
           }
