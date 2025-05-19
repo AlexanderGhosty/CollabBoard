@@ -52,36 +52,60 @@ export const useBoardStore = create<BoardState>()(
         return;
       }
 
-      // Try to find board in the cache first, otherwise fetch it from the API
-      let board = get().boards.find((b) => b.id === id);
+      console.log(`Loading board with ID: ${id}`);
 
-      if (!board) {
-        try {
-          board = await boardService.getBoardById(id);
-        } catch (error) {
-          console.error("Failed to load board:", error);
+      try {
+        // Always fetch the board from the API to ensure we have the latest data
+        // This is important for data persistence between page refreshes
+        const board = await boardService.getBoardById(id);
+
+        console.log("Loaded board data:", board);
+
+        // Ensure the board has a valid ID
+        if (!board || !board.id) {
+          console.error("Board loaded without a valid ID:", board);
           return;
         }
+
+        // Sort lists by position
+        if (board.lists) {
+          board.lists.sort((a: List, b: List) => a.position - b.position);
+
+          // Sort cards within each list by position
+          board.lists.forEach((list: List) => {
+            if (list.cards) {
+              list.cards.sort((a: Card, b: Card) => a.position - b.position);
+            }
+          });
+        }
+
+        // Update the store with the loaded board
+        set((s) => {
+          s.active = board;
+
+          // Also update the board in the boards array if it exists
+          const boardIndex = s.boards.findIndex((b) => b.id === id);
+          if (boardIndex !== -1) {
+            s.boards[boardIndex] = board;
+          } else {
+            // Add the board to the boards array if it doesn't exist
+            s.boards.push(board);
+          }
+        });
+
+        // Connect to WebSocket for real-time updates
+        wsClient.connect(id);
+
+        // Subscribe to WebSocket events
+        subscribeWS('card_created', (d: any) => get().applyWS({ event: 'card_created', data: d }));
+        subscribeWS('card_moved', (d: any) => get().applyWS({ event: 'card_moved', data: d }));
+        subscribeWS('list_created', (d: any) => get().applyWS({ event: 'list_created', data: d }));
+        subscribeWS('list_moved', (d: any) => get().applyWS({ event: 'list_moved', data: d }));
+
+        console.log(`Board ${id} loaded successfully with ${board.lists.length} lists`);
+      } catch (error) {
+        console.error("Failed to load board:", error);
       }
-
-      if (!board) return;
-
-      // Ensure the board has a valid ID
-      if (!board.id) {
-        console.error("Board loaded without a valid ID:", board);
-        return;
-      }
-
-      set((s) => {
-        s.active = board;
-      });
-
-      wsClient.connect(id);
-
-      subscribeWS('card_created', (d: any) => get().applyWS({ event: 'card_created', data: d }));
-      subscribeWS('card_moved', (d: any) => get().applyWS({ event: 'card_moved', data: d }));
-      subscribeWS('list_created', (d: any) => get().applyWS({ event: 'list_created', data: d }));
-      subscribeWS('list_moved', (d: any) => get().applyWS({ event: 'list_moved', data: d }));
     },
 
     async createBoard(name) {
@@ -244,16 +268,34 @@ export const useBoardStore = create<BoardState>()(
     },
 
     async deleteCard(cardId) {
-      await boardService.deleteCard(cardId);
+      const board = get().active;
+      if (!board) return;
 
-      set((s) => {
-        const board = s.active;
-        if (!board) return;
-        board.lists.forEach((l: List) => {
-          const idx = l.cards.findIndex((c: Card) => c.id === cardId);
-          if (idx !== -1) l.cards.splice(idx, 1);
+      // Find the list that contains the card
+      const list = board.lists.find((l: List) => l.cards.some((c: Card) => c.id === cardId));
+      if (!list) {
+        console.error(`Could not find list containing card ${cardId}`);
+        return;
+      }
+
+      try {
+        await boardService.deleteCard(cardId, list.id);
+
+        // Update the UI after successful deletion
+        set((s) => {
+          if (!s.active) return;
+
+          s.active.lists.forEach((l: List) => {
+            const idx = l.cards.findIndex((c: Card) => c.id === cardId);
+            if (idx !== -1) {
+              console.log(`Removing card ${cardId} from list ${l.id}`);
+              l.cards.splice(idx, 1);
+            }
+          });
         });
-      });
+      } catch (error) {
+        console.error(`Error deleting card ${cardId}:`, error);
+      }
     },
 
     /* ────────────── WebSocket incoming ───────────── */

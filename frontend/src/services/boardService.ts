@@ -18,7 +18,8 @@ const ENDPOINTS = {
   list:   (listId: string)    => `/lists/${listId}`,
   moveList: (listId: string)  => `/lists/${listId}/move`,
   cards:  (listId: string | number) => `/lists/${listId}/cards`,
-  move:   (cardId: string)    => `/cards/${cardId}/move`,
+  card:   (listId: string, cardId: string) => `/lists/${listId}/cards/${cardId}`,
+  moveCard: (listId: string, cardId: string) => `/lists/${listId}/cards/${cardId}/move`,
   dup:    (cardId: string)    => `/cards/${cardId}/duplicate`,
 };
 
@@ -53,22 +54,57 @@ export const boardService = {
 
   /** Получить доску по ID */
   async getBoardById(id: string): Promise<Board> {
-    const { data } = await api.get<any>(ENDPOINTS.board(id));
-    // Ensure all IDs are strings
-    return {
-      ...data,
-      id: String(data.id),
-      ownerId: data.ownerId ? String(data.ownerId) : undefined,
-      lists: (data.lists || []).map((list: any) => ({
+    console.log(`Fetching board with ID: ${id}`);
+
+    // Step 1: Fetch the board data
+    const { data: boardData } = await api.get<any>(ENDPOINTS.board(id));
+    console.log("Raw board data:", boardData);
+
+    // Step 2: Fetch the lists for this board
+    const { data: listsData } = await api.get<any[]>(ENDPOINTS.lists(id));
+    console.log("Raw lists data:", listsData);
+
+    // Process lists data - handle both uppercase and lowercase property names
+    const processedLists = (listsData || []).map((list: any) => {
+      const listId = String(list.ID || list.id);
+      return {
         ...list,
-        id: String(list.id),
-        boardId: String(list.boardId),
-        cards: (list.cards || []).map((card: any) => ({
+        id: listId,
+        boardId: String(list.BoardID || list.boardId || list.board_id || id),
+        title: list.Title || list.title || '',
+        position: list.Position || list.position || 0,
+        cards: [] // Initialize empty cards array for each list
+      };
+    });
+
+    // Step 3: For each list, fetch its cards
+    for (const list of processedLists) {
+      try {
+        const { data: cardsData } = await api.get<any[]>(`/lists/${list.id}/cards`);
+        console.log(`Raw cards data for list ${list.id}:`, cardsData);
+
+        // Process cards data - handle both uppercase and lowercase property names
+        list.cards = (cardsData || []).map((card: any) => ({
           ...card,
-          id: String(card.id),
-          listId: String(card.listId)
-        }))
-      }))
+          id: String(card.ID || card.id),
+          listId: String(card.ListID || card.listId || list.id),
+          title: card.Title || card.title || '',
+          position: card.Position || card.position || 0
+        }));
+      } catch (error) {
+        console.error(`Error fetching cards for list ${list.id}:`, error);
+        list.cards = []; // Ensure cards is at least an empty array if fetch fails
+      }
+    }
+
+    // Step 4: Return the complete board with lists and cards
+    return {
+      ...boardData,
+      id: String(boardData.ID || boardData.id),
+      name: boardData.Name || boardData.name,
+      ownerId: boardData.OwnerID ? String(boardData.OwnerID) :
+               (boardData.ownerId ? String(boardData.ownerId) : undefined),
+      lists: processedLists
     };
   },
 
@@ -96,8 +132,33 @@ export const boardService = {
 
   /** Переместить карточку (между списками или внутри списка) */
   async moveCard(cardId: string, toListId: string, toPos: number): Promise<void> {
-    await api.post(ENDPOINTS.move(cardId), { listId: toListId, position: toPos });
-    sendWS({ event: 'card_moved', data: { cardId, toListId, toPos } });
+    console.log(`Moving card ${cardId} to list ${toListId} at position ${toPos}`);
+
+    try {
+      // Convert listId to number for the backend
+      const listIdNum = parseInt(toListId);
+
+      // Use PUT method as expected by the backend
+      await api.put(ENDPOINTS.moveCard(toListId, cardId), {
+        listId: listIdNum,
+        position: toPos
+      });
+
+      console.log("Card moved successfully");
+
+      // Send WebSocket event to notify other clients
+      sendWS({
+        event: 'card_moved',
+        data: {
+          cardId,
+          toListId,
+          toPos
+        }
+      });
+    } catch (error) {
+      console.error("Error moving card:", error);
+      throw error;
+    }
   },
 
   /** Создать список */
@@ -179,8 +240,15 @@ export const boardService = {
   },
 
   /** Удалить карточку */
-  async deleteCard(cardId: string): Promise<void> {
-    await api.delete(ENDPOINTS.cards(cardId));
-    sendWS({ event: 'card_deleted', data: { cardId } });
+  async deleteCard(cardId: string, listId: string): Promise<void> {
+    try {
+      console.log(`Deleting card ${cardId} from list ${listId}`);
+      await api.delete(ENDPOINTS.card(listId, cardId));
+      console.log("Card deleted successfully");
+      sendWS({ event: 'card_deleted', data: { cardId } });
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      throw error;
+    }
   },
 };
