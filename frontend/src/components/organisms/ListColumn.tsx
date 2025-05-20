@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { List } from '@/services/boardService';
 import CardItem from '@/components/molecules/CardItem';
 import ListHeader from '@/components/molecules/ListHeader';
@@ -14,6 +14,19 @@ interface Props {
 export default function ListColumn({ list }: Props) {
   // Use a specific selector for the createCard function instead of the entire store
   const createCard = useBoardStore(state => state.createCard);
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Define the callback for adding a card before using it in JSX
   const handleAddCard = useCallback(() => {
@@ -43,7 +56,7 @@ export default function ListColumn({ list }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      className="w-72 shrink-0 rounded-2xl bg-zinc-100 p-3"
+      className="w-72 shrink-0 rounded-2xl bg-zinc-100 p-3 flex flex-col"
     >
       <ListHeader
         list={list}
@@ -51,7 +64,10 @@ export default function ListColumn({ list }: Props) {
       />
 
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 overflow-y-auto mt-2" style={{
+          maxHeight: `${Math.min(validCards.length * 60 + 20, windowHeight - 200)}px`,
+          minHeight: '50px'
+        }}>
           {validCards.map((card) => (
             <CardItem key={card.id} card={card} />
           ))}

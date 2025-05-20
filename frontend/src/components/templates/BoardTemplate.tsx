@@ -137,7 +137,7 @@ export default function BoardTemplate() {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {listsWithValidIds.map((list) => (
             <ListColumn key={list.id} list={list} />
           ))}
