@@ -72,73 +72,75 @@ export default function BoardsPage() {
   }, [boardToDelete, store]);
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold text-zinc-800">Ваши доски</h1>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Название доски"
-            className="w-60 rounded-2xl border border-zinc-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Button onClick={handleCreate} loading={creating}>
-            Создать
-          </Button>
-        </div>
-      </header>
-
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {boards && boards.length > 0 ? (
-          boards
-            .filter(b => b && b.id) // Filter out boards without IDs
-            .map((b) => {
-              // Ensure board ID is a string and not undefined
-              const boardId = b.id ? String(b.id) : null;
-              if (!boardId) {
-                console.error("Board with undefined ID:", b);
-                return null; // Skip this board
-              }
-              return (
-                <div key={boardId} className="relative group">
-                  <Link
-                    to={`/board/${boardId}`}
-                    className="block rounded-2xl border border-zinc-200 bg-white p-5 shadow transition-colors hover:bg-zinc-50"
-                  >
-                    <h2 className="text-xl font-semibold text-zinc-800 pr-8">{b.name}</h2>
-                  </Link>
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="danger"
-                      className="!px-2 !py-1 !text-xs"
-                      onClick={(e) => handleDeleteClick(e, boardId, b.name)}
-                      title={`Удалить доску ${b.name}`}
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                </div>
-              );
-            })
-            .filter(Boolean) // Remove null entries
-        ) : (
-          <div className="col-span-full text-center py-8 text-zinc-500">
-            У вас пока нет досок. Создайте первую доску, используя форму выше.
+    <main className="mx-auto max-w-7xl p-6 flex flex-col items-center">
+      <div className="w-full max-w-6xl">
+        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-3xl font-bold text-zinc-800">Ваши доски</h1>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Название доски"
+              className="w-60 rounded-2xl border border-zinc-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Button onClick={handleCreate} loading={creating}>
+              Создать
+            </Button>
           </div>
-        )}
-      </section>
+        </header>
 
-      {/* Confirmation dialog for board deletion */}
-      <ConfirmDialog
-        isOpen={boardToDelete !== null}
-        title="Удалить доску"
-        message={boardToDelete ? `Вы уверены, что хотите удалить доску "${boardToDelete.name}"? Это действие нельзя отменить.` : ''}
-        confirmLabel="Удалить"
-        variant="danger"
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setBoardToDelete(null)}
-      />
+        <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {boards && boards.length > 0 ? (
+            boards
+              .filter(b => b && b.id) // Filter out boards without IDs
+              .map((b) => {
+                // Ensure board ID is a string and not undefined
+                const boardId = b.id ? String(b.id) : null;
+                if (!boardId) {
+                  console.error("Board with undefined ID:", b);
+                  return null; // Skip this board
+                }
+                return (
+                  <div key={boardId} className="relative group">
+                    <Link
+                      to={`/board/${boardId}`}
+                      className="block rounded-2xl border border-zinc-200 bg-white p-4 shadow transition-colors hover:bg-zinc-50 h-full"
+                    >
+                      <h2 className="text-lg font-semibold text-zinc-800 pr-8">{b.name}</h2>
+                    </Link>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="danger"
+                        className="!px-2 !py-1 !text-xs"
+                        onClick={(e) => handleDeleteClick(e, boardId, b.name)}
+                        title={`Удалить доску ${b.name}`}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+              .filter(Boolean) // Remove null entries
+          ) : (
+            <div className="col-span-full text-center py-8 text-zinc-500">
+              У вас пока нет досок. Создайте первую доску, используя форму выше.
+            </div>
+          )}
+        </section>
+
+        {/* Confirmation dialog for board deletion */}
+        <ConfirmDialog
+          isOpen={boardToDelete !== null}
+          title="Удалить доску"
+          message={boardToDelete ? `Вы уверены, что хотите удалить доску "${boardToDelete.name}"? Это действие нельзя отменить.` : ''}
+          confirmLabel="Удалить"
+          variant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setBoardToDelete(null)}
+        />
+      </div>
     </main>
   );
 }

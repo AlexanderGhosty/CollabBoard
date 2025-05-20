@@ -8,6 +8,7 @@ import BoardPage     from '@/components/pages/BoardPage';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import Toast, { ToastContainer } from '@/components/atoms/Toast';
+import './App.css';
 
 // Error boundary component to catch errors in child components
 class ErrorBoundary extends Component<{ children: ReactNode, fallback?: ReactNode }> {

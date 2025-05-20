@@ -39,9 +39,11 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-4">
-      <BoardHeader />
-      <BoardTemplate />
+    <main className="flex min-h-screen flex-col p-4 items-center">
+      <div className="w-full max-w-7xl">
+        <BoardHeader />
+        <BoardTemplate />
+      </div>
     </main>
   );
 }
