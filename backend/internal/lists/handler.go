@@ -19,6 +19,7 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g.PUT("/:id", updateListHandler(svc))
 	g.PUT("/:id/move", moveListHandler(svc))
 	g.DELETE("/:id", deleteListHandler(svc))
+	g.POST("/normalize", normalizePositionsHandler(svc))
 }
 
 func createListHandler(svc *Service) gin.HandlerFunc {
@@ -136,5 +137,46 @@ func deleteListHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "list deleted"})
+	}
+}
+
+// normalizePositionsHandler provides an API endpoint to manually trigger position normalization
+func normalizePositionsHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
+		userID := int32(c.GetInt("userID"))
+
+		// Log the request
+		log.Printf("Normalize positions request: boardID=%d, userID=%d", boardID, userID)
+
+		// Check if user is a member of the board
+		if _, err := svc.q.GetBoardMember(c.Request.Context(), db.GetBoardMemberParams{
+			BoardID: int32(boardID), UserID: userID,
+		}); err != nil {
+			log.Printf("User %d is not a member of board %d", userID, boardID)
+			c.JSON(http.StatusForbidden, gin.H{"error": "not a member"})
+			return
+		}
+
+		// Call the normalization function
+		if err := svc.NormalizeListPositions(c.Request.Context(), int32(boardID)); err != nil {
+			log.Printf("Error normalizing positions: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Get the updated lists to return in the response
+		lists, err := svc.ListByBoard(c.Request.Context(), userID, int32(boardID))
+		if err != nil {
+			log.Printf("Error getting lists after normalization: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		log.Printf("Successfully normalized positions for board %d", boardID)
+		c.JSON(http.StatusOK, gin.H{
+			"message": "positions normalized",
+			"lists":   lists,
+		})
 	}
 }

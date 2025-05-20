@@ -1,9 +1,14 @@
 package main
 
 import (
+	"backend/internal/auth"
 	"backend/internal/boards"
 	"backend/internal/cards"
+	"backend/internal/config"
+	db "backend/internal/db/sqlc"
+	"backend/internal/jobs"
 	"backend/internal/lists"
+	"backend/internal/middleware"
 	"backend/internal/websocket"
 	"context"
 	"log"
@@ -11,11 +16,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"backend/internal/auth"
-	"backend/internal/config"
-	db "backend/internal/db/sqlc"
-	"backend/internal/middleware"
 )
 
 func main() {
@@ -78,6 +78,12 @@ func main() {
 	r.GET("/ws/board/:id", func(c *gin.Context) {
 		websocket.ServeBoardWS(c, hub, queries, cfg.JWTSecret)
 	})
+
+	// Start the position normalizer background job
+	// Run every 30 minutes to check and fix any position conflicts
+	positionNormalizer := jobs.NewPositionNormalizer(listsSvc, queries, 30*time.Minute)
+	positionNormalizer.Start()
+	defer positionNormalizer.Stop()
 
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("server failed: %v", err)

@@ -243,7 +243,7 @@ export const boardService = {
         id: String(data.ID || data.id || listId),
         boardId: String(data.BoardID || data.boardId || data.board_id || boardId),
         title: data.Title || data.title || list.title,
-        position: data.Position || data.position || roundedPosition,
+        position: data.Position || data.position || intPosition,
         cards: list.cards || []
       };
 
@@ -254,6 +254,31 @@ export const boardService = {
       return normalizedList;
     } catch (error) {
       console.error(`Error moving list ${listId}:`, error);
+
+      // Enhance error information for better error handling in the UI
+      if (error instanceof Error) {
+        // Check for network errors
+        if (error.message.includes('Network Error')) {
+          throw new Error('network: Failed to connect to the server. Please check your internet connection.');
+        }
+
+        // Check for timeout errors
+        if (error.message.includes('timeout')) {
+          throw new Error('timeout: Request timed out. The server might be busy, please try again.');
+        }
+
+        // Check for specific backend errors
+        if (error.message.includes('not a member')) {
+          throw new Error('not a member: You don\'t have permission to move this list.');
+        }
+
+        // Check for position conflicts
+        if (error.message.includes('position conflict')) {
+          throw new Error('position conflict: Position conflict detected. The list order will be fixed automatically.');
+        }
+      }
+
+      // If we couldn't identify a specific error, rethrow the original
       throw error;
     }
   },

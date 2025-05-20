@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { boardService, Card, List, Board } from '@/services/boardService';
 import { wsClient, sendWS, subscribeWS, WSMessage } from '@/services/websocket';
+import { useToastStore } from '@/store/useToastStore';
 
 interface BoardState {
   /** коллекция всех досок пользователя (лендинг) */
@@ -217,8 +218,12 @@ export const useBoardStore = create<BoardState>()(
         const listIndex = board.lists.findIndex((l: List) => l.id === listId);
         if (listIndex === -1) {
           console.error(`List with ID ${listId} not found in board ${board.id}`);
+          useToastStore.getState().error(`List not found. Please refresh the page and try again.`);
           return;
         }
+
+        // Get the list title for better error messages
+        const listTitle = board.lists[listIndex].title;
 
         // Store the original lists state for rollback if needed
         const originalLists = JSON.parse(JSON.stringify(board.lists));
@@ -263,8 +268,29 @@ export const useBoardStore = create<BoardState>()(
         // Call the API to persist the change
         await boardService.moveList(listId, position);
         console.log(`List ${listId} moved to position ${position} successfully`);
+
+        // Show success toast
+        useToastStore.getState().success(`List "${listTitle}" moved successfully`);
       } catch (error) {
         console.error(`Error moving list ${listId}:`, error);
+
+        // Determine the specific error message based on the error
+        let errorMessage = "Failed to move list. Please try again.";
+
+        if (error instanceof Error) {
+          if (error.message.includes("not a member")) {
+            errorMessage = "You don't have permission to move this list.";
+          } else if (error.message.includes("position conflict")) {
+            errorMessage = "Position conflict detected. The list order will be fixed automatically.";
+          } else if (error.message.includes("network")) {
+            errorMessage = "Network error. Please check your connection and try again.";
+          } else if (error.message.includes("timeout")) {
+            errorMessage = "Request timed out. The server might be busy, please try again.";
+          }
+        }
+
+        // Show error toast
+        useToastStore.getState().error(errorMessage);
 
         // Revert the optimistic update on error
         set((s) => {

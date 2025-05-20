@@ -6,6 +6,8 @@ import RegisterPage  from '@/components/pages/RegisterPage';
 import BoardsPage    from '@/components/pages/BoardsPage';
 import BoardPage     from '@/components/pages/BoardPage';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useToastStore } from '@/store/useToastStore';
+import Toast, { ToastContainer } from '@/components/atoms/Toast';
 
 // Error boundary component to catch errors in child components
 class ErrorBoundary extends Component<{ children: ReactNode, fallback?: ReactNode }> {
@@ -45,8 +47,24 @@ function Protected({ children }: { children: JSX.Element }) {
 }
 
 export default function App() {
+  const toasts = useToastStore((state) => state.toasts);
+  const removeToast = useToastStore((state) => state.removeToast);
   return (
     <BrowserRouter>
+      {/* Toast container */}
+      <ToastContainer>
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            id={toast.id}
+            message={toast.message}
+            type={toast.type}
+            duration={toast.duration}
+            onClose={removeToast}
+          />
+        ))}
+      </ToastContainer>
+
       <Routes>
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

@@ -78,8 +78,9 @@ func (s *Service) Delete(ctx context.Context, userID, listID int32) error {
 	return nil
 }
 
-// normalizeListPositions ensures all lists have sequential positions starting from 1
-func (s *Service) normalizeListPositions(ctx context.Context, boardID int32) error {
+// NormalizeListPositions ensures all lists have sequential positions starting from 1
+// This is exported so it can be called by background jobs and API endpoints
+func (s *Service) NormalizeListPositions(ctx context.Context, boardID int32) error {
 	log.Printf("Normalizing list positions for board %d", boardID)
 
 	// Get all lists for this board
@@ -167,7 +168,7 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	// If there are position conflicts, normalize all positions first
 	if hasConflicts {
 		log.Printf("Position conflicts detected, normalizing positions")
-		if err := s.normalizeListPositions(ctx, lst.BoardID); err != nil {
+		if err := s.NormalizeListPositions(ctx, lst.BoardID); err != nil {
 			log.Printf("Error normalizing list positions: %v", err)
 			return db.List{}, err
 		}
@@ -241,6 +242,12 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 
 	// Broadcast the change to all connected clients
 	s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "list_moved", Data: updated})
+
+	// Normalize list positions after every move operation to ensure consistency
+	if err := s.NormalizeListPositions(ctx, lst.BoardID); err != nil {
+		log.Printf("Warning: Failed to normalize list positions after move: %v", err)
+		// We don't return the error here as the move operation itself was successful
+	}
 
 	return updated, nil
 }
