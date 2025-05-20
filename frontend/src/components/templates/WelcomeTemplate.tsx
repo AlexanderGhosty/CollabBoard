@@ -6,7 +6,7 @@ interface WelcomeTemplateProps {
 
 export default function WelcomeTemplate({ children }: WelcomeTemplateProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen w-full flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header with logo */}
       <header className="w-full py-6 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex justify-center">

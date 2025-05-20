@@ -56,7 +56,7 @@ export default function ListColumn({ list }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      className="w-72 shrink-0 rounded-2xl bg-white p-3 flex flex-col shadow-md border border-indigo-50"
+      className="w-72 shrink-0 rounded-2xl bg-white p-3 flex flex-col shadow-md border border-indigo-50 max-h-full"
     >
       <ListHeader
         list={list}
@@ -64,8 +64,8 @@ export default function ListColumn({ list }: Props) {
       />
 
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-2 overflow-y-auto mt-2" style={{
-          maxHeight: `${Math.min(validCards.length * 60 + 20, windowHeight - 200)}px`,
+        <div className="flex flex-col gap-2 overflow-y-auto mt-2 flex-grow" style={{
+          maxHeight: `${Math.min(validCards.length * 60 + 20, windowHeight - 180)}px`,
           minHeight: '50px'
         }}>
           {validCards.map((card) => (

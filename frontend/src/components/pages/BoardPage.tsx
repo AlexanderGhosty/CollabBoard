@@ -39,9 +39,11 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-4 items-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full max-w-7xl">
-        <BoardHeader />
+    <main className="flex min-h-screen w-full flex-col p-0 bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full px-4 py-4">
+        <div className="mx-auto max-w-7xl">
+          <BoardHeader />
+        </div>
         <BoardTemplate />
       </div>
     </main>

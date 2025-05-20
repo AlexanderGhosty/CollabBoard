@@ -185,13 +185,17 @@ export default function BoardTemplate() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
-        <div className="flex gap-4 overflow-x-auto pb-4 items-start bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
-          {listsWithValidIds.map((list) => (
-            <SortableListColumn key={list.id} list={list} />
-          ))}
-        </div>
-      </SortableContext>
+      <div className="board-container w-full overflow-hidden">
+        <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
+          <div className="flex gap-4 overflow-x-auto pb-4 items-start w-full h-[calc(100vh-120px)] pt-2">
+            {listsWithValidIds.map((list) => (
+              <SortableListColumn key={list.id} list={list} />
+            ))}
+            {/* Add an empty div at the end to ensure there's space for scrolling */}
+            <div className="w-4 shrink-0"></div>
+          </div>
+        </SortableContext>
+      </div>
 
       {/* Custom drag overlay for dragged items */}
       <DragOverlay activeId={activeId} activeData={activeData} />

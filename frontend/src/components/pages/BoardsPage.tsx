@@ -72,8 +72,8 @@ export default function BoardsPage() {
   }, [boardToDelete, store]);
 
   return (
-    <main className="mx-auto max-w-7xl p-6 flex flex-col items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-      <div className="w-full max-w-6xl">
+    <main className="w-full min-h-screen p-0 flex flex-col items-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full max-w-7xl px-4 py-6">
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-3xl font-bold text-blue-800">Ваши доски</h1>
           <div className="flex gap-2">
