@@ -1,5 +1,5 @@
 import { DragOverlay as DndKitDragOverlay } from '@dnd-kit/core';
-import { Card } from '@/services/boardService';
+import { Card, List } from '@/services/boardService';
 import { CSSProperties, useEffect, useState } from 'react';
 
 interface DragOverlayProps {
@@ -17,12 +17,49 @@ export default function DragOverlay({ activeId, activeData }: DragOverlayProps) 
     return <CardDragOverlay card={activeData.card} />;
   }
 
+  if (type === 'list') {
+    return <ListDragOverlay list={activeData.list} />;
+  }
+
   // Default fallback - should not happen in normal usage
   return null;
 }
 
 interface CardDragOverlayProps {
   card: Card;
+}
+
+interface ListDragOverlayProps {
+  list: List;
+}
+
+function ListDragOverlay({ list }: ListDragOverlayProps) {
+  // Style for the dragged list
+  const style: CSSProperties = {
+    width: '288px', // Same as w-72 (18rem = 288px)
+    transform: 'rotate(2deg)', // Slight rotation for visual feedback
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)', // Enhanced shadow
+  };
+
+  return (
+    <DndKitDragOverlay
+      dropAnimation={{
+        duration: 300,
+        easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+      }}
+      className="dnd-draggable-overlay"
+    >
+      <div
+        style={style}
+        className="rounded-2xl bg-zinc-100 p-3 shadow-lg cursor-grabbing z-50 dnd-dragging-animation"
+      >
+        <div className="font-semibold text-zinc-800 px-2 mb-2">{list.title}</div>
+        <div className="bg-zinc-200/50 rounded-xl p-2 text-center text-sm text-zinc-500">
+          {list.cards?.length || 0} карточек
+        </div>
+      </div>
+    </DndKitDragOverlay>
+  );
 }
 
 function CardDragOverlay({ card }: CardDragOverlayProps) {

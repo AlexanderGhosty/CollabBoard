@@ -23,7 +23,7 @@ const ENDPOINTS = {
   board:  (id: string)        => `/boards/${id}`,
   lists:  (boardId: string)   => `/boards/${boardId}/lists`,
   list:   (listId: string)    => `/lists/${listId}`,
-  moveList: (listId: string)  => `/lists/${listId}/move`,
+  moveList: (boardId: string, listId: string)  => `/boards/${boardId}/lists/${listId}/move`,
   cards:  (listId: string | number) => `/lists/${listId}/cards`,
   card:   (listId: string, cardId: string) => `/lists/${listId}/cards/${cardId}`,
   moveCard: (listId: string, cardId: string) => `/lists/${listId}/cards/${cardId}/move`,
@@ -200,19 +200,62 @@ export const boardService = {
 
   /** Переместить список (изменить порядок) */
   async moveList(listId: string, position: number): Promise<List> {
-    const { data } = await api.post<any>(ENDPOINTS.moveList(listId), { position });
+    console.log(`Moving list ${listId} to position ${position}`);
 
-    // Normalize the response to ensure it has the expected lowercase property names
-    const normalizedList: List = {
-      id: String(data.ID || data.id || listId),
-      boardId: String(data.BoardID || data.boardId || data.board_id || ''),
-      title: data.Title || data.title || '',
-      position: data.Position || data.position || position,
-      cards: data.cards || []
-    };
+    // Find the board ID for this list
+    const board = useBoardStore.getState().active;
+    if (!board) {
+      throw new Error("No active board found");
+    }
 
-    sendWS({ event: 'list_moved', data: normalizedList });
-    return normalizedList;
+    const list = board.lists.find(l => l.id === listId);
+    if (!list) {
+      throw new Error(`List with ID ${listId} not found in active board`);
+    }
+
+    const boardId = list.boardId;
+    console.log(`Found list ${listId} in board ${boardId}`);
+
+    try {
+      // Ensure position is a valid number
+      if (isNaN(position) || !isFinite(position)) {
+        console.error("Invalid position value:", position);
+        position = list.position + 1; // Default to moving it one position forward
+      }
+
+      // Convert position to integer to match backend expectations
+      const intPosition = Math.round(position);
+      console.log(`Sending position ${intPosition} to server (original: ${position})`);
+
+      // Log the full request details
+      console.log(`Request URL: ${ENDPOINTS.moveList(boardId, listId)}`);
+      console.log(`Request payload:`, { position: intPosition });
+
+      // Use PUT method as expected by the backend
+      const { data } = await api.put<any>(ENDPOINTS.moveList(boardId, listId), {
+        position: intPosition
+      });
+
+      console.log("List moved successfully, response:", data);
+
+      // Normalize the response to ensure it has the expected lowercase property names
+      const normalizedList: List = {
+        id: String(data.ID || data.id || listId),
+        boardId: String(data.BoardID || data.boardId || data.board_id || boardId),
+        title: data.Title || data.title || list.title,
+        position: data.Position || data.position || roundedPosition,
+        cards: list.cards || []
+      };
+
+      // Log the normalized list for debugging
+      console.log("Normalized list after move:", normalizedList);
+
+      // The backend will broadcast the event to all clients
+      return normalizedList;
+    } catch (error) {
+      console.error(`Error moving list ${listId}:`, error);
+      throw error;
+    }
   },
 
   /** Создать карточку */

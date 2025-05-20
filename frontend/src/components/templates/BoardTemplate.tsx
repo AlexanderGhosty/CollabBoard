@@ -11,16 +11,17 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useCallback, useState } from 'react';
-import ListColumn from '@/components/organisms/ListColumn';
 import { useBoardStore } from '@/store/useBoardStore';
 import { List, Card } from '@/services/boardService';
 import DragOverlay from '@/components/molecules/DragOverlay';
+import SortableListColumn from '@/components/molecules/SortableListColumn';
 
 export default function BoardTemplate() {
   // Use specific selectors for each piece of state/action needed
   const board = useBoardStore(state => state.active);
   const moveCard = useBoardStore(state => state.moveCard);
   const moveList = useBoardStore(state => state.moveList);
+  const set = useBoardStore.setState;
 
   // State to track the currently active (dragged) item
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -122,6 +123,11 @@ export default function BoardTemplate() {
         return;
       }
 
+      if (oldIdx === newIdx) {
+        console.log("List dropped in the same position, no action needed");
+        return;
+      }
+
       // Get the list being moved
       const movingList = board.lists[oldIdx];
       console.log("Moving list:", movingList);
@@ -129,25 +135,39 @@ export default function BoardTemplate() {
       // Calculate the new position
       let newPosition: number;
 
-      if (newIdx === 0) {
-        // Moving to the beginning
-        newPosition = board.lists[0].position / 2;
-      } else if (newIdx === board.lists.length - 1) {
-        // Moving to the end
-        newPosition = board.lists[board.lists.length - 1].position + 1;
-      } else {
-        // Moving between two lists
-        const prevPosition = board.lists[newIdx - 1].position;
-        const nextPosition = board.lists[newIdx].position;
-        newPosition = (prevPosition + nextPosition) / 2;
+      // Sort lists by position to ensure correct order
+      const sortedLists = [...board.lists].sort((a, b) => a.position - b.position);
+
+      // Log the current positions of all lists
+      console.log("Current list positions:", sortedLists.map(l => ({ id: l.id, position: l.position })));
+
+      // Find the target position based on the visual order after drag
+      // This is simpler and more reliable than trying to calculate intermediate positions
+      newPosition = newIdx + 1; // Positions start at 1
+
+      console.log(`Moving list from visual position ${oldIdx + 1} to ${newIdx + 1}`);
+
+      // Ensure position is a valid integer
+      newPosition = Math.round(newPosition);
+
+      // Final validation
+      if (isNaN(newPosition) || !isFinite(newPosition) || newPosition <= 0) {
+        console.error("Invalid position calculated:", newPosition);
+        // Fallback to a safe position - at the end
+        newPosition = sortedLists.length > 0 ?
+          Math.max(...sortedLists.map(l => l.position)) + 1 : 1;
       }
+
+      console.log(`Final position for list ${movingList.id}: ${newPosition}`);
+
 
       console.log("New position calculated:", newPosition);
 
       // Call the API to persist the change
+      // The moveList function will handle the optimistic update
       moveList(movingList.id, newPosition);
     }
-  }, [board, moveCard, moveList]);
+  }, [board, moveCard, moveList, set]);
 
   // Add the conditional return after all hooks are defined
   if (!board) return null;
@@ -168,7 +188,7 @@ export default function BoardTemplate() {
       <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {listsWithValidIds.map((list) => (
-            <ListColumn key={list.id} list={list} />
+            <SortableListColumn key={list.id} list={list} />
           ))}
         </div>
       </SortableContext>

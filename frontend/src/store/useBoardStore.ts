@@ -210,32 +210,71 @@ export const useBoardStore = create<BoardState>()(
       const board = get().active;
       if (!board) return;
 
-      await boardService.moveList(listId, position);
-
-      // Optimistic update locally
-      set((s) => {
-        if (!s.active) return;
+      try {
+        console.log(`Moving list ${listId} to position ${position}`);
 
         // Find the list to move
-        const listIndex = s.active.lists.findIndex((l: List) => l.id === listId);
-        if (listIndex === -1) return;
-
-        // Get the list
-        const [list] = s.active.lists.splice(listIndex, 1);
-
-        // Update its position
-        list.position = position;
-
-        // Re-insert at the correct position based on the new position value
-        const insertIndex = s.active.lists.findIndex((l: List) => l.position > position);
-        if (insertIndex === -1) {
-          // If no list has a higher position, add to the end
-          s.active.lists.push(list);
-        } else {
-          // Otherwise insert at the correct position
-          s.active.lists.splice(insertIndex, 0, list);
+        const listIndex = board.lists.findIndex((l: List) => l.id === listId);
+        if (listIndex === -1) {
+          console.error(`List with ID ${listId} not found in board ${board.id}`);
+          return;
         }
-      });
+
+        // Store the original lists state for rollback if needed
+        const originalLists = JSON.parse(JSON.stringify(board.lists));
+
+        // Perform optimistic update
+        set((s) => {
+          if (!s.active) return;
+
+          // Get the list to move
+          const list = s.active.lists.find((l: List) => l.id === listId);
+          if (!list) return;
+
+          const oldPosition = list.position;
+          console.log(`Optimistically moving list ${listId} from position ${oldPosition} to ${position}`);
+
+          // Update the position of the moved list
+          list.position = position;
+
+          // Update positions of other lists
+          s.active.lists.forEach((l: List) => {
+            // If moving forward (e.g., from pos 2 to pos 4)
+            if (oldPosition < position) {
+              if (l.id !== listId && l.position > oldPosition && l.position <= position) {
+                l.position--;
+              }
+            }
+            // If moving backward (e.g., from pos 4 to pos 2)
+            else if (oldPosition > position) {
+              if (l.id !== listId && l.position >= position && l.position < oldPosition) {
+                l.position++;
+              }
+            }
+          });
+
+          // Sort lists by position
+          s.active.lists.sort((a: List, b: List) => a.position - b.position);
+
+          console.log("Lists after optimistic update:",
+            s.active.lists.map(l => ({ id: l.id, position: l.position })));
+        });
+
+        // Call the API to persist the change
+        await boardService.moveList(listId, position);
+        console.log(`List ${listId} moved to position ${position} successfully`);
+      } catch (error) {
+        console.error(`Error moving list ${listId}:`, error);
+
+        // Revert the optimistic update on error
+        set((s) => {
+          if (!s.active) return;
+
+          // Restore the original lists state
+          s.active.lists = JSON.parse(JSON.stringify(originalLists));
+          console.log("Reverted optimistic update due to error");
+        });
+      }
     },
 
     async createCard(listId, title, description = '') {
@@ -577,19 +616,61 @@ export const useBoardStore = create<BoardState>()(
             // Map uppercase property names from backend to lowercase expected by frontend
             const listId = String(rawList.ID || rawList.id || '');
             const position = rawList.Position || rawList.position || 0;
+            const title = rawList.Title || rawList.title || '';
+            const boardId = String(rawList.BoardID || rawList.boardId || rawList.board_id || '');
 
             if (!listId) {
               console.error("Received moved list without ID via WebSocket:", rawList);
               break;
             }
 
-            // Find and update the list with the new position
+            console.log("Received list_moved event:", rawList);
+
+            // Check if this is a WebSocket event for a change we initiated
+            // If it's our own change, we've already updated the UI optimistically
+            const isOwnChange = board.lists.some(l => l.id === listId && l.position === position);
+            if (isOwnChange) {
+              console.log(`Ignoring list_moved event for list ${listId} as it matches our local state`);
+              break;
+            }
+
+            // Update the list position directly without reloading the board
             const listIndex = board.lists.findIndex((l: List) => l.id === listId);
             if (listIndex !== -1) {
-              console.log(`Updating position of list ${listId} to ${position}`);
+              console.log(`Updating list ${listId}: position=${position}, title="${title}"`);
+
+              // Get the current position before updating
+              const oldPosition = board.lists[listIndex].position;
+
+              // Preserve the existing title if the incoming title is empty
+              if (title) {
+                board.lists[listIndex].title = title;
+              }
+
+              // Update positions of all affected lists
+              board.lists.forEach((l: List) => {
+                // If moving forward (e.g., from pos 2 to pos 4)
+                if (oldPosition < position) {
+                  if (l.id !== listId && l.position > oldPosition && l.position <= position) {
+                    l.position--;
+                  }
+                }
+                // If moving backward (e.g., from pos 4 to pos 2)
+                else if (oldPosition > position) {
+                  if (l.id !== listId && l.position >= position && l.position < oldPosition) {
+                    l.position++;
+                  }
+                }
+              });
+
+              // Update the moved list's position
               board.lists[listIndex].position = position;
+
               // Sort lists by position
               board.lists.sort((a: List, b: List) => a.position - b.position);
+
+              console.log("Lists after WebSocket update:",
+                board.lists.map(l => ({ id: l.id, position: l.position })));
             } else {
               console.log(`List with ID ${listId} not found, cannot update position`);
             }

@@ -2,6 +2,10 @@ package lists
 
 import (
 	db "backend/internal/db/sqlc"
+	"bytes"
+	"io"
+	"log"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -82,19 +86,42 @@ func updateListHandler(svc *Service) gin.HandlerFunc {
 func moveListHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, _ := strconv.Atoi(c.Param("id"))
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
+
+		// Log the request details
+		log.Printf("Move list request: listID=%d, boardID=%d", id, boardID)
+
+		// Read the raw request body for logging
+		bodyBytes, _ := io.ReadAll(c.Request.Body)
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // Reset the body
+
+		log.Printf("Move list request body: %s", string(bodyBytes))
+
 		var req struct {
-			Position int32 `json:"position" binding:"required"`
+			Position float64 `json:"position"` // Changed to float64 to handle decimal positions
 		}
+
 		if err := c.ShouldBindJSON(&req); err != nil {
+			log.Printf("Move list binding error: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+
+		log.Printf("Move list parsed position: %f", req.Position)
+
+		// Convert float64 to int32 for the database
+		position := int32(math.Round(req.Position))
+		log.Printf("Move list rounded position: %d", position)
+
 		userID := int32(c.GetInt("userID"))
-		lst, err := svc.Move(c.Request.Context(), userID, int32(id), req.Position)
+		lst, err := svc.Move(c.Request.Context(), userID, int32(id), position)
 		if err != nil {
+			log.Printf("Move list service error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+
+		log.Printf("Move list success: list=%+v", lst)
 		c.JSON(http.StatusOK, lst)
 	}
 }
