@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
+import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import { useBoardStore } from '@/store/useBoardStore';
 import { subscribeWS } from '@/services/websocket';
 
@@ -9,12 +10,13 @@ export default function BoardsPage() {
   const { boards } = store;
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
+  const [boardToDelete, setBoardToDelete] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     // Fetch boards when component mounts
     store.fetchBoards();
 
-    // Subscribe to board_created and board_updated events for real-time updates
+    // Subscribe to board_created, board_updated, and board_deleted events for real-time updates
     const unsubscribeCreated = subscribeWS('board_created', (data: any) => {
       console.log('BoardsPage received board_created event:', data);
       // Refresh the boards list to show the new board
@@ -27,10 +29,17 @@ export default function BoardsPage() {
       store.fetchBoards();
     });
 
+    const unsubscribeDeleted = subscribeWS('board_deleted', (data: any) => {
+      console.log('BoardsPage received board_deleted event:', data);
+      // Refresh the boards list to remove the deleted board
+      store.fetchBoards();
+    });
+
     // Cleanup subscriptions when component unmounts
     return () => {
       unsubscribeCreated();
       unsubscribeUpdated();
+      unsubscribeDeleted();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -45,6 +54,22 @@ export default function BoardsPage() {
       setCreating(false);
     }
   };
+
+  const handleDeleteClick = useCallback((e: React.MouseEvent, boardId: string, boardName: string) => {
+    // Prevent navigation to the board page
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Set the board to delete
+    setBoardToDelete({ id: boardId, name: boardName });
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (boardToDelete) {
+      await store.deleteBoard(boardToDelete.id);
+      setBoardToDelete(null);
+    }
+  }, [boardToDelete, store]);
 
   return (
     <main className="mx-auto max-w-4xl p-6">
@@ -76,13 +101,24 @@ export default function BoardsPage() {
                 return null; // Skip this board
               }
               return (
-                <Link
-                  key={boardId}
-                  to={`/board/${boardId}`}
-                  className="rounded-2xl border border-zinc-200 bg-white p-5 shadow transition-colors hover:bg-zinc-50"
-                >
-                  <h2 className="text-xl font-semibold text-zinc-800">{b.name}</h2>
-                </Link>
+                <div key={boardId} className="relative group">
+                  <Link
+                    to={`/board/${boardId}`}
+                    className="block rounded-2xl border border-zinc-200 bg-white p-5 shadow transition-colors hover:bg-zinc-50"
+                  >
+                    <h2 className="text-xl font-semibold text-zinc-800 pr-8">{b.name}</h2>
+                  </Link>
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="danger"
+                      className="!px-2 !py-1 !text-xs"
+                      onClick={(e) => handleDeleteClick(e, boardId, b.name)}
+                      title={`Удалить доску ${b.name}`}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </div>
               );
             })
             .filter(Boolean) // Remove null entries
@@ -92,6 +128,17 @@ export default function BoardsPage() {
           </div>
         )}
       </section>
+
+      {/* Confirmation dialog for board deletion */}
+      <ConfirmDialog
+        isOpen={boardToDelete !== null}
+        title="Удалить доску"
+        message={boardToDelete ? `Вы уверены, что хотите удалить доску "${boardToDelete.name}"? Это действие нельзя отменить.` : ''}
+        confirmLabel="Удалить"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setBoardToDelete(null)}
+      />
     </main>
   );
 }

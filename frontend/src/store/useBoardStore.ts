@@ -14,6 +14,7 @@ interface BoardState {
   fetchBoards: () => Promise<void>;
   loadBoard: (id: string) => Promise<void>;
   createBoard: (name: string) => Promise<void>;
+  deleteBoard: (boardId: string) => Promise<void>;
   createList: (title: string) => Promise<void>;
   updateList: (listId: string, title: string) => Promise<void>;
   moveList: (listId: string, position: number) => Promise<void>;
@@ -111,6 +112,7 @@ export const useBoardStore = create<BoardState>()(
         subscribeWS('list_deleted', (d: any) => get().applyWS({ event: 'list_deleted', data: d }));
         subscribeWS('board_created', (d: any) => get().applyWS({ event: 'board_created', data: d }));
         subscribeWS('board_updated', (d: any) => get().applyWS({ event: 'board_updated', data: d }));
+        subscribeWS('board_deleted', (d: any) => get().applyWS({ event: 'board_deleted', data: d }));
 
         console.log(`Board ${id} loaded successfully with ${board.lists.length} lists`);
       } catch (error) {
@@ -133,6 +135,36 @@ export const useBoardStore = create<BoardState>()(
           console.log(`Board ${board.id} already exists, not adding duplicate`);
         }
       });
+    },
+
+    async deleteBoard(boardId) {
+      try {
+        console.log(`Deleting board ${boardId}`);
+        await boardService.deleteBoard(boardId);
+
+        // Update the boards array by removing the deleted board
+        set((s) => {
+          const boardIndex = s.boards.findIndex(b => b.id === boardId);
+          if (boardIndex !== -1) {
+            s.boards.splice(boardIndex, 1);
+            console.log(`Removed board ${boardId} from boards list`);
+          }
+
+          // If the active board is the one being deleted, set active to null
+          if (s.active && s.active.id === boardId) {
+            s.active = null;
+            console.log(`Cleared active board as it was deleted`);
+          }
+        });
+
+        // Show success toast
+        useToastStore.getState().success("Доска успешно удалена");
+      } catch (error) {
+        console.error(`Error deleting board ${boardId}:`, error);
+
+        // Show error toast
+        useToastStore.getState().error("Не удалось удалить доску. Пожалуйста, попробуйте снова.");
+      }
     },
 
     async createList(title) {
@@ -874,6 +906,38 @@ export const useBoardStore = create<BoardState>()(
             if (board.id === boardId) {
               board.name = boardName || board.name;
               console.log(`Updated active board name to "${boardName}" via WebSocket`);
+            }
+            break;
+          }
+
+          case 'board_deleted': {
+            // Handle board_deleted event
+            const rawData = data as any;
+
+            // Extract the board ID (handle both formats: { id } or { ID })
+            const boardId = String(rawData.id || rawData.ID || '');
+
+            console.log("Received board_deleted event with data:", rawData);
+
+            if (!boardId) {
+              console.error("Received board_deleted event with missing ID:", rawData);
+              break;
+            }
+
+            // Remove the board from the boards array
+            const boardIndex = s.boards.findIndex(b => b.id === boardId);
+            if (boardIndex !== -1) {
+              s.boards.splice(boardIndex, 1);
+              console.log(`Removed board ${boardId} from boards list via WebSocket`);
+            }
+
+            // If this is the active board, clear it and show a toast notification
+            if (board.id === boardId) {
+              s.active = null;
+              console.log(`Cleared active board as it was deleted via WebSocket`);
+
+              // Show a toast notification
+              useToastStore.getState().info("Эта доска была удалена");
             }
             break;
           }

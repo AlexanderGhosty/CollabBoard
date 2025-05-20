@@ -444,4 +444,19 @@ export const boardService = {
       throw error;
     }
   },
+
+  /** Удалить доску */
+  async deleteBoard(boardId: string): Promise<void> {
+    try {
+      console.log(`Deleting board ${boardId}`);
+      await api.delete(ENDPOINTS.board(boardId));
+      console.log("Board deleted successfully");
+
+      // The backend will broadcast the board_deleted event to all connected clients
+      // We don't need to send a WebSocket event here
+    } catch (error) {
+      console.error("Error deleting board:", error);
+      throw error;
+    }
+  },
 };
