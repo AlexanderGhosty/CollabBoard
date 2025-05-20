@@ -185,9 +185,9 @@ export default function BoardTemplate() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="board-container w-full overflow-hidden">
+      <div className="board-container w-full overflow-visible">
         <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-4 overflow-x-auto pb-4 items-start w-full h-[calc(100vh-120px)] pt-2">
+          <div className="flex gap-4 overflow-x-auto pb-6 items-start w-full h-[calc(100vh-140px)] pt-2 board-scroll-container">
             {listsWithValidIds.map((list) => (
               <SortableListColumn key={list.id} list={list} />
             ))}

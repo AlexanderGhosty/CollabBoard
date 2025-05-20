@@ -2,8 +2,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import BoardHeader from '@/components/organisms/BoardHeader';
 import BoardTemplate from '@/components/templates/BoardTemplate';
+import Header from '@/components/organisms/Header';
 import { useBoardStore } from '@/store/useBoardStore';
 import { subscribeWS } from '@/services/websocket';
+import './BoardPage.css';
 
 export default function BoardPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +14,16 @@ export default function BoardPage() {
   // Use specific selectors for the store functions
   const loadBoard = useBoardStore(state => state.loadBoard);
   const active = useBoardStore(state => state.active);
+
+  // Add board-page class to body when component mounts
+  useEffect(() => {
+    document.body.classList.add('board-page');
+
+    // Remove the class when component unmounts
+    return () => {
+      document.body.classList.remove('board-page');
+    };
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -39,8 +51,9 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col p-0 bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full px-4 py-4">
+    <main className="flex min-h-screen w-full flex-col p-0 bg-gradient-to-br from-blue-50 to-indigo-100 overflow-x-visible">
+      <Header />
+      <div className="w-full px-4 overflow-visible">
         <div className="mx-auto max-w-7xl">
           <BoardHeader />
         </div>

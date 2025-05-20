@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
+import Header from '@/components/organisms/Header';
 import { useBoardStore } from '@/store/useBoardStore';
 import { subscribeWS } from '@/services/websocket';
 
@@ -73,8 +74,9 @@ export default function BoardsPage() {
 
   return (
     <main className="w-full min-h-screen p-0 flex flex-col items-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full max-w-7xl px-4 py-6">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <Header />
+      <div className="w-full max-w-7xl px-4">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-3xl font-bold text-blue-800">Ваши доски</h1>
           <div className="flex gap-2">
             <input
@@ -88,7 +90,7 @@ export default function BoardsPage() {
               Создать
             </Button>
           </div>
-        </header>
+        </div>
 
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {boards && boards.length > 0 ? (

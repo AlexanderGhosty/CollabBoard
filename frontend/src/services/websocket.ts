@@ -48,6 +48,16 @@ class WebSocketClient {
     this.openSocket();
   }
 
+  /** Отключиться от сервера и очистить все ресурсы */
+  disconnect() {
+    if (this.socket) {
+      this.socket.close();
+    }
+    this.cleanup();
+    this.boardId = null;
+    this.subscriptions.clear();
+  }
+
   /** Отправить сообщение */
   send<T = unknown>(msg: WSMessage<T>) {
     if (this.socket?.readyState === WebSocket.OPEN) {

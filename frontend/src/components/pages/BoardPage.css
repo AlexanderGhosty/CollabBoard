@@ -1,0 +1,11 @@
+/* Override global overflow settings for the board page */
+body.board-page {
+  overflow-x: visible !important;
+}
+
+/* Ensure scrollbars are visible */
+.board-scroll-container {
+  overflow-x: auto !important;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(37, 99, 235, 0.7) rgba(219, 234, 254, 0.7);
+}
