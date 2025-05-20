@@ -124,13 +124,20 @@ export const boardService = {
   /** Создать доску */
   async createBoard(name: string): Promise<Board> {
     const { data } = await api.post<any>(ENDPOINTS.boards, { name });
-    // Ensure all IDs are strings
+    console.log("Raw board creation data from API:", data); // Debug log
+
+    // Ensure all IDs are strings and properly normalize property names
     const board = {
       ...data,
-      id: String(data.id),
-      ownerId: data.ownerId ? String(data.ownerId) : undefined,
+      id: String(data.ID || data.id),
+      name: data.Name || data.name || name, // Ensure name is properly set
+      ownerId: data.OwnerID ? String(data.OwnerID) :
+               (data.ownerId ? String(data.ownerId) : undefined),
       lists: data.lists || []
     };
+
+    console.log("Normalized board data:", board); // Debug log
+
     // Рассылаем событие owner‑клиентам
     sendWS({ event: 'board_created', data: board });
     return board;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
 import { useBoardStore } from '@/store/useBoardStore';
+import { subscribeWS } from '@/services/websocket';
 
 export default function BoardsPage() {
   const store = useBoardStore();
@@ -10,7 +11,27 @@ export default function BoardsPage() {
   const [name, setName] = useState('');
 
   useEffect(() => {
+    // Fetch boards when component mounts
     store.fetchBoards();
+
+    // Subscribe to board_created and board_updated events for real-time updates
+    const unsubscribeCreated = subscribeWS('board_created', (data: any) => {
+      console.log('BoardsPage received board_created event:', data);
+      // Refresh the boards list to show the new board
+      store.fetchBoards();
+    });
+
+    const unsubscribeUpdated = subscribeWS('board_updated', (data: any) => {
+      console.log('BoardsPage received board_updated event:', data);
+      // Refresh the boards list to show updated board names
+      store.fetchBoards();
+    });
+
+    // Cleanup subscriptions when component unmounts
+    return () => {
+      unsubscribeCreated();
+      unsubscribeUpdated();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

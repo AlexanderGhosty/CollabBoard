@@ -109,6 +109,8 @@ export const useBoardStore = create<BoardState>()(
         subscribeWS('list_updated', (d: any) => get().applyWS({ event: 'list_updated', data: d }));
         subscribeWS('list_moved', (d: any) => get().applyWS({ event: 'list_moved', data: d }));
         subscribeWS('list_deleted', (d: any) => get().applyWS({ event: 'list_deleted', data: d }));
+        subscribeWS('board_created', (d: any) => get().applyWS({ event: 'board_created', data: d }));
+        subscribeWS('board_updated', (d: any) => get().applyWS({ event: 'board_updated', data: d }));
 
         console.log(`Board ${id} loaded successfully with ${board.lists.length} lists`);
       } catch (error) {
@@ -118,8 +120,18 @@ export const useBoardStore = create<BoardState>()(
 
     async createBoard(name) {
       const board = await boardService.createBoard(name);
+      console.log("Board created successfully:", board);
+
+      // Update the boards array with the new board
       set((s) => {
-        s.boards.push(board);
+        // Check if the board already exists to prevent duplicates
+        const boardExists = s.boards.some(b => b.id === board.id);
+        if (!boardExists) {
+          s.boards.push(board);
+          console.log(`Added board ${board.id} with name "${board.name}" to boards list`);
+        } else {
+          console.log(`Board ${board.id} already exists, not adding duplicate`);
+        }
       });
     },
 
@@ -789,9 +801,80 @@ export const useBoardStore = create<BoardState>()(
             }
             break;
           }
-          case 'board_created':
+          case 'board_created': {
+            // Handle board_created event
+            const rawData = data as any;
+
+            // Extract and normalize the board data
+            const boardId = String(rawData.ID || rawData.id || '');
+            const boardName = rawData.Name || rawData.name || '';
+            const ownerId = rawData.OwnerID ? String(rawData.OwnerID) :
+                           (rawData.ownerId ? String(rawData.ownerId) : undefined);
+
+            console.log("Received board_created event with data:", rawData);
+
+            if (!boardId || !boardName) {
+              console.error("Received board_created event with missing ID or name:", rawData);
+              break;
+            }
+
+            // Update the boards array with the new board
+            const normalizedBoard = {
+              id: boardId,
+              name: boardName,
+              ownerId: ownerId,
+              lists: rawData.lists || []
+            };
+
+            // Check if this board is already in the boards array
+            const boardExists = s.boards.some(b => b.id === boardId);
+            if (!boardExists) {
+              s.boards.push(normalizedBoard);
+              console.log(`Added board ${boardId} with name "${boardName}" to boards list via WebSocket`);
+            } else {
+              // Update the existing board
+              const boardIndex = s.boards.findIndex(b => b.id === boardId);
+              if (boardIndex !== -1) {
+                s.boards[boardIndex] = {
+                  ...s.boards[boardIndex],
+                  ...normalizedBoard
+                };
+                console.log(`Updated board ${boardId} in boards list via WebSocket`);
+              }
+            }
+            break;
+          }
+
           case 'board_updated': {
-            // These events are handled at the board list level
+            // Handle board_updated event
+            const rawData = data as any;
+
+            // Extract and normalize the board data
+            const boardId = String(rawData.ID || rawData.id || '');
+            const boardName = rawData.Name || rawData.name || '';
+
+            console.log("Received board_updated event with data:", rawData);
+
+            if (!boardId) {
+              console.error("Received board_updated event with missing ID:", rawData);
+              break;
+            }
+
+            // Update the board in the boards array
+            const boardIndex = s.boards.findIndex(b => b.id === boardId);
+            if (boardIndex !== -1) {
+              s.boards[boardIndex] = {
+                ...s.boards[boardIndex],
+                name: boardName || s.boards[boardIndex].name
+              };
+              console.log(`Updated board ${boardId} name to "${boardName}" in boards list via WebSocket`);
+            }
+
+            // If this is the active board, update it too
+            if (board.id === boardId) {
+              board.name = boardName || board.name;
+              console.log(`Updated active board name to "${boardName}" via WebSocket`);
+            }
             break;
           }
           // можно расширять другими событиями
