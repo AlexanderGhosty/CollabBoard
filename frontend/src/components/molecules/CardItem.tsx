@@ -222,7 +222,7 @@ export default function CardItem({ card }: CardItemProps) {
           style={style}
           {...modifiedListeners}
           {...attributes}
-          className={`rounded-2xl bg-white p-3 shadow hover:bg-zinc-50 cursor-pointer transition-opacity ${isDragging ? 'opacity-40' : ''}`}
+          className={`rounded-2xl bg-white p-3 shadow-sm border border-blue-50 hover:bg-blue-50 cursor-pointer transition-opacity ${isDragging ? 'opacity-40' : ''}`}
           onClick={(e) => {
             // If we're not dragging, handle the click
             // This is a backup click handler in case the mouse events don't trigger properly
@@ -234,9 +234,9 @@ export default function CardItem({ card }: CardItemProps) {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <p className="text-sm text-zinc-800 break-words pr-6">{card.title}</p>
+          <p className="text-sm text-blue-800 break-words pr-6">{card.title}</p>
           {card.description && (
-            <div className="mt-2 text-xs text-zinc-500">
+            <div className="mt-2 text-xs text-blue-600">
               <span className="inline-block mr-1">📝</span>
               Есть описание
             </div>

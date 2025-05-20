@@ -1,9 +1,17 @@
+import { Link } from 'react-router-dom';
+
 export default function AuthTemplate({ children }: { children: React.ReactNode }) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 p-6">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
-          {children}
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+        {children}
+
+        <div className="mt-6 text-center">
+          <Link to="/welcome" className="text-sm text-blue-600 hover:text-blue-800">
+            ← Back to welcome page
+          </Link>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}

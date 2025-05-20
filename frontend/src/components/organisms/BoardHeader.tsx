@@ -33,7 +33,7 @@ export default function BoardHeader() {
         >
           ← Назад
         </Button>
-        <h2 className="text-2xl font-bold text-zinc-800">{board.name}</h2>
+        <h2 className="text-2xl font-bold text-blue-800">{board.name}</h2>
       </div>
       <Button
         variant="secondary"

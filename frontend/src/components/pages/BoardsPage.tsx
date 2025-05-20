@@ -72,15 +72,15 @@ export default function BoardsPage() {
   }, [boardToDelete, store]);
 
   return (
-    <main className="mx-auto max-w-7xl p-6 flex flex-col items-center">
+    <main className="mx-auto max-w-7xl p-6 flex flex-col items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       <div className="w-full max-w-6xl">
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-bold text-zinc-800">Ваши доски</h1>
+          <h1 className="text-3xl font-bold text-blue-800">Ваши доски</h1>
           <div className="flex gap-2">
             <input
               type="text"
               placeholder="Название доски"
-              className="w-60 rounded-2xl border border-zinc-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+              className="w-60 rounded-2xl border border-indigo-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -105,9 +105,9 @@ export default function BoardsPage() {
                   <div key={boardId} className="relative group">
                     <Link
                       to={`/board/${boardId}`}
-                      className="block rounded-2xl border border-zinc-200 bg-white p-4 shadow transition-colors hover:bg-zinc-50 h-full"
+                      className="block rounded-2xl border border-indigo-100 bg-white p-4 shadow-md transition-colors hover:bg-blue-50 h-full"
                     >
-                      <h2 className="text-lg font-semibold text-zinc-800 pr-8">{b.name}</h2>
+                      <h2 className="text-lg font-semibold text-blue-800 pr-8">{b.name}</h2>
                     </Link>
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
@@ -124,7 +124,7 @@ export default function BoardsPage() {
               })
               .filter(Boolean) // Remove null entries
           ) : (
-            <div className="col-span-full text-center py-8 text-zinc-500">
+            <div className="col-span-full text-center py-8 text-blue-600 bg-white rounded-2xl shadow-md border border-indigo-100 p-8">
               У вас пока нет досок. Создайте первую доску, используя форму выше.
             </div>
           )}

@@ -1,6 +1,7 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy, Component, ErrorInfo, ReactNode } from 'react';
+import WelcomePage   from '@/components/pages/WelcomePage';
 import LoginPage     from '@/components/pages/LoginPage';
 import RegisterPage  from '@/components/pages/RegisterPage';
 import BoardsPage    from '@/components/pages/BoardsPage';
@@ -44,7 +45,7 @@ class ErrorBoundary extends Component<{ children: ReactNode, fallback?: ReactNod
 
 function Protected({ children }: { children: JSX.Element }) {
   const isAuth = !!useAuthStore((s) => s.token);
-  return isAuth ? children : <Navigate to="/login" replace />;
+  return isAuth ? children : <Navigate to="/welcome" replace />;
 }
 
 export default function App() {
@@ -67,6 +68,7 @@ export default function App() {
       </ToastContainer>
 
       <Routes>
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
@@ -89,8 +91,8 @@ export default function App() {
             </Protected>
           }
         />
-        {/* fallback → на главную или логин */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Redirect unauthenticated users to welcome page */}
+        <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     </BrowserRouter>
   );

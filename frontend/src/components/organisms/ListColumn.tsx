@@ -56,7 +56,7 @@ export default function ListColumn({ list }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      className="w-72 shrink-0 rounded-2xl bg-zinc-100 p-3 flex flex-col"
+      className="w-72 shrink-0 rounded-2xl bg-white p-3 flex flex-col shadow-md border border-indigo-50"
     >
       <ListHeader
         list={list}

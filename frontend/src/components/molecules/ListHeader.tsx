@@ -48,7 +48,7 @@ export default function ListHeader({ list, onAddCard }: Props) {
           value={list.title}
           onSave={handleTitleUpdate}
           className="flex-grow max-w-[70%]"
-          textClassName="font-semibold text-zinc-800"
+          textClassName="font-semibold text-blue-800"
           inputClassName="font-semibold"
           placeholder="Enter list title"
           validateEmpty={true}

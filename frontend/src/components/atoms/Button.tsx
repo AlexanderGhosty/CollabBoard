@@ -8,9 +8,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const base = 'rounded-2xl px-4 py-2 font-medium transition-colors disabled:opacity-50';
 const variants = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700',
-  secondary: 'bg-zinc-200 text-zinc-800 hover:bg-zinc-300',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
+  primary: 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm',
+  secondary: 'bg-indigo-50 text-blue-800 hover:bg-indigo-100 border border-indigo-100 shadow-sm',
+  danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
 };
 
 export default function Button({ variant = 'primary', loading, className, children, ...rest }: ButtonProps) {
