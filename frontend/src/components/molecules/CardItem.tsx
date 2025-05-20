@@ -36,7 +36,7 @@ export default function CardItem({ card }: CardItemProps) {
     };
   }, []);
 
-  const { attributes, listeners, setNodeRef, transform, transition } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useDraggable({
     id: card.id,
     data: {
       type: 'card',
@@ -46,7 +46,7 @@ export default function CardItem({ card }: CardItemProps) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition
+    transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)'
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -222,7 +222,7 @@ export default function CardItem({ card }: CardItemProps) {
           style={style}
           {...modifiedListeners}
           {...attributes}
-          className="rounded-2xl bg-white p-3 shadow hover:bg-zinc-50 cursor-pointer"
+          className={`rounded-2xl bg-white p-3 shadow hover:bg-zinc-50 cursor-pointer transition-opacity ${isDragging ? 'opacity-40' : ''}`}
           onClick={(e) => {
             // If we're not dragging, handle the click
             // This is a backup click handler in case the mouse events don't trigger properly

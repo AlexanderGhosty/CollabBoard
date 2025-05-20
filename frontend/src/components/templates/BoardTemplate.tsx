@@ -6,13 +6,15 @@ import {
   useSensors,
   DragEndEvent,
   DragOverEvent,
-  DragStartEvent
+  DragStartEvent,
+  Active
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import ListColumn from '@/components/organisms/ListColumn';
 import { useBoardStore } from '@/store/useBoardStore';
 import { List, Card } from '@/services/boardService';
+import DragOverlay from '@/components/molecules/DragOverlay';
 
 export default function BoardTemplate() {
   // Use specific selectors for each piece of state/action needed
@@ -20,12 +22,34 @@ export default function BoardTemplate() {
   const moveCard = useBoardStore(state => state.moveCard);
   const moveList = useBoardStore(state => state.moveList);
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  // State to track the currently active (dragged) item
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeData, setActiveData] = useState<any>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      // Activate on a small movement to avoid interfering with click
+      activationConstraint: {
+        distance: 5, // 5px movement before drag starts
+      }
+    })
+  );
+
+  // Handle drag start event
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(String(active.id));
+    setActiveData(active.data?.current);
+  }, []);
 
   // Define all hooks before any conditional returns
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     console.log("Drag end event:", event);
     const { active, over } = event;
+
+    // Reset active drag state
+    setActiveId(null);
+    setActiveData(null);
 
     if (!over || active.id === over.id) {
       console.log("No valid drop target or same source and target");
@@ -135,7 +159,12 @@ export default function BoardTemplate() {
   const listIds = listsWithValidIds.map(list => list.id);
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {listsWithValidIds.map((list) => (
@@ -143,6 +172,9 @@ export default function BoardTemplate() {
           ))}
         </div>
       </SortableContext>
+
+      {/* Custom drag overlay for dragged items */}
+      <DragOverlay activeId={activeId} activeData={activeData} />
     </DndContext>
   );
 }

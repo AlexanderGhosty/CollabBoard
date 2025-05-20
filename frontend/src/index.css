@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom styles for drag and drop */
+.dnd-draggable-overlay {
+  z-index: 9999;
+  pointer-events: none;
+  cursor: grabbing;
+  will-change: transform;
+  transform-origin: center center;
+  position: fixed; /* Ensures the overlay is positioned relative to the viewport */
+}
+
+/* Ensure draggable items are visible outside their containers */
+[data-dnd-draggable] {
+  position: relative;
+  z-index: 1;
+}
+
+/* Animation for drag and drop */
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.dnd-dragging-animation {
+  animation: pop 0.2s ease-in-out;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
