@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useCallback } from 'react';
 import { List } from '@/services/boardService';
 import CardItem from '@/components/molecules/CardItem';
 import ListHeader from '@/components/molecules/ListHeader';
@@ -11,7 +12,14 @@ interface Props {
 }
 
 export default function ListColumn({ list }: Props) {
-  const store = useBoardStore();
+  // Use a specific selector for the createCard function instead of the entire store
+  const createCard = useBoardStore(state => state.createCard);
+
+  // Define the callback for adding a card before using it in JSX
+  const handleAddCard = useCallback(() => {
+    createCard(list.id, 'Новая карточка');
+  }, [createCard, list.id]);
+
   const { isOver, setNodeRef } = useDroppable({
     id: list.id,
     data: {
@@ -39,7 +47,7 @@ export default function ListColumn({ list }: Props) {
     >
       <ListHeader
         list={list}
-        onAddCard={() => store.createCard(list.id, 'Новая карточка')}
+        onAddCard={handleAddCard}
       />
 
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>

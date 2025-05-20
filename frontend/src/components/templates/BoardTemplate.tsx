@@ -9,18 +9,21 @@ import {
   DragStartEvent
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useCallback } from 'react';
 import ListColumn from '@/components/organisms/ListColumn';
 import { useBoardStore } from '@/store/useBoardStore';
 import { List, Card } from '@/services/boardService';
 
 export default function BoardTemplate() {
-  const store = useBoardStore();
-  const board = store.active;
+  // Use specific selectors for each piece of state/action needed
+  const board = useBoardStore(state => state.active);
+  const moveCard = useBoardStore(state => state.moveCard);
+  const moveList = useBoardStore(state => state.moveList);
+
   const sensors = useSensors(useSensor(PointerSensor));
 
-  if (!board) return null;
-
-  const handleDragEnd = (event: DragEndEvent) => {
+  // Define all hooks before any conditional returns
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     console.log("Drag end event:", event);
     const { active, over } = event;
 
@@ -74,7 +77,7 @@ export default function BoardTemplate() {
         : 1;
 
       // Call the API to move the card
-      store.moveCard(cardId, targetList, position);
+      moveCard(cardId, targetList, position);
       return;
     }
 
@@ -118,9 +121,12 @@ export default function BoardTemplate() {
       console.log("New position calculated:", newPosition);
 
       // Call the API to persist the change
-      store.moveList(movingList.id, newPosition);
+      moveList(movingList.id, newPosition);
     }
-  };
+  }, [board, moveCard, moveList]);
+
+  // Add the conditional return after all hooks are defined
+  if (!board) return null;
 
   // Ensure all lists have valid IDs for keys
   const listsWithValidIds = board.lists.filter(list => list && list.id);

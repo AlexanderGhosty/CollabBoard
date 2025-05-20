@@ -1,16 +1,26 @@
+import { useCallback } from 'react';
 import Button from '@/components/atoms/Button';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useNavigate } from 'react-router-dom';
 
 export default function BoardHeader() {
   const navigate = useNavigate();
-  const store = useBoardStore();
-  const board = store.active;
-  if (!board) return null;
+  // Use specific selectors for each piece of state/action needed
+  const board = useBoardStore(state => state.active);
+  const createList = useBoardStore(state => state.createList);
 
-  const handleBackClick = () => {
+  // Define all hooks before any conditional returns
+  const handleBackClick = useCallback(() => {
     navigate('/');
-  };
+  }, [navigate]);
+
+  // Define the createList callback here, not inside JSX
+  const handleCreateList = useCallback(() => {
+    createList('Новый список');
+  }, [createList]);
+
+  // Conditional return after all hooks are defined
+  if (!board) return null;
 
   return (
     <header className="mb-4 flex items-center justify-between">
@@ -25,7 +35,12 @@ export default function BoardHeader() {
         </Button>
         <h2 className="text-2xl font-bold text-zinc-800">{board.name}</h2>
       </div>
-      <Button variant="secondary" onClick={() => store.createList('Новый список')}>＋ Список</Button>
+      <Button
+        variant="secondary"
+        onClick={handleCreateList}
+      >
+        ＋ Список
+      </Button>
     </header>
   );
 }

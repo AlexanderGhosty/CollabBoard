@@ -238,7 +238,7 @@ export default function CardItem({ card }: CardItemProps) {
           {card.description && (
             <div className="mt-2 text-xs text-zinc-500">
               <span className="inline-block mr-1">📝</span>
-              Has description
+              Есть описание
             </div>
           )}
         </div>

@@ -6,14 +6,15 @@ import { useBoardStore } from '@/store/useBoardStore';
 
 export default function BoardPage() {
   const { id } = useParams<{ id: string }>();
-  const store = useBoardStore();
+  // Use a specific selector for the loadBoard function
+  const loadBoard = useBoardStore(state => state.loadBoard);
 
   useEffect(() => {
     if (id) {
-      store.loadBoard(id);
+      loadBoard(id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    // We can now include loadBoard in the dependency array
+  }, [id, loadBoard]);
 
   return (
     <main className="flex min-h-screen flex-col p-4">

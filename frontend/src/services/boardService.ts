@@ -295,6 +295,49 @@ export const boardService = {
     }
   },
 
+  /** Обновить заголовок списка */
+  async updateList(listId: string, title: string): Promise<List> {
+    try {
+      console.log(`Updating list ${listId} with title: ${title}`);
+
+      // Find the board ID for this list
+      const board = useBoardStore.getState().active;
+      if (!board) {
+        throw new Error("No active board found");
+      }
+
+      const list = board.lists.find(l => l.id === listId);
+      if (!list) {
+        throw new Error(`List with ID ${listId} not found in active board`);
+      }
+
+      const boardId = list.boardId;
+      console.log(`Found list ${listId} in board ${boardId}`);
+
+      // Use the correct endpoint format: /boards/:boardId/lists/:id
+      const updateEndpoint = `${ENDPOINTS.lists(boardId)}/${listId}`;
+      console.log(`Using update endpoint: ${updateEndpoint}`);
+
+      const { data } = await api.put<any>(updateEndpoint, { title });
+
+      // Normalize the response to ensure it has the expected lowercase property names
+      const normalizedList: List = {
+        id: String(data.ID || data.id || listId),
+        boardId: String(data.BoardID || data.boardId || data.board_id || boardId),
+        title: data.Title || data.title || title,
+        position: data.Position || data.position || list.position,
+        cards: list.cards || []
+      };
+
+      console.log("List updated successfully:", normalizedList);
+      sendWS({ event: 'list_updated', data: normalizedList });
+      return normalizedList;
+    } catch (error) {
+      console.error("Error updating list:", error);
+      throw error;
+    }
+  },
+
   /** Удалить список */
   async deleteList(listId: string): Promise<void> {
     try {

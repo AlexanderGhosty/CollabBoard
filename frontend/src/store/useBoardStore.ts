@@ -14,6 +14,7 @@ interface BoardState {
   loadBoard: (id: string) => Promise<void>;
   createBoard: (name: string) => Promise<void>;
   createList: (title: string) => Promise<void>;
+  updateList: (listId: string, title: string) => Promise<void>;
   moveList: (listId: string, position: number) => Promise<void>;
   deleteList: (listId: string) => Promise<void>;
   createCard: (listId: string, title: string, description?: string) => Promise<void>;
@@ -104,6 +105,7 @@ export const useBoardStore = create<BoardState>()(
         subscribeWS('card_moved', (d: any) => get().applyWS({ event: 'card_moved', data: d }));
         subscribeWS('card_deleted', (d: any) => get().applyWS({ event: 'card_deleted', data: d }));
         subscribeWS('list_created', (d: any) => get().applyWS({ event: 'list_created', data: d }));
+        subscribeWS('list_updated', (d: any) => get().applyWS({ event: 'list_updated', data: d }));
         subscribeWS('list_moved', (d: any) => get().applyWS({ event: 'list_moved', data: d }));
         subscribeWS('list_deleted', (d: any) => get().applyWS({ event: 'list_deleted', data: d }));
 
@@ -155,6 +157,53 @@ export const useBoardStore = create<BoardState>()(
           }
         }
       });
+    },
+
+    async updateList(listId, title) {
+      const board = get().active;
+      if (!board) return;
+
+      try {
+        // Find the list to update
+        const list = board.lists.find((l: List) => l.id === listId);
+        if (!list) {
+          console.error(`List with ID ${listId} not found in board ${board.id}`);
+          return;
+        }
+
+        // Optimistic update locally
+        set((s) => {
+          if (!s.active) return;
+
+          const listToUpdate = s.active.lists.find((l: List) => l.id === listId);
+          if (listToUpdate) {
+            listToUpdate.title = title;
+            console.log(`Optimistically updated list ${listId} title to "${title}"`);
+          }
+        });
+
+        // Call the API to update the list
+        const updatedList = await boardService.updateList(listId, title);
+        console.log(`List ${listId} updated successfully:`, updatedList);
+      } catch (error) {
+        console.error(`Error updating list ${listId}:`, error);
+
+        // Revert the optimistic update on error
+        set((s) => {
+          if (!s.active) return;
+
+          const list = board.lists.find((l: List) => l.id === listId);
+          if (list) {
+            const listToRevert = s.active.lists.find((l: List) => l.id === listId);
+            if (listToRevert) {
+              listToRevert.title = list.title;
+              console.log(`Reverted optimistic update for list ${listId}`);
+            }
+          }
+        });
+
+        throw error;
+      }
     },
 
     async moveList(listId, position) {
@@ -497,6 +546,28 @@ export const useBoardStore = create<BoardState>()(
               console.log("Added new list from WebSocket event");
             } else {
               console.log("List already exists, skipping WebSocket event");
+            }
+            break;
+          }
+          case 'list_updated': {
+            const rawList = data as any;
+
+            // Map uppercase property names from backend to lowercase expected by frontend
+            const listId = String(rawList.ID || rawList.id || '');
+            const title = rawList.Title || rawList.title || '';
+
+            if (!listId) {
+              console.error("Received updated list without ID via WebSocket:", rawList);
+              break;
+            }
+
+            // Find and update the list with the new title
+            const listIndex = board.lists.findIndex((l: List) => l.id === listId);
+            if (listIndex !== -1) {
+              console.log(`Updating title of list ${listId} to "${title}"`);
+              board.lists[listIndex].title = title;
+            } else {
+              console.log(`List with ID ${listId} not found, cannot update title`);
             }
             break;
           }
