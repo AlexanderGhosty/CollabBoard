@@ -9,6 +9,8 @@ interface BoardState {
   boards: Board[];
   /** активная доска (открыта /board/:id) */
   active: Board | null;
+  /** флаг, указывающий, что модальное окно карточки открыто */
+  isCardModalOpen: boolean;
 
   /** REST‑методы */
   fetchBoards: () => Promise<void>;
@@ -26,6 +28,9 @@ interface BoardState {
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
 
+  /** методы управления состоянием модального окна */
+  setCardModalOpen: (isOpen: boolean) => void;
+
   /** обработка входящих WS‑ивентов */
   applyWS: (msg: WSMessage) => void;
 }
@@ -34,6 +39,13 @@ export const useBoardStore = create<BoardState>()(
   immer((set, get) => ({
     boards: [],
     active: null,
+    isCardModalOpen: false,
+
+    setCardModalOpen(isOpen) {
+      set((s) => {
+        s.isCardModalOpen = isOpen;
+      });
+    },
 
     /* ───────────────── REST ───────────────── */
     async fetchBoards() {

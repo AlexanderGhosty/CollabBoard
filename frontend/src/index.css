@@ -20,6 +20,30 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Style for when drag-and-drop is disabled due to modal being open */
+.dnd-disabled [data-dnd-draggable] {
+  cursor: default !important;
+  pointer-events: none !important;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+/* Ensure modal content is always interactive */
+dialog {
+  pointer-events: auto !important;
+  z-index: 1000;
+}
+
+dialog * {
+  pointer-events: auto !important;
+}
+
+/* Style for dialog backdrop */
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
 /* Animation for drag and drop */
 @keyframes pop {
   0% {
@@ -195,6 +219,18 @@ body {
 
 .modal-exit {
   animation: modalFadeOut 0.2s ease-in forwards;
+}
+
+/* Additional dialog styles */
+dialog {
+  margin: auto;
+  padding: 1.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
 }
 
 /* Standard scrollbar properties for Firefox and other browsers */

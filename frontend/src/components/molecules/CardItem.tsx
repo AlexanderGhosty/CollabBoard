@@ -15,6 +15,7 @@ export default function CardItem({ card }: CardItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const deleteCard = useBoardStore(state => state.deleteCard);
+  const isCardModalOpen = useBoardStore(state => state.isCardModalOpen);
 
   // Refs for tracking drag vs click
   const dragTimeoutRef = useRef<number | null>(null);
@@ -41,13 +42,16 @@ export default function CardItem({ card }: CardItemProps) {
     data: {
       type: 'card',
       card
-    }
+    },
+    disabled: isCardModalOpen // Disable dragging when a card modal is open
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: transition || 'all 250ms cubic-bezier(0.2, 0, 0, 1)',
     zIndex: isDragging ? 50 : 'auto',
+    // Add a subtle visual indication when drag is disabled
+    cursor: isCardModalOpen ? 'default' : 'grab'
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -221,12 +225,13 @@ export default function CardItem({ card }: CardItemProps) {
         <div
           ref={setNodeRef}
           style={style}
-          {...modifiedListeners}
+          {...(isCardModalOpen ? {} : modifiedListeners)} // Only apply listeners if drag is enabled
           {...attributes}
           className={`rounded-2xl bg-white p-4 shadow-card hover:shadow-card-hover border border-blue-100
-            hover:bg-gradient-to-br hover:from-white hover:to-blue-50 cursor-pointer
+            hover:bg-gradient-to-br hover:from-white hover:to-blue-50
             transition-all duration-300 ease-in-out card-enter animate-scale-in
-            ${isDragging ? 'opacity-60 rotate-1 scale-105' : 'opacity-100'}`}
+            ${isDragging ? 'opacity-60 rotate-1 scale-105' : 'opacity-100'}
+            ${isCardModalOpen ? 'cursor-default' : 'cursor-grab'}`}
           onClick={(e) => {
             // If we're not dragging, handle the click
             // This is a backup click handler in case the mouse events don't trigger properly
@@ -234,9 +239,9 @@ export default function CardItem({ card }: CardItemProps) {
               handleCardClick(e);
             }
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          onTouchStart={isCardModalOpen ? undefined : handleTouchStart}
+          onTouchMove={isCardModalOpen ? undefined : handleTouchMove}
+          onTouchEnd={isCardModalOpen ? undefined : handleTouchEnd}
         >
           <p className="text-sm font-medium text-blue-800 break-words pr-6 leading-snug">{card.title}</p>
           {card.description && (
