@@ -22,6 +22,7 @@ export default function BoardTemplate() {
   const moveCard = useBoardStore(state => state.moveCard);
   const moveList = useBoardStore(state => state.moveList);
   const createList = useBoardStore(state => state.createList);
+  const isCardModalOpen = useBoardStore(state => state.isCardModalOpen);
   const set = useBoardStore.setState;
 
   // Define the createList callback
@@ -44,10 +45,17 @@ export default function BoardTemplate() {
 
   // Handle drag start event
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    // If a card modal is open, prevent drag operations
+    if (isCardModalOpen) {
+      // Cancel the drag operation by not setting activeId and activeData
+      event.preventDefault();
+      return;
+    }
+
     const { active } = event;
     setActiveId(String(active.id));
     setActiveData(active.data?.current);
-  }, []);
+  }, [isCardModalOpen]);
 
   // Define all hooks before any conditional returns
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -190,8 +198,10 @@ export default function BoardTemplate() {
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      // Disable drag detection completely when a card modal is open
+      autoScroll={!isCardModalOpen}
     >
-      <div className="board-container w-full overflow-visible page-enter animate-fade-in">
+      <div className={`board-container w-full overflow-visible page-enter animate-fade-in ${isCardModalOpen ? 'dnd-disabled' : ''}`}>
         <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
           <div className="flex gap-5 overflow-x-auto pb-8 items-start w-full h-[calc(100vh-140px)] pt-3 board-scroll-container
             bg-gradient-to-br from-blue-50/50 to-indigo-100/50 rounded-xl p-4">
@@ -201,10 +211,12 @@ export default function BoardTemplate() {
 
             {/* Add a "Add List" button at the end */}
             <div
-              onClick={handleCreateList}
-              className="w-72 shrink-0 rounded-2xl bg-white/60 border border-dashed border-blue-200 p-4 h-32
-                flex items-center justify-center cursor-pointer hover:bg-white/80 transition-all duration-300
-                hover:shadow-md hover:border-blue-300 backdrop-blur-sm hover:scale-105 active:scale-95"
+              onClick={isCardModalOpen ? undefined : handleCreateList}
+              className={`w-72 shrink-0 rounded-2xl bg-white/60 border border-dashed border-blue-200 p-4 h-32
+                flex items-center justify-center transition-all duration-300
+                backdrop-blur-sm ${isCardModalOpen
+                  ? 'opacity-50 cursor-default'
+                  : 'cursor-pointer hover:bg-white/80 hover:shadow-md hover:border-blue-300 hover:scale-105 active:scale-95'}`}
             >
               <div className="text-blue-600 font-medium flex flex-col items-center gap-2">
                 <span className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">+</span>

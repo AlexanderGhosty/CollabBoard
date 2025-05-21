@@ -16,6 +16,7 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
   const [loading, setLoading] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const updateCard = useBoardStore(state => state.updateCard);
+  const setCardModalOpen = useBoardStore(state => state.setCardModalOpen);
 
   // Reset form when card changes
   useEffect(() => {
@@ -28,6 +29,9 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
     const dialog = dialogRef.current;
 
     if (isOpen && dialog) {
+      // Update global state to disable drag-and-drop
+      setCardModalOpen(true);
+
       // Only call showModal if the dialog is not already open
       if (!dialog.open) {
         try {
@@ -49,6 +53,8 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
         }
       }
     } else if (dialog) {
+      // Re-enable drag-and-drop when modal closes
+      setCardModalOpen(false);
       dialog.close();
     }
 
@@ -56,9 +62,11 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
     return () => {
       if (dialog && dialog.open) {
         dialog.close();
+        // Make sure drag-and-drop is re-enabled when component unmounts
+        setCardModalOpen(false);
       }
     };
-  }, [isOpen]);
+  }, [isOpen, setCardModalOpen]);
 
   const handleSave = async () => {
     if (!title.trim()) return;
@@ -81,6 +89,8 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
     // Reset form and close modal
     setTitle(card.title);
     setDescription(card.description || '');
+    // Ensure drag-and-drop is re-enabled
+    setCardModalOpen(false);
     onClose();
   };
 
@@ -103,12 +113,17 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
   return (
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-50 rounded-2xl bg-white p-6 shadow-modal backdrop:bg-black backdrop:bg-opacity-60
-        w-full max-w-md modal-enter animate-modal-in border border-blue-100 backdrop-blur"
+      className="fixed inset-0 z-[1000] rounded-2xl bg-white p-6 shadow-xl
+        w-full max-w-md modal-enter animate-modal-in border border-blue-100 m-auto"
       onClose={handleCancel}
       onClick={handleDialogClick}
+      style={{ pointerEvents: 'auto' }}
     >
-      <div className="flex flex-col gap-5" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex flex-col gap-5"
+        onClick={(e) => e.stopPropagation()}
+        style={{ pointerEvents: 'auto' }}
+      >
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold text-blue-800">Редактирование карточки</h3>
           <button
