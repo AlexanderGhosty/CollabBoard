@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { z } from 'zod';
 import Button from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
+import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
@@ -17,6 +18,8 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
   const [emailError, setEmailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{ userId: string; name: string } | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const { boardMembers, active, fetchBoardMembers, inviteMember, removeMember, setMemberModalOpen } = useBoardStore();
@@ -44,9 +47,11 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
   useEffect(() => {
     if (active && active.id) {
       console.log('MemberManagementModal mounted, forcing refresh of board members');
+      console.log('Active board:', active);
+      console.log('Current user:', currentUser);
       fetchBoardMembers();
     }
-  }, [active, fetchBoardMembers]);
+  }, [active, fetchBoardMembers, currentUser]);
 
   // Handle dialog open/close
   useEffect(() => {
@@ -145,6 +150,14 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
 
     if (isAlreadyMember) {
       setEmailError('Этот пользователь уже является участником доски');
+      toast.error('Этот пользователь уже является участником доски');
+      return;
+    }
+
+    // Check if current user is the owner
+    if (!isOwner) {
+      setEmailError('Только владелец доски может приглашать участников');
+      toast.error('Только владелец доски может приглашать участников');
       return;
     }
 
@@ -157,22 +170,30 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
       await inviteMember(email.trim());
       setEmail(''); // Clear the input on success
       setInviteSuccess(true);
+      setEmailError(null); // Clear any previous errors
 
       // Show success toast
       toast.success(`Пользователь ${email.trim()} успешно приглашен на доску`);
+
+      // Refresh the members list
+      await fetchBoardMembers();
     } catch (error) {
       console.error('Error inviting member:', error);
+      setInviteSuccess(false);
 
       // Handle specific error cases
       if (error instanceof Error) {
         console.log("Error message:", error.message);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes('не найден') || error.message.includes('not found')) {
           setEmailError('Пользователь с таким email не найден');
           toast.error('Пользователь с таким email не найден');
-        } else if (error.message.includes('owner')) {
+        } else if (error.message.includes('владелец') || error.message.includes('owner')) {
           setEmailError(error.message);
           toast.error(error.message);
+        } else if (error.message.includes('уже является') || error.message.includes('already')) {
+          setEmailError('Этот пользователь уже является участником доски');
+          toast.error('Этот пользователь уже является участником доски');
         } else {
           setEmailError(error.message);
           toast.error(error.message);
@@ -186,7 +207,7 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
+  const handleRemoveMemberClick = (userId: string) => {
     // Check if userId is defined
     if (!userId) {
       console.error('Cannot remove member: userId is undefined');
@@ -194,27 +215,64 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
       return;
     }
 
-    console.log("Attempting to remove member with userId:", userId);
+    console.log("Preparing to remove member with userId:", userId);
     console.log("Current user ID:", currentUser?.id);
     console.log("Is current user the owner?", isOwner);
 
     // Find the member in the list
-    const memberToRemove = safeBoardMembers.find(m => String(m.userId) === String(userId));
-    console.log("Member to remove:", memberToRemove);
+    const member = safeBoardMembers.find(m => String(m.userId) === String(userId));
+    console.log("Member to remove:", member);
 
-    if (confirm('Вы уверены, что хотите удалить этого участника?')) {
-      try {
-        await removeMember(userId);
-        toast.success('Участник успешно удален с доски');
-      } catch (error) {
-        console.error('Error removing member:', error);
-        if (error instanceof Error) {
-          toast.error(error.message);
-        } else {
-          toast.error('Не удалось удалить участника');
-        }
-      }
+    if (!member) {
+      toast.error('Пользователь не найден на этой доске');
+      return;
     }
+
+    // Check if trying to remove self
+    const isSelf = currentUser && String(currentUser.id) === String(userId);
+    if (isSelf) {
+      toast.error('Вы не можете удалить себя с доски');
+      return;
+    }
+
+    // Check if trying to remove the owner
+    const isRemovingOwner = member.role === 'owner';
+    if (isRemovingOwner) {
+      toast.error('Нельзя удалить владельца доски');
+      return;
+    }
+
+    // Set the member to remove and open the confirm dialog
+    setMemberToRemove({
+      userId,
+      name: member.name || member.email || 'Пользователь'
+    });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!memberToRemove) return;
+
+    try {
+      setLoading(true);
+      await removeMember(memberToRemove.userId);
+      // Toast notification is now handled in the useBoardStore.removeMember function
+
+      // Refresh the members list
+      await fetchBoardMembers();
+    } catch (error) {
+      console.error('Error removing member:', error);
+      // Error toast notifications are now handled in the useBoardStore.removeMember function
+    } finally {
+      setLoading(false);
+      setConfirmDialogOpen(false);
+      setMemberToRemove(null);
+    }
+  };
+
+  const handleCancelRemove = () => {
+    setConfirmDialogOpen(false);
+    setMemberToRemove(null);
   };
 
   // Safe access to boardMembers
@@ -373,7 +431,7 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
                       <Button
                         variant="danger"
                         className="!px-2 !py-1 !text-xs"
-                        onClick={() => member.userId && handleRemoveMember(member.userId)}
+                        onClick={() => member.userId && handleRemoveMemberClick(member.userId)}
                       >
                         Удалить
                       </Button>
@@ -400,6 +458,18 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog for Member Removal */}
+      <ConfirmDialog
+        isOpen={confirmDialogOpen}
+        title="Удаление участника"
+        message={`Вы уверены, что хотите удалить ${memberToRemove?.name || 'этого участника'} с доски?`}
+        confirmLabel="Удалить"
+        cancelLabel="Отмена"
+        onConfirm={handleConfirmRemove}
+        onCancel={handleCancelRemove}
+        variant="danger"
+      />
     </dialog>
   );
 }

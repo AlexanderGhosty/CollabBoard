@@ -126,8 +126,16 @@ export const boardService = {
       console.log("Current user ID:", currentUserId);
 
       if (currentUserId) {
+        // Convert to string for comparison
+        const currentUserIdStr = String(currentUserId);
+
+        // Log all member user IDs for debugging
+        if (members.length > 0) {
+          console.log("All member user IDs:", members.map(m => String(m.userId)));
+        }
+
         // Find the current user in the members list
-        const currentUserMember = members.find(m => String(m.userId) === String(currentUserId));
+        const currentUserMember = members.find(m => String(m.userId) === currentUserIdStr);
         console.log("Current user member data:", currentUserMember);
 
         if (currentUserMember) {
@@ -144,10 +152,10 @@ export const boardService = {
           console.log("- Owner ID from uppercase:", ownerIdFromUpperCase);
           console.log("- Owner ID from lowercase:", ownerIdFromLowerCase);
           console.log("- Combined owner ID:", ownerId);
-          console.log("- Current user ID:", currentUserId);
-          console.log("- Do they match?", ownerId === String(currentUserId));
+          console.log("- Current user ID:", currentUserIdStr);
+          console.log("- Do they match?", ownerId === currentUserIdStr);
 
-          if (ownerId && String(ownerId) === String(currentUserId)) {
+          if (ownerId && ownerId === currentUserIdStr) {
             userRole = 'owner';
             console.log("User is the owner of the board based on ownerId match");
           }
@@ -160,6 +168,7 @@ export const boardService = {
       // Fallback: check if user is the owner based on board data
       const { user } = useAuthStore.getState();
       if (user && user.id && boardData) {
+        const currentUserIdStr = String(user.id);
         const ownerIdFromUpperCase = boardData.OwnerID ? String(boardData.OwnerID) : undefined;
         const ownerIdFromLowerCase = boardData.ownerId ? String(boardData.ownerId) : undefined;
         const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
@@ -168,10 +177,10 @@ export const boardService = {
         console.log("- Owner ID from uppercase:", ownerIdFromUpperCase);
         console.log("- Owner ID from lowercase:", ownerIdFromLowerCase);
         console.log("- Combined owner ID:", ownerId);
-        console.log("- Current user ID:", user.id);
-        console.log("- Do they match?", ownerId === String(user.id));
+        console.log("- Current user ID:", currentUserIdStr);
+        console.log("- Do they match?", ownerId === currentUserIdStr);
 
-        if (ownerId && String(ownerId) === String(user.id)) {
+        if (ownerId && ownerId === currentUserIdStr) {
           userRole = 'owner';
           console.log("Fallback: User is the owner of the board based on ownerId match");
         }
@@ -700,6 +709,8 @@ export const boardService = {
           throw new Error("Пользователь с таким email не найден");
         } else if (status === 403) {
           throw new Error("У вас нет прав для приглашения участников");
+        } else if (status === 409) {
+          throw new Error("Этот пользователь уже является участником доски");
         } else if (status === 400 && errorData?.error) {
           throw new Error(errorData.error);
         }
@@ -727,8 +738,28 @@ export const boardService = {
 
       // Send WebSocket event to notify other clients
       sendWS({ event: 'member_removed', data: normalizedData });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error removing member:", error);
+
+      // Handle specific API error responses
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+
+        console.log("API error response:", status, errorData);
+
+        if (status === 404) {
+          throw new Error("Пользователь не найден на этой доске");
+        } else if (status === 403) {
+          throw new Error("У вас нет прав для удаления участников");
+        } else if (status === 400 && errorData?.error) {
+          throw new Error(errorData.error);
+        } else if (status === 409) {
+          throw new Error("Нельзя удалить владельца доски");
+        }
+      }
+
+      // Re-throw the original error if we couldn't handle it specifically
       throw error;
     }
   },

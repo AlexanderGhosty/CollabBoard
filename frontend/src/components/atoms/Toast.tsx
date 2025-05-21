@@ -12,17 +12,17 @@ export interface ToastProps {
 }
 
 const typeClasses = {
-  success: 'bg-green-50 border-l-green-500 text-green-800 shadow-[0_0_15px_rgba(0,200,0,0.15)]',
-  error: 'bg-red-50 border-l-red-500 text-red-800 shadow-[0_0_15px_rgba(200,0,0,0.15)]',
-  warning: 'bg-yellow-50 border-l-yellow-500 text-yellow-800 shadow-[0_0_15px_rgba(200,150,0,0.15)]',
-  info: 'bg-blue-50 border-l-blue-500 text-blue-800 shadow-[0_0_15px_rgba(0,100,200,0.15)]'
+  success: 'bg-gradient-to-r from-blue-50 to-green-50 border-l-green-500 text-green-800 shadow-[0_0_15px_rgba(0,200,0,0.15)]',
+  error: 'bg-gradient-to-r from-blue-50 to-red-50 border-l-red-500 text-red-800 shadow-[0_0_15px_rgba(200,0,0,0.15)]',
+  warning: 'bg-gradient-to-r from-blue-50 to-yellow-50 border-l-yellow-500 text-yellow-800 shadow-[0_0_15px_rgba(200,150,0,0.15)]',
+  info: 'bg-gradient-to-r from-blue-50 to-indigo-100 border-l-blue-600 text-blue-800 shadow-[0_0_15px_rgba(0,100,200,0.15)]'
 };
 
 const typeIconContainers = {
-  success: 'bg-green-100 text-green-600',
-  error: 'bg-red-100 text-red-600',
-  warning: 'bg-yellow-100 text-yellow-600',
-  info: 'bg-blue-100 text-blue-600'
+  success: 'bg-gradient-to-r from-green-50 to-green-100 text-green-600',
+  error: 'bg-gradient-to-r from-red-50 to-red-100 text-red-600',
+  warning: 'bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-600',
+  info: 'bg-gradient-to-r from-blue-50 to-indigo-100 text-blue-600'
 };
 
 const typeIcons = {
@@ -85,8 +85,8 @@ export default function Toast({ id, message, type, duration = 5000, onClose }: T
         </div>
         <button
           onClick={handleClose}
-          className="ml-1 w-6 h-6 rounded-full flex items-center justify-center text-gray-400
-            hover:text-gray-600 hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
+          className="ml-1 w-6 h-6 rounded-full flex items-center justify-center text-blue-400
+            hover:text-blue-600 hover:bg-blue-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
           aria-label="Close"
         >
           ✕
@@ -98,8 +98,8 @@ export default function Toast({ id, message, type, duration = 5000, onClose }: T
 
 export function ToastContainer({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed top-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
-      <div className="pointer-events-auto">
+    <div className="fixed top-6 right-6 z-50 flex flex-col gap-4 pointer-events-none">
+      <div className="pointer-events-auto flex flex-col gap-4">
         {children}
       </div>
     </div>

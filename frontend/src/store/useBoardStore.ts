@@ -122,7 +122,12 @@ export const useBoardStore = create<BoardState>()(
           s.ownedBoards = [];
           s.memberBoards = [];
           s.boards = [];
+          s.loading = false;
+          s.error = `Failed to fetch boards: ${error}`;
         });
+
+        // Show error toast
+        useToastStore.getState().error("Не удалось загрузить список досок");
       }
     },
 
@@ -199,24 +204,47 @@ export const useBoardStore = create<BoardState>()(
         console.log(`Board ${id} loaded successfully with ${board.lists.length} lists`);
       } catch (error) {
         console.error("Failed to load board:", error);
+
+        // Update the store with the error
+        set((s) => {
+          s.loading = false;
+          s.error = `Failed to load board: ${error}`;
+        });
+
+        // Show error toast
+        useToastStore.getState().error("Не удалось загрузить доску");
       }
     },
 
     async createBoard(name) {
-      const board = await boardService.createBoard(name);
-      console.log("Board created successfully:", board);
+      try {
+        const board = await boardService.createBoard(name);
+        console.log("Board created successfully:", board);
 
-      // Update the boards array with the new board
-      set((s) => {
-        // Check if the board already exists to prevent duplicates
-        const boardExists = s.boards.some(b => b.id === board.id);
-        if (!boardExists) {
-          s.boards.push(board);
-          console.log(`Added board ${board.id} with name "${board.name}" to boards list`);
-        } else {
-          console.log(`Board ${board.id} already exists, not adding duplicate`);
-        }
-      });
+        // Update the boards array with the new board
+        set((s) => {
+          // Check if the board already exists to prevent duplicates
+          const boardExists = s.boards.some(b => b.id === board.id);
+          if (!boardExists) {
+            s.boards.push(board);
+            console.log(`Added board ${board.id} with name "${board.name}" to boards list`);
+          } else {
+            console.log(`Board ${board.id} already exists, not adding duplicate`);
+          }
+        });
+
+        // Show success toast
+        useToastStore.getState().success("Доска успешно создана");
+
+        return board;
+      } catch (error) {
+        console.error("Failed to create board:", error);
+
+        // Show error toast
+        useToastStore.getState().error("Не удалось создать доску");
+
+        throw error;
+      }
     },
 
     async deleteBoard(boardId) {
@@ -688,6 +716,8 @@ export const useBoardStore = create<BoardState>()(
           return;
         }
 
+        console.log("Active board before fetching members:", get().active);
+
         console.log(`Fetching members for board ${targetBoardId}`);
         const members = await boardService.getBoardMembers(targetBoardId);
         console.log("Board members fetched:", members);
@@ -740,6 +770,20 @@ export const useBoardStore = create<BoardState>()(
             const userIdStr = String(user.id);
             const currentUserMember = members.find(m => String(m.userId) === userIdStr);
 
+            // Get owner ID from board data
+            const ownerIdFromUpperCase = s.active.OwnerID ? String(s.active.OwnerID) : undefined;
+            const ownerIdFromLowerCase = s.active.ownerId ? String(s.active.ownerId) : undefined;
+            const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
+
+            console.log("Checking user role in active board:");
+            console.log("- Current user ID:", userIdStr);
+            console.log("- Owner ID from board:", ownerId);
+            console.log("- Current role in board:", s.active.role);
+            console.log("- User found in members?", !!currentUserMember);
+            if (currentUserMember) {
+              console.log("- Role in members:", currentUserMember.role);
+            }
+
             if (currentUserMember) {
               // User found in members list, update role
               const newRole = currentUserMember.role as 'owner' | 'member';
@@ -748,7 +792,7 @@ export const useBoardStore = create<BoardState>()(
                 console.log(`Updating user role in active board from ${s.active.role} to ${newRole}`);
                 s.active.role = newRole;
               }
-            } else if (s.active.ownerId === userIdStr || s.active.OwnerID === userIdStr) {
+            } else if (ownerId === userIdStr) {
               // User is the owner but not in members list
               console.log("User is the owner but not in members list, setting role to owner");
               s.active.role = 'owner';
@@ -760,6 +804,9 @@ export const useBoardStore = create<BoardState>()(
         set((s) => {
           s.boardMembers = [];
         });
+
+        // Show error toast
+        useToastStore.getState().error("Не удалось загрузить список участников");
       }
     },
 
@@ -913,23 +960,27 @@ export const useBoardStore = create<BoardState>()(
           throw new Error("Только владелец доски может удалять участников");
         }
 
-        await boardService.removeMember(boardId, userId);
-        // Refresh the members list
-        await get().fetchBoardMembers();
+        try {
+          await boardService.removeMember(boardId, userId);
+          // Refresh the members list
+          await get().fetchBoardMembers();
+        } catch (error) {
+          console.error("Error removing member:", error);
+          // Re-throw the error to be handled by the caller
+          throw error;
+        }
 
         // Show success toast
-        useToastStore.getState().showToast({
-          type: 'success',
-          message: 'Пользователь удален с доски'
-        });
+        useToastStore.getState().success('Пользователь удален с доски');
       } catch (error) {
         console.error("Failed to remove member:", error);
 
         // Show error toast
-        useToastStore.getState().showToast({
-          type: 'error',
-          message: error instanceof Error ? error.message : 'Не удалось удалить пользователя'
-        });
+        if (error instanceof Error) {
+          useToastStore.getState().error(error.message);
+        } else {
+          useToastStore.getState().error('Не удалось удалить пользователя');
+        }
       }
     },
 
@@ -1470,6 +1521,16 @@ export const useBoardStore = create<BoardState>()(
             } else if (board && (!boardId || boardId === board.id)) {
               // Someone else was removed from this board, refresh the members list
               console.log("Another user was removed from this board, refreshing members list");
+
+              // Find the removed member's name if available
+              const members = s.boardMembers;
+              const removedMember = members.find(m => String(m.userId) === userId);
+              const memberName = removedMember ? (removedMember.name || removedMember.email || 'Пользователь') : 'Пользователь';
+
+              // Show a toast notification
+              useToastStore.getState().info(`${memberName} был удален с доски`);
+
+              // Refresh the members list
               setTimeout(() => get().fetchBoardMembers(), 0);
             } else {
               console.log("Member removed from a different board, no action needed");
