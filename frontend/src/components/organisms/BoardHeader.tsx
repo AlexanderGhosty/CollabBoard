@@ -1,13 +1,16 @@
 import { useCallback } from 'react';
 import Button from '@/components/atoms/Button';
+import EditableText from '@/components/atoms/EditableText';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useNavigate } from 'react-router-dom';
+import { boardNameSchema } from '@/utils/validate';
 
 export default function BoardHeader() {
   const navigate = useNavigate();
   // Use specific selectors for each piece of state/action needed
   const board = useBoardStore(state => state.active);
   const createList = useBoardStore(state => state.createList);
+  const updateBoardName = useBoardStore(state => state.updateBoardName);
 
   // Define all hooks before any conditional returns
   const handleBackClick = useCallback(() => {
@@ -18,6 +21,20 @@ export default function BoardHeader() {
   const handleCreateList = useCallback(() => {
     createList('Новый список');
   }, [createList]);
+
+  // Handle board name update
+  const handleBoardNameUpdate = useCallback(async (newName: string) => {
+    if (!board) return;
+
+    // Validate the board name
+    try {
+      boardNameSchema.parse(newName);
+      await updateBoardName(board.id, newName);
+    } catch (error) {
+      console.error('Board name validation error:', error);
+      throw new Error(error instanceof Error ? error.message : 'Invalid board name');
+    }
+  }, [board, updateBoardName]);
 
   // Conditional return after all hooks are defined
   if (!board) return null;
@@ -33,9 +50,17 @@ export default function BoardHeader() {
         >
           ← Назад
         </Button>
-        <h2 className="text-2xl font-bold text-blue-800 bg-white/70 px-4 py-2 rounded-xl shadow-sm backdrop-blur-sm">
-          {board.name}
-        </h2>
+        <div className="bg-white/70 px-4 py-2 rounded-xl shadow-sm backdrop-blur-sm">
+          <EditableText
+            value={board.name}
+            onSave={handleBoardNameUpdate}
+            textClassName="text-2xl font-bold text-blue-800"
+            inputClassName="text-2xl font-bold text-blue-800"
+            placeholder="Enter board name"
+            validateEmpty={true}
+            emptyErrorMessage="Board name cannot be empty"
+          />
+        </div>
       </div>
       <Button
         variant="primary"

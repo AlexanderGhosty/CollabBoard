@@ -459,4 +459,30 @@ export const boardService = {
       throw error;
     }
   },
+
+  /** Обновить название доски */
+  async updateBoard(boardId: string, name: string): Promise<Board> {
+    try {
+      console.log(`Updating board ${boardId} with name: ${name}`);
+
+      const { data } = await api.put<any>(ENDPOINTS.board(boardId), { name });
+      console.log("Raw updated board data from API:", data);
+
+      // Normalize the response to ensure it has the expected lowercase property names
+      const normalizedBoard: Board = {
+        id: String(data.ID || data.id || boardId),
+        name: data.Name || data.name || name,
+        ownerId: data.OwnerID ? String(data.OwnerID) :
+                 (data.ownerId ? String(data.ownerId) : undefined),
+        lists: [] // Lists will be populated separately if needed
+      };
+
+      console.log("Board updated successfully:", normalizedBoard);
+      sendWS({ event: 'board_updated', data: normalizedBoard });
+      return normalizedBoard;
+    } catch (error) {
+      console.error("Error updating board:", error);
+      throw error;
+    }
+  },
 };

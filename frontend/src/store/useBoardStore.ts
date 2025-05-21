@@ -15,6 +15,7 @@ interface BoardState {
   loadBoard: (id: string) => Promise<void>;
   createBoard: (name: string) => Promise<void>;
   deleteBoard: (boardId: string) => Promise<void>;
+  updateBoardName: (boardId: string, name: string) => Promise<void>;
   createList: (title: string) => Promise<void>;
   updateList: (listId: string, title: string) => Promise<void>;
   moveList: (listId: string, position: number) => Promise<void>;
@@ -164,6 +165,60 @@ export const useBoardStore = create<BoardState>()(
 
         // Show error toast
         useToastStore.getState().error("Не удалось удалить доску. Пожалуйста, попробуйте снова.");
+      }
+    },
+
+    async updateBoardName(boardId, name) {
+      const board = get().active;
+      if (!board || board.id !== boardId) {
+        console.error(`Cannot update board name: active board is null or doesn't match boardId ${boardId}`);
+        return;
+      }
+
+      try {
+        // Store the original name for rollback if needed
+        const originalName = board.name;
+
+        // Optimistic update locally
+        set((s) => {
+          if (s.active && s.active.id === boardId) {
+            s.active.name = name;
+            console.log(`Optimistically updated board ${boardId} name to "${name}"`);
+          }
+
+          // Also update the board in the boards array if it exists
+          const boardIndex = s.boards.findIndex(b => b.id === boardId);
+          if (boardIndex !== -1) {
+            s.boards[boardIndex].name = name;
+          }
+        });
+
+        // Call the API to update the board
+        const updatedBoard = await boardService.updateBoard(boardId, name);
+        console.log(`Board ${boardId} updated successfully:`, updatedBoard);
+
+        // Show success toast
+        useToastStore.getState().success("Название доски обновлено");
+      } catch (error) {
+        console.error(`Error updating board ${boardId} name:`, error);
+
+        // Revert the optimistic update on error
+        set((s) => {
+          if (s.active && s.active.id === boardId) {
+            s.active.name = board.name;
+            console.log(`Reverted optimistic update for board ${boardId}`);
+          }
+
+          // Also revert in the boards array
+          const boardIndex = s.boards.findIndex(b => b.id === boardId);
+          if (boardIndex !== -1) {
+            s.boards[boardIndex].name = board.name;
+          }
+        });
+
+        // Show error toast
+        useToastStore.getState().error("Не удалось обновить название доски. Пожалуйста, попробуйте снова.");
+        throw error;
       }
     },
 
