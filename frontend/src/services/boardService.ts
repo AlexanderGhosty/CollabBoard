@@ -1,6 +1,7 @@
 import { api } from '@/services/api';
 import { sendWS } from '@/services/websocket';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 /** Типы сущностей (минимально‑необходимые) */
 export type Card  = {
@@ -15,6 +16,7 @@ export type Board = {
   id: string;
   name: string;  // Changed from 'title' to 'name' to match backend
   ownerId?: string; // Added to match backend
+  role?: 'owner' | 'member'; // Added for board sharing feature
   lists: List[]
 };
 
@@ -39,7 +41,7 @@ export const boardService = {
     // Ensure all IDs are strings and handle the BoardID field from backend
     return data.map(board => {
       // The backend returns BoardID instead of id
-      const boardId = board.BoardID || board.boardId || board.id;
+      const boardId = board.BoardID || board.boardId || board.id || board.board_id;
       // The backend returns Name or name
       const boardName = board.Name || board.name;
 
@@ -54,9 +56,50 @@ export const boardService = {
         // Ensure name is properly set
         name: boardName,
         ownerId: board.OwnerID ? String(board.OwnerID) : (board.ownerId ? String(board.ownerId) : undefined),
+        role: board.role || 'member', // Include role if available
         lists: board.lists || []
       };
     }).filter(board => board.id); // Filter out boards without IDs
+  },
+
+  /** Получить доски по роли пользователя (owner/member) */
+  async getBoardsByRole(role: 'owner' | 'member'): Promise<Board[]> {
+    try {
+      const { data } = await api.get<any[]>(`${ENDPOINTS.boards}/by-role/${role}`);
+      console.log(`Raw board data for role ${role} from API:`, data);
+
+      // Check if data is null or undefined, return empty array if it is
+      if (!data) {
+        console.warn(`No data returned for role ${role}, returning empty array`);
+        return [];
+      }
+
+      // Ensure all IDs are strings and handle the BoardID field from backend
+      return data.map(board => {
+        // The backend returns board_id instead of id
+        const boardId = board.board_id || board.BoardID || board.boardId || board.id;
+        // The backend returns Name or name
+        const boardName = board.Name || board.name;
+
+        if (!boardId) {
+          console.error("Board without ID received:", board);
+        }
+
+        return {
+          ...board,
+          id: boardId ? String(boardId) : undefined,
+          name: boardName,
+          ownerId: board.owner_id ? String(board.owner_id) :
+                  (board.OwnerID ? String(board.OwnerID) :
+                  (board.ownerId ? String(board.ownerId) : undefined)),
+          role: board.role || role, // Include role from response or use the requested role
+          lists: board.lists || []
+        };
+      }).filter(board => board.id); // Filter out boards without IDs
+    } catch (error) {
+      console.error(`Error fetching boards for role ${role}:`, error);
+      return []; // Return empty array on error
+    }
   },
 
   /** Получить доску по ID */
@@ -71,6 +114,70 @@ export const boardService = {
     const { data: listsData } = await api.get<any[]>(ENDPOINTS.lists(id));
     console.log("Raw lists data:", listsData);
 
+    // Step 3: Fetch board members to determine the current user's role
+    let userRole: 'owner' | 'member' = 'member'; // Default to member
+    try {
+      const members = await this.getBoardMembers(id);
+      console.log("Board members:", members);
+
+      // Get current user ID from auth store
+      const { user } = useAuthStore.getState();
+      const currentUserId = user?.id;
+      console.log("Current user ID:", currentUserId);
+
+      if (currentUserId) {
+        // Find the current user in the members list
+        const currentUserMember = members.find(m => String(m.userId) === String(currentUserId));
+        console.log("Current user member data:", currentUserMember);
+
+        if (currentUserMember) {
+          userRole = currentUserMember.role as 'owner' | 'member';
+          console.log("User role on this board:", userRole);
+        } else {
+          // If user is not found in members list but is the owner of the board
+          // This is a fallback in case the board_members table doesn't have an entry
+          const ownerIdFromUpperCase = boardData.OwnerID ? String(boardData.OwnerID) : undefined;
+          const ownerIdFromLowerCase = boardData.ownerId ? String(boardData.ownerId) : undefined;
+          const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
+
+          console.log("Checking owner ID match:");
+          console.log("- Owner ID from uppercase:", ownerIdFromUpperCase);
+          console.log("- Owner ID from lowercase:", ownerIdFromLowerCase);
+          console.log("- Combined owner ID:", ownerId);
+          console.log("- Current user ID:", currentUserId);
+          console.log("- Do they match?", ownerId === String(currentUserId));
+
+          if (ownerId && String(ownerId) === String(currentUserId)) {
+            userRole = 'owner';
+            console.log("User is the owner of the board based on ownerId match");
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error determining user role:", error);
+      // Continue with default role 'member'
+
+      // Fallback: check if user is the owner based on board data
+      const { user } = useAuthStore.getState();
+      if (user && user.id && boardData) {
+        const ownerIdFromUpperCase = boardData.OwnerID ? String(boardData.OwnerID) : undefined;
+        const ownerIdFromLowerCase = boardData.ownerId ? String(boardData.ownerId) : undefined;
+        const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
+
+        console.log("Fallback checking owner ID match:");
+        console.log("- Owner ID from uppercase:", ownerIdFromUpperCase);
+        console.log("- Owner ID from lowercase:", ownerIdFromLowerCase);
+        console.log("- Combined owner ID:", ownerId);
+        console.log("- Current user ID:", user.id);
+        console.log("- Do they match?", ownerId === String(user.id));
+
+        if (ownerId && String(ownerId) === String(user.id)) {
+          userRole = 'owner';
+          console.log("Fallback: User is the owner of the board based on ownerId match");
+        }
+      }
+    }
+
     // Process lists data - handle both uppercase and lowercase property names
     const processedLists = (listsData || []).map((list: any) => {
       const listId = String(list.ID || list.id);
@@ -84,7 +191,7 @@ export const boardService = {
       };
     });
 
-    // Step 3: For each list, fetch its cards
+    // Step 4: For each list, fetch its cards
     for (const list of processedLists) {
       try {
         const { data: cardsData } = await api.get<any[]>(`/lists/${list.id}/cards`);
@@ -110,15 +217,19 @@ export const boardService = {
       }
     }
 
-    // Step 4: Return the complete board with lists and cards
-    return {
+    // Step 5: Return the complete board with lists and cards
+    const normalizedBoard = {
       ...boardData,
       id: String(boardData.ID || boardData.id),
       name: boardData.Name || boardData.name,
       ownerId: boardData.OwnerID ? String(boardData.OwnerID) :
                (boardData.ownerId ? String(boardData.ownerId) : undefined),
+      role: userRole, // Set the user's role on this board
       lists: processedLists
     };
+
+    console.log("Final normalized board with role:", normalizedBoard);
+    return normalizedBoard;
   },
 
   /** Создать доску */
@@ -502,6 +613,122 @@ export const boardService = {
       return normalizedBoard;
     } catch (error) {
       console.error("Error updating board:", error);
+      throw error;
+    }
+  },
+
+  /** Получить список участников доски */
+  async getBoardMembers(boardId: string): Promise<any[]> {
+    try {
+      console.log(`Fetching members for board ${boardId}`);
+      const { data } = await api.get(`/boards/${boardId}/members`);
+      console.log("Raw board members data from API:", data);
+
+      // Check if data is an array
+      if (!Array.isArray(data)) {
+        console.error("Expected array of members but got:", data);
+        return [];
+      }
+
+      // Normalize the response to ensure consistent property names
+      const normalizedMembers = data.map((member: any) => {
+        // Extract user_id from different possible formats
+        const userIdFromSnakeCase = member.user_id !== undefined ? String(member.user_id) : undefined;
+        const userIdFromCamelCase = member.userId !== undefined ? String(member.userId) : undefined;
+        const userIdFromUpperCase = member.UserID !== undefined ? String(member.UserID) : undefined;
+
+        // Use the first available ID
+        const userId = userIdFromSnakeCase || userIdFromCamelCase || userIdFromUpperCase;
+
+        console.log(`Normalizing member: ${JSON.stringify(member)}`);
+        console.log(`- user_id: ${userIdFromSnakeCase}, userId: ${userIdFromCamelCase}, UserID: ${userIdFromUpperCase}`);
+        console.log(`- Final userId: ${userId}`);
+
+        return {
+          ...member,
+          userId: userId,
+          name: member.name || member.Name || 'Unknown',
+          email: member.email || member.Email || '',
+          role: member.role || member.Role || 'member'
+        };
+      });
+
+      console.log("Normalized members:", normalizedMembers);
+      return normalizedMembers;
+    } catch (error) {
+      console.error("Error fetching board members:", error);
+      throw error;
+    }
+  },
+
+  /** Пригласить пользователя на доску по email */
+  async inviteMemberByEmail(boardId: string, email: string, role: 'owner' | 'member' = 'member'): Promise<any> {
+    try {
+      console.log(`Inviting user ${email} to board ${boardId} with role ${role}`);
+
+      // Validate email format before sending to API
+      if (!email || !email.includes('@')) {
+        throw new Error("Некорректный формат email");
+      }
+
+      const { data } = await api.post(`/boards/${boardId}/members/invite`, { email, role });
+      console.log("Invitation successful:", data);
+
+      // Normalize the response data
+      const normalizedData = {
+        ...data,
+        boardId: String(data.board_id || data.boardId || data.BoardID || boardId),
+        userId: String(data.user_id || data.userId || data.UserID || ''),
+        email: data.email || data.Email || email,
+        role: data.role || data.Role || role
+      };
+
+      console.log("Normalized invitation data:", normalizedData);
+
+      // Send WebSocket event to notify other clients
+      sendWS({ event: 'member_added', data: normalizedData });
+      return normalizedData;
+    } catch (error: any) {
+      console.error("Error inviting member:", error);
+
+      // Handle specific API error responses
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+
+        if (status === 404) {
+          throw new Error("Пользователь с таким email не найден");
+        } else if (status === 403) {
+          throw new Error("У вас нет прав для приглашения участников");
+        } else if (status === 400 && errorData?.error) {
+          throw new Error(errorData.error);
+        }
+      }
+
+      // Re-throw the original error if we couldn't handle it specifically
+      throw error;
+    }
+  },
+
+  /** Удалить участника с доски */
+  async removeMember(boardId: string, userId: string): Promise<void> {
+    try {
+      console.log(`Removing user ${userId} from board ${boardId}`);
+      await api.delete(`/boards/${boardId}/members/${userId}`);
+      console.log("Member removed successfully");
+
+      // Normalize the data for WebSocket event
+      const normalizedData = {
+        boardId: String(boardId),
+        userId: String(userId)
+      };
+
+      console.log("Sending normalized member_removed event:", normalizedData);
+
+      // Send WebSocket event to notify other clients
+      sendWS({ event: 'member_removed', data: normalizedData });
+    } catch (error) {
+      console.error("Error removing member:", error);
       throw error;
     }
   },

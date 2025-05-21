@@ -14,6 +14,7 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 
 	g.POST("", createBoardHandler(svc))
 	g.GET("", listBoardsHandler(svc))
+	g.GET("/by-role/:role", listBoardsByRoleHandler(svc))
 
 	g.GET("/:boardId", getBoardHandler(svc))
 	g.PUT("/:boardId", updateBoardHandler(svc))
@@ -22,6 +23,7 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g.GET("/:boardId/members", listMembersHandler(svc))
 	g.POST("/:boardId/members", addMemberHandler(svc))
 	g.DELETE("/:boardId/members/:userId", deleteMemberHandler(svc))
+	g.POST("/:boardId/members/invite", inviteMemberByEmailHandler(svc))
 }
 
 func createBoardHandler(svc *Service) gin.HandlerFunc {
@@ -172,5 +174,66 @@ func deleteMemberHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "member removed"})
+	}
+}
+
+func listBoardsByRoleHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role := c.Param("role")
+		// Validate role parameter
+		if role != "owner" && role != "member" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role parameter, must be 'owner' or 'member'"})
+			return
+		}
+
+		userID := int32(c.GetInt("userID"))
+		boards, err := svc.ListBoardsByRole(c.Request.Context(), userID, role)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, boards)
+	}
+}
+
+func inviteMemberByEmailHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
+		userID := int32(c.GetInt("userID"))
+
+		var req struct {
+			Email string `json:"email" binding:"required,email"`
+			Role  string `json:"role"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Default role to "member" if not specified
+		if req.Role == "" {
+			req.Role = "member"
+		}
+
+		// Validate role
+		if req.Role != "owner" && req.Role != "member" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role, must be 'owner' or 'member'"})
+			return
+		}
+
+		member, err := svc.AddMemberByEmail(c.Request.Context(), userID, int32(boardID), req.Email, req.Role)
+		if err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, ErrForbidden) {
+				status = http.StatusForbidden
+			} else if errors.Is(err, ErrUserNotFound) {
+				status = http.StatusNotFound
+				c.JSON(status, gin.H{"error": "user with this email not found"})
+				return
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusCreated, member)
 	}
 }

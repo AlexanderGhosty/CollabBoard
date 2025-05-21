@@ -26,6 +26,10 @@ func (r *Repository) ListByUser(ctx context.Context, userID int32) ([]db.ListBoa
 	return r.queries.ListBoardsByUser(ctx, userID)
 }
 
+func (r *Repository) ListByUserAndRole(ctx context.Context, arg db.ListBoardsByUserAndRoleParams) ([]db.ListBoardsByUserAndRoleRow, error) {
+	return r.queries.ListBoardsByUserAndRole(ctx, arg)
+}
+
 func (r *Repository) Update(ctx context.Context, arg db.UpdateBoardParams) (db.Board, error) {
 	return r.queries.UpdateBoard(ctx, arg)
 }

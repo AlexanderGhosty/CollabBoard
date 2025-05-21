@@ -22,6 +22,13 @@ FROM board_members bm
 WHERE bm.user_id = $1
 ORDER BY b.created_at;
 
+-- name: ListBoardsByUserAndRole :many
+SELECT b.id AS board_id, b.name, b.owner_id, b.created_at, bm.role
+FROM board_members bm
+         JOIN boards b ON b.id = bm.board_id
+WHERE bm.user_id = $1 AND bm.role = $2
+ORDER BY b.created_at;
+
 -- name: UpdateBoardMemberRole :one
 UPDATE board_members
 SET role = $3

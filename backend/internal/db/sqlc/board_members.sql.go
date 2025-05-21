@@ -143,6 +143,53 @@ func (q *Queries) ListBoardsByUser(ctx context.Context, userID int32) ([]ListBoa
 	return items, nil
 }
 
+const listBoardsByUserAndRole = `-- name: ListBoardsByUserAndRole :many
+SELECT b.id AS board_id, b.name, b.owner_id, b.created_at, bm.role
+FROM board_members bm
+         JOIN boards b ON b.id = bm.board_id
+WHERE bm.user_id = $1 AND bm.role = $2
+ORDER BY b.created_at
+`
+
+type ListBoardsByUserAndRoleParams struct {
+	UserID int32
+	Role   string
+}
+
+type ListBoardsByUserAndRoleRow struct {
+	BoardID   int32
+	Name      string
+	OwnerID   int32
+	CreatedAt pgtype.Timestamp
+	Role      string
+}
+
+func (q *Queries) ListBoardsByUserAndRole(ctx context.Context, arg ListBoardsByUserAndRoleParams) ([]ListBoardsByUserAndRoleRow, error) {
+	rows, err := q.db.Query(ctx, listBoardsByUserAndRole, arg.UserID, arg.Role)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBoardsByUserAndRoleRow
+	for rows.Next() {
+		var i ListBoardsByUserAndRoleRow
+		if err := rows.Scan(
+			&i.BoardID,
+			&i.Name,
+			&i.OwnerID,
+			&i.CreatedAt,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateBoardMemberRole = `-- name: UpdateBoardMemberRole :one
 UPDATE board_members
 SET role = $3

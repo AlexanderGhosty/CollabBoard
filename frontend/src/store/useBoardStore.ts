@@ -3,17 +3,27 @@ import { immer } from 'zustand/middleware/immer';
 import { boardService, Card, List, Board } from '@/services/boardService';
 import { wsClient, sendWS, subscribeWS, WSMessage } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface BoardState {
   /** коллекция всех досок пользователя (лендинг) */
   boards: Board[];
+  /** доски, где пользователь является владельцем */
+  ownedBoards: Board[];
+  /** доски, где пользователь является участником */
+  memberBoards: Board[];
   /** активная доска (открыта /board/:id) */
   active: Board | null;
+  /** участники активной доски */
+  boardMembers: any[];
   /** флаг, указывающий, что модальное окно карточки открыто */
   isCardModalOpen: boolean;
+  /** флаг, указывающий, что модальное окно управления участниками открыто */
+  isMemberModalOpen: boolean;
 
   /** REST‑методы */
   fetchBoards: () => Promise<void>;
+  fetchBoardsByRole: () => Promise<void>;
   loadBoard: (id: string) => Promise<void>;
   createBoard: (name: string) => Promise<void>;
   deleteBoard: (boardId: string) => Promise<void>;
@@ -28,8 +38,14 @@ interface BoardState {
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
 
-  /** методы управления состоянием модального окна */
+  /** методы управления участниками */
+  fetchBoardMembers: (boardId?: string) => Promise<void>;
+  inviteMember: (email: string, role?: 'owner' | 'member') => Promise<void>;
+  removeMember: (userId: string) => Promise<void>;
+
+  /** методы управления состоянием модальных окон */
   setCardModalOpen: (isOpen: boolean) => void;
+  setMemberModalOpen: (isOpen: boolean) => void;
 
   /** обработка входящих WS‑ивентов */
   applyWS: (msg: WSMessage) => void;
@@ -38,12 +54,22 @@ interface BoardState {
 export const useBoardStore = create<BoardState>()(
   immer((set, get) => ({
     boards: [],
+    ownedBoards: [],
+    memberBoards: [],
     active: null,
+    boardMembers: [],
     isCardModalOpen: false,
+    isMemberModalOpen: false,
 
     setCardModalOpen(isOpen) {
       set((s) => {
         s.isCardModalOpen = isOpen;
+      });
+    },
+
+    setMemberModalOpen(isOpen) {
+      set((s) => {
+        s.isMemberModalOpen = isOpen;
       });
     },
 
@@ -57,6 +83,44 @@ export const useBoardStore = create<BoardState>()(
       } catch (error) {
         console.error("Failed to fetch boards:", error);
         set((s) => {
+          s.boards = [];
+        });
+      }
+    },
+
+    async fetchBoardsByRole() {
+      try {
+        // Fetch boards where user is owner
+        const ownedBoards = await boardService.getBoardsByRole('owner');
+        // Fetch boards where user is member
+        const memberBoards = await boardService.getBoardsByRole('member');
+
+        // Log the results for debugging
+        console.log("Fetched owned boards:", ownedBoards);
+        console.log("Fetched member boards:", memberBoards);
+
+        set((s) => {
+          // Ensure we always set arrays, even if the API returns null
+          s.ownedBoards = Array.isArray(ownedBoards) ? ownedBoards : [];
+          s.memberBoards = Array.isArray(memberBoards) ? memberBoards : [];
+
+          // Also update the combined boards list
+          s.boards = [
+            ...s.ownedBoards,
+            ...s.memberBoards
+          ];
+
+          console.log("Updated store with boards:", {
+            ownedBoards: s.ownedBoards.length,
+            memberBoards: s.memberBoards.length,
+            totalBoards: s.boards.length
+          });
+        });
+      } catch (error) {
+        console.error("Failed to fetch boards by role:", error);
+        set((s) => {
+          s.ownedBoards = [];
+          s.memberBoards = [];
           s.boards = [];
         });
       }
@@ -111,6 +175,9 @@ export const useBoardStore = create<BoardState>()(
           }
         });
 
+        // Fetch board members after loading the board
+        get().fetchBoardMembers(id);
+
         // Connect to WebSocket for real-time updates
         wsClient.connect(id);
 
@@ -126,6 +193,8 @@ export const useBoardStore = create<BoardState>()(
         subscribeWS('board_created', (d: any) => get().applyWS({ event: 'board_created', data: d }));
         subscribeWS('board_updated', (d: any) => get().applyWS({ event: 'board_updated', data: d }));
         subscribeWS('board_deleted', (d: any) => get().applyWS({ event: 'board_deleted', data: d }));
+        subscribeWS('member_added', (d: any) => get().applyWS({ event: 'member_added', data: d }));
+        subscribeWS('member_removed', (d: any) => get().applyWS({ event: 'member_removed', data: d }));
 
         console.log(`Board ${id} loaded successfully with ${board.lists.length} lists`);
       } catch (error) {
@@ -609,6 +678,261 @@ export const useBoardStore = create<BoardState>()(
       }
     },
 
+    /* ───────────────── BOARD MEMBERS ───────────────── */
+    async fetchBoardMembers(boardId) {
+      try {
+        // Use the active board ID if none is provided
+        const targetBoardId = boardId || get().active?.id;
+        if (!targetBoardId) {
+          console.error("No board ID provided and no active board");
+          return;
+        }
+
+        console.log(`Fetching members for board ${targetBoardId}`);
+        const members = await boardService.getBoardMembers(targetBoardId);
+        console.log("Board members fetched:", members);
+
+        // Get current user ID from auth store for debugging
+        const { user } = useAuthStore.getState();
+        console.log("Current user:", user);
+
+        // Check if current user is in the members list and what role they have
+        if (user && user.id) {
+          // Convert all user IDs to strings for comparison
+          const userIdStr = String(user.id);
+          const memberUserIds = members.map(m => String(m.userId));
+
+          console.log("All member user IDs:", memberUserIds);
+          console.log("Current user ID (string):", userIdStr);
+          console.log("Is current user ID in members list?", memberUserIds.includes(userIdStr));
+
+          const currentUserMember = members.find(m => String(m.userId) === userIdStr);
+          console.log("Current user member data:", currentUserMember);
+
+          if (currentUserMember) {
+            console.log("User role on this board:", currentUserMember.role);
+          } else {
+            console.log("Current user not found in board members list");
+
+            // Check if the active board has the current user as owner
+            const active = get().active;
+            if (active) {
+              const ownerIdFromUpperCase = active.OwnerID ? String(active.OwnerID) : undefined;
+              const ownerIdFromLowerCase = active.ownerId ? String(active.ownerId) : undefined;
+              const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
+
+              console.log("Checking if user is owner of the board:");
+              console.log("- Owner ID from uppercase:", ownerIdFromUpperCase);
+              console.log("- Owner ID from lowercase:", ownerIdFromLowerCase);
+              console.log("- Combined owner ID:", ownerId);
+              console.log("- Current user ID:", userIdStr);
+              console.log("- Do they match?", ownerId === userIdStr);
+            }
+          }
+        }
+
+        set((s) => {
+          s.boardMembers = members || [];
+          console.log("Board members set in store:", s.boardMembers);
+
+          // Update the user's role in the active board if needed
+          if (s.active && user && user.id) {
+            const userIdStr = String(user.id);
+            const currentUserMember = members.find(m => String(m.userId) === userIdStr);
+
+            if (currentUserMember) {
+              // User found in members list, update role
+              const newRole = currentUserMember.role as 'owner' | 'member';
+
+              if (s.active.role !== newRole) {
+                console.log(`Updating user role in active board from ${s.active.role} to ${newRole}`);
+                s.active.role = newRole;
+              }
+            } else if (s.active.ownerId === userIdStr || s.active.OwnerID === userIdStr) {
+              // User is the owner but not in members list
+              console.log("User is the owner but not in members list, setting role to owner");
+              s.active.role = 'owner';
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Failed to fetch board members:", error);
+        set((s) => {
+          s.boardMembers = [];
+        });
+      }
+    },
+
+    async inviteMember(email, role = 'member') {
+      try {
+        const active = get().active;
+        const boardId = active?.id;
+        if (!boardId) {
+          console.error("No active board");
+          throw new Error("Нет активной доски");
+        }
+
+        // Check if current user is the owner of the board
+        const isOwnerByRole = active?.role === 'owner';
+        const boardMembers = get().boardMembers;
+        const currentUser = useAuthStore.getState().user;
+
+        // Convert IDs to strings for comparison
+        const currentUserIdStr = currentUser?.id ? String(currentUser.id) : '';
+
+        const isUserOwnerInMembers = boardMembers.some(m =>
+          String(m.userId) === currentUserIdStr && m.role === 'owner');
+
+        // Check both uppercase and lowercase ownerId properties
+        const ownerIdFromUpperCase = active?.OwnerID ? String(active.OwnerID) : undefined;
+        const ownerIdFromLowerCase = active?.ownerId ? String(active.ownerId) : undefined;
+        const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
+        const isOwnerByBoardData = ownerId === currentUserIdStr;
+
+        // Combined check - user is owner if any of the checks pass
+        const isOwner = isOwnerByRole || isUserOwnerInMembers || isOwnerByBoardData;
+
+        console.log("Checking if user can invite members:");
+        console.log("- Current user ID (string):", currentUserIdStr);
+        console.log("- Owner ID from uppercase:", ownerIdFromUpperCase);
+        console.log("- Owner ID from lowercase:", ownerIdFromLowerCase);
+        console.log("- Combined owner ID:", ownerId);
+        console.log("- Is owner by role?", isOwnerByRole);
+        console.log("- Is owner in members?", isUserOwnerInMembers);
+        console.log("- Is owner by board data?", isOwnerByBoardData);
+        console.log("- Is owner (combined)?", isOwner);
+
+        // Log member user IDs for comparison
+        if (boardMembers.length > 0) {
+          console.log("Member user IDs (as strings):", boardMembers.map(m => String(m.userId)));
+          console.log("Member with owner role:", boardMembers.find(m => m.role === 'owner'));
+        }
+
+        if (!isOwner) {
+          console.error("User is not the owner of the board");
+          throw new Error("Только владелец доски может приглашать участников");
+        }
+
+        // Validate email format before sending to API
+        if (!email || !email.includes('@')) {
+          throw new Error("Некорректный формат email");
+        }
+
+        // Check if user is already a member
+        const existingMembers = get().boardMembers;
+        const isAlreadyMember = existingMembers.some(
+          (member) => member.email.toLowerCase() === email.toLowerCase()
+        );
+
+        if (isAlreadyMember) {
+          throw new Error("Этот пользователь уже является участником доски");
+        }
+
+        // Send invitation
+        await boardService.inviteMemberByEmail(boardId, email, role);
+
+        // Refresh the members list
+        await get().fetchBoardMembers();
+
+        // Show success toast
+        useToastStore.getState().success(`Пользователь ${email} успешно приглашен на доску`);
+
+        return true;
+      } catch (error) {
+        console.error("Failed to invite member:", error);
+
+        // Handle specific error cases
+        let errorMessage = 'Не удалось пригласить пользователя';
+
+        if (error instanceof Error) {
+          // Check for specific error messages from the backend
+          if (error.message.includes('not found')) {
+            errorMessage = 'Пользователь с таким email не найден';
+          } else if (error.message.includes('already')) {
+            errorMessage = 'Этот пользователь уже является участником доски';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+
+        // Show error toast
+        useToastStore.getState().error(errorMessage);
+
+        // Re-throw the error so the component can handle it
+        throw error;
+      }
+    },
+
+    async removeMember(userId) {
+      try {
+        const active = get().active;
+        const boardId = active?.id;
+        if (!boardId) {
+          console.error("No active board");
+          throw new Error("Нет активной доски");
+        }
+
+        // Check if current user is the owner of the board
+        const isOwnerByRole = active?.role === 'owner';
+        const boardMembers = get().boardMembers;
+        const currentUser = useAuthStore.getState().user;
+
+        // Convert IDs to strings for comparison
+        const currentUserIdStr = currentUser?.id ? String(currentUser.id) : '';
+
+        const isUserOwnerInMembers = boardMembers.some(m =>
+          String(m.userId) === currentUserIdStr && m.role === 'owner');
+
+        // Check both uppercase and lowercase ownerId properties
+        const ownerIdFromUpperCase = active?.OwnerID ? String(active.OwnerID) : undefined;
+        const ownerIdFromLowerCase = active?.ownerId ? String(active.ownerId) : undefined;
+        const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
+        const isOwnerByBoardData = ownerId === currentUserIdStr;
+
+        // Combined check - user is owner if any of the checks pass
+        const isOwner = isOwnerByRole || isUserOwnerInMembers || isOwnerByBoardData;
+
+        console.log("Checking if user can remove members:");
+        console.log("- Current user ID (string):", currentUserIdStr);
+        console.log("- Owner ID from uppercase:", ownerIdFromUpperCase);
+        console.log("- Owner ID from lowercase:", ownerIdFromLowerCase);
+        console.log("- Combined owner ID:", ownerId);
+        console.log("- Is owner by role?", isOwnerByRole);
+        console.log("- Is owner in members?", isUserOwnerInMembers);
+        console.log("- Is owner by board data?", isOwnerByBoardData);
+        console.log("- Is owner (combined)?", isOwner);
+
+        // Log member user IDs for comparison
+        if (boardMembers.length > 0) {
+          console.log("Member user IDs (as strings):", boardMembers.map(m => String(m.userId)));
+          console.log("Member with owner role:", boardMembers.find(m => m.role === 'owner'));
+        }
+
+        if (!isOwner) {
+          console.error("User is not the owner of the board");
+          throw new Error("Только владелец доски может удалять участников");
+        }
+
+        await boardService.removeMember(boardId, userId);
+        // Refresh the members list
+        await get().fetchBoardMembers();
+
+        // Show success toast
+        useToastStore.getState().showToast({
+          type: 'success',
+          message: 'Пользователь удален с доски'
+        });
+      } catch (error) {
+        console.error("Failed to remove member:", error);
+
+        // Show error toast
+        useToastStore.getState().showToast({
+          type: 'error',
+          message: error instanceof Error ? error.message : 'Не удалось удалить пользователя'
+        });
+      }
+    },
+
     /* ────────────── WebSocket incoming ───────────── */
     applyWS({ event, data }) {
       set((s) => {
@@ -1076,6 +1400,79 @@ export const useBoardStore = create<BoardState>()(
 
               // Show a toast notification
               useToastStore.getState().info("Эта доска была удалена");
+            }
+            break;
+          }
+
+          case 'member_added': {
+            // Handle member_added event
+            const rawData = data as any;
+            console.log("Received member_added event with data:", rawData);
+
+            // Extract the board ID (handle both formats)
+            const boardId = String(rawData.BoardID || rawData.boardId || rawData.board_id || '');
+
+            // Extract the user ID (handle both formats)
+            const userId = String(rawData.UserID || rawData.userId || rawData.user_id || '');
+
+            // Extract the email (handle both formats)
+            const email = rawData.Email || rawData.email || '';
+
+            console.log("Extracted from member_added event:");
+            console.log("- Board ID:", boardId);
+            console.log("- User ID:", userId);
+            console.log("- Email:", email);
+            console.log("- Current board ID:", board.id);
+
+            // If we're on the board where the member was added, refresh the members list
+            if (boardId && board.id === boardId) {
+              console.log("Member added to current board, refreshing members list");
+
+              // We need to call fetchBoardMembers outside of the immer setter
+              setTimeout(() => get().fetchBoardMembers(), 0);
+
+              // Show a toast notification
+              useToastStore.getState().info("Новый участник добавлен на доску");
+            } else {
+              console.log("Member added to a different board, no action needed");
+            }
+            break;
+          }
+
+          case 'member_removed': {
+            // Handle member_removed event
+            const rawData = data as any;
+            console.log("Received member_removed event with data:", rawData);
+
+            // Extract the user ID (handle both formats)
+            const userId = String(rawData.userId || rawData.UserID || rawData.user_id || '');
+
+            // Extract the board ID (handle both formats)
+            const boardId = String(rawData.boardId || rawData.BoardID || rawData.board_id || '');
+
+            console.log("Extracted from member_removed event:");
+            console.log("- User ID:", userId);
+            console.log("- Board ID:", boardId);
+            console.log("- Current board ID:", board.id);
+            console.log("- Current user ID:", useAuthStore.getState().user?.id);
+
+            // If we're on a board and our user ID matches the removed member, redirect to home
+            const currentUserId = useAuthStore.getState().user?.id;
+            if (currentUserId && userId === String(currentUserId)) {
+              // We've been removed from this board
+              useToastStore.getState().info("Вы были удалены с этой доски");
+              console.log("Current user was removed from this board, redirecting to home");
+
+              // Redirect to home page
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 1500);
+            } else if (board && (!boardId || boardId === board.id)) {
+              // Someone else was removed from this board, refresh the members list
+              console.log("Another user was removed from this board, refreshing members list");
+              setTimeout(() => get().fetchBoardMembers(), 0);
+            } else {
+              console.log("Member removed from a different board, no action needed");
             }
             break;
           }

@@ -3,6 +3,7 @@ package boards
 import (
 	"context"
 	"errors"
+
 	"github.com/gin-gonic/gin"
 
 	db "backend/internal/db/sqlc"
@@ -19,7 +20,8 @@ func NewService(repo *Repository, hub *websocket.Hub) *Service {
 }
 
 var (
-	ErrForbidden = errors.New("forbidden")
+	ErrForbidden    = errors.New("forbidden: insufficient permissions")
+	ErrUserNotFound = errors.New("user not found")
 )
 
 func (s *Service) CreateBoard(ctx context.Context, ownerID int32, name string) (db.Board, error) {
@@ -36,6 +38,13 @@ func (s *Service) CreateBoard(ctx context.Context, ownerID int32, name string) (
 
 func (s *Service) ListBoards(ctx context.Context, userID int32) ([]db.ListBoardsByUserRow, error) {
 	return s.repo.ListByUser(ctx, userID)
+}
+
+func (s *Service) ListBoardsByRole(ctx context.Context, userID int32, role string) ([]db.ListBoardsByUserAndRoleRow, error) {
+	return s.repo.ListByUserAndRole(ctx, db.ListBoardsByUserAndRoleParams{
+		UserID: userID,
+		Role:   role,
+	})
 }
 
 func (s *Service) UpdateBoard(ctx context.Context, userID int32, arg db.UpdateBoardParams) (db.Board, error) {
@@ -121,4 +130,38 @@ func (s *Service) RemoveMember(
 		Event: "member_removed", Data: map[string]int32{"userId": memberID},
 	})
 	return nil
+}
+
+func (s *Service) AddMemberByEmail(
+	ctx context.Context, userID, boardID int32, email, role string,
+) (db.BoardMember, error) {
+	// Check if the current user is the owner of the board
+	owner, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	})
+	if err != nil || owner.Role != "owner" {
+		return db.BoardMember{}, ErrForbidden
+	}
+
+	// Find the user by email
+	user, err := s.repo.queries.GetUserByEmail(ctx, email)
+	if err != nil {
+		return db.BoardMember{}, ErrUserNotFound
+	}
+
+	// Default role to "member" if not specified
+	if role == "" {
+		role = "member"
+	}
+
+	// Add the user as a member
+	m, err := s.repo.AddMember(ctx, db.AddBoardMemberParams{
+		BoardID: boardID, UserID: user.ID, Role: role,
+	})
+	if err == nil {
+		s.hub.Broadcast(boardID, websocket.EventMessage{
+			Event: "member_added", Data: m,
+		})
+	}
+	return m, err
 }
