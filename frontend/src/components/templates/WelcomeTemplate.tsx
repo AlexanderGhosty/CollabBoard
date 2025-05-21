@@ -9,7 +9,12 @@ export default function WelcomeTemplate({ children }: WelcomeTemplateProps) {
     <div className="min-h-screen w-full flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header with logo */}
       <header className="w-full py-6 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex justify-center">
+        <div className="max-w-7xl mx-auto flex justify-center items-center gap-3">
+          <img
+            src="/logo.svg"
+            alt="CollabBoard Logo"
+            className="h-10 w-10"
+          />
           <h1 className="text-3xl font-bold text-blue-600">CollabBoard</h1>
         </div>
       </header>

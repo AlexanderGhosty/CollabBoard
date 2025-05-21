@@ -16,13 +16,13 @@ export default function Header() {
     if (wsClient) {
       wsClient.disconnect();
     }
-    
+
     // Clear authentication data
     logout();
-    
+
     // Show success message
     addToast('You have been successfully logged out', 3000);
-    
+
     // Redirect to login page
     navigate('/login');
   }, [logout, navigate, addToast]);
@@ -30,15 +30,22 @@ export default function Header() {
   return (
     <header className="w-full py-3 px-4 bg-white shadow-sm mb-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-blue-600">CollabBoard</h1>
-        
+        <div className="flex items-center gap-2">
+          <img
+            src="/logo.svg"
+            alt="CollabBoard Logo"
+            className="h-8 w-8"
+          />
+          <h1 className="text-2xl font-bold text-blue-600">CollabBoard</h1>
+        </div>
+
         <div className="flex items-center gap-4">
           {user && (
             <span className="text-blue-800">
               {user.name}
             </span>
           )}
-          <Button 
+          <Button
             variant="secondary"
             onClick={handleLogout}
             className="!px-3 !py-1"
