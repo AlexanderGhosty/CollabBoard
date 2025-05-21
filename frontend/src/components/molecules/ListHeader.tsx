@@ -43,21 +43,21 @@ export default function ListHeader({ list, onAddCard }: Props) {
 
   return (
     <>
-      <header className="mb-2 flex items-center justify-between gap-1 px-2">
+      <header className="mb-3 flex items-center justify-between gap-2 px-1">
         <EditableText
           value={list.title}
           onSave={handleTitleUpdate}
           className="flex-grow max-w-[70%]"
-          textClassName="font-semibold text-blue-800"
-          inputClassName="font-semibold"
+          textClassName="font-semibold text-blue-800 text-lg"
+          inputClassName="font-semibold text-lg"
           placeholder="Enter list title"
           validateEmpty={true}
           emptyErrorMessage="List title cannot be empty"
         />
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           <Button
             variant="danger"
-            className="!px-2 !py-1"
+            className="!px-2 !py-1 !rounded-full !min-w-8 !min-h-8 !flex !items-center !justify-center hover:!shadow-md transition-all duration-200"
             onClick={handleDeleteClick}
             title={`Delete list ${list.title}`}
           >
@@ -65,7 +65,7 @@ export default function ListHeader({ list, onAddCard }: Props) {
           </Button>
           <Button
             variant="secondary"
-            className="!px-2 !py-1"
+            className="!px-2 !py-1 !rounded-full !min-w-8 !min-h-8 !flex !items-center !justify-center hover:!shadow-md transition-all duration-200 hover:!bg-blue-100"
             onClick={handleAddCard}
             title={`Add card to list ${list.id}`}
           >

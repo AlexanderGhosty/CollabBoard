@@ -41,7 +41,15 @@ export default function ListColumn({ list }: Props) {
     }
   });
 
-  const style = { backgroundColor: isOver ? 'rgba(0,0,0,0.04)' : undefined };
+  const style = {
+    backgroundColor: isOver
+      ? 'rgba(219, 234, 254, 0.5)' // Light blue background when hovering
+      : 'rgba(255, 255, 255, 0.95)', // Slightly transparent white by default
+    transition: 'all 0.3s ease',
+    boxShadow: isOver
+      ? '0 4px 12px rgba(37, 99, 235, 0.15)'
+      : undefined
+  };
 
   // Ensure cards array exists, initialize as empty array if undefined
   const cards = list.cards || [];
@@ -56,7 +64,8 @@ export default function ListColumn({ list }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      className="w-72 shrink-0 rounded-2xl bg-white p-3 flex flex-col shadow-md border border-indigo-50 max-h-full"
+      className="w-72 shrink-0 rounded-2xl bg-white p-4 flex flex-col shadow-list border border-indigo-100 max-h-full
+        list-enter animate-slide-in transition-all duration-300 ease-in-out hover:shadow-lg"
     >
       <ListHeader
         list={list}
@@ -64,13 +73,23 @@ export default function ListColumn({ list }: Props) {
       />
 
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-2 overflow-y-auto mt-2 flex-grow" style={{
-          maxHeight: `${Math.min(validCards.length * 60 + 20, windowHeight - 180)}px`,
-          minHeight: '50px'
-        }}>
+        <div
+          className="flex flex-col gap-3 overflow-y-auto mt-3 flex-grow scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent pr-1"
+          style={{
+            maxHeight: `${Math.min(validCards.length * 70 + 20, windowHeight - 180)}px`,
+            minHeight: '50px',
+            transition: 'max-height 0.3s ease'
+          }}
+        >
           {validCards.map((card) => (
             <CardItem key={card.id} card={card} />
           ))}
+
+          {validCards.length === 0 && (
+            <div className="flex items-center justify-center h-20 rounded-xl bg-blue-50/50 border border-dashed border-blue-200 text-blue-400 text-sm">
+              Нет карточек
+            </div>
+          )}
         </div>
       </SortableContext>
     </div>

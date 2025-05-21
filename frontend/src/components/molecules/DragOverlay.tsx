@@ -37,24 +37,25 @@ function ListDragOverlay({ list }: ListDragOverlayProps) {
   // Style for the dragged list
   const style: CSSProperties = {
     width: '288px', // Same as w-72 (18rem = 288px)
-    transform: 'rotate(2deg)', // Slight rotation for visual feedback
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)', // Enhanced shadow
+    transform: 'rotate(3deg) scale(1.02)', // Enhanced rotation and slight scale for visual feedback
+    boxShadow: '0 12px 20px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', // Enhanced shadow
+    background: 'linear-gradient(to bottom right, #ffffff, #f0f9ff)', // Subtle gradient
   };
 
   return (
     <DndKitDragOverlay
       dropAnimation={{
-        duration: 300,
+        duration: 400,
         easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
       }}
       className="dnd-draggable-overlay"
     >
       <div
         style={style}
-        className="rounded-2xl bg-zinc-100 p-3 shadow-lg cursor-grabbing z-50 dnd-dragging-animation"
+        className="rounded-2xl p-4 cursor-grabbing z-50 dnd-dragging-animation border border-blue-100"
       >
-        <div className="font-semibold text-zinc-800 px-2 mb-2">{list.title}</div>
-        <div className="bg-zinc-200/50 rounded-xl p-2 text-center text-sm text-zinc-500">
+        <div className="font-semibold text-blue-800 px-2 mb-3 text-lg">{list.title}</div>
+        <div className="bg-blue-50/80 rounded-xl p-3 text-center text-sm text-blue-600 font-medium border border-blue-100">
           {list.cards?.length || 0} карточек
         </div>
       </div>
@@ -81,28 +82,31 @@ function CardDragOverlay({ card }: CardDragOverlayProps) {
   // Style for the dragged card
   const style: CSSProperties = {
     width: windowWidth < 640 ? '90%' : '272px', // Responsive width
-    transform: 'rotate(2deg)', // Slight rotation for visual feedback
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)', // Enhanced shadow
+    transform: 'rotate(3deg) scale(1.02)', // Enhanced rotation and slight scale
+    boxShadow: '0 12px 20px -5px rgba(0, 0, 0, 0.15), 0 8px 12px -6px rgba(0, 0, 0, 0.1)', // Enhanced shadow
+    background: 'linear-gradient(to bottom right, #ffffff, #f8fafc)', // Subtle gradient
   };
 
   return (
     <DndKitDragOverlay
       dropAnimation={{
-        duration: 300,
+        duration: 400,
         easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
       }}
       className="dnd-draggable-overlay"
     >
       <div
         style={style}
-        className="rounded-2xl bg-white p-3 shadow-lg cursor-grabbing z-50 dnd-dragging-animation w-auto"
+        className="rounded-2xl p-4 cursor-grabbing z-50 dnd-dragging-animation w-auto border border-blue-100"
       >
         <div className="w-full max-w-[272px]">
-          <p className="text-sm text-zinc-800 break-words pr-6">{card.title}</p>
+          <p className="text-sm font-medium text-blue-800 break-words pr-6 leading-snug">{card.title}</p>
           {card.description && (
-            <div className="mt-2 text-xs text-zinc-500">
-              <span className="inline-block mr-1">📝</span>
-              Есть описание
+            <div className="mt-3 text-xs text-blue-600 flex items-center">
+              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-100 rounded-full mr-2">
+                <span className="text-blue-600">📝</span>
+              </span>
+              <span>Есть описание</span>
             </div>
           )}
         </div>

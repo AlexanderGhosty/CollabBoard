@@ -46,7 +46,8 @@ export default function CardItem({ card }: CardItemProps) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)'
+    transition: transition || 'all 250ms cubic-bezier(0.2, 0, 0, 1)',
+    zIndex: isDragging ? 50 : 'auto',
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -203,12 +204,12 @@ export default function CardItem({ card }: CardItemProps) {
       <div className="relative group">
         {/* Delete button outside the draggable area */}
         <div
-          className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-all duration-200 transform scale-90 group-hover:scale-100"
           onClick={(e) => e.stopPropagation()}
         >
           <Button
             variant="danger"
-            className="!px-1.5 !py-0.5 !text-xs"
+            className="!px-1.5 !py-0.5 !text-xs !rounded-full !min-w-6 !min-h-6 !flex !items-center !justify-center !shadow-md hover:!shadow-lg"
             onClick={handleDeleteClick}
             title={`Delete card ${card.title}`}
           >
@@ -222,7 +223,10 @@ export default function CardItem({ card }: CardItemProps) {
           style={style}
           {...modifiedListeners}
           {...attributes}
-          className={`rounded-2xl bg-white p-3 shadow-sm border border-blue-50 hover:bg-blue-50 cursor-pointer transition-opacity ${isDragging ? 'opacity-40' : ''}`}
+          className={`rounded-2xl bg-white p-4 shadow-card hover:shadow-card-hover border border-blue-100
+            hover:bg-gradient-to-br hover:from-white hover:to-blue-50 cursor-pointer
+            transition-all duration-300 ease-in-out card-enter animate-scale-in
+            ${isDragging ? 'opacity-60 rotate-1 scale-105' : 'opacity-100'}`}
           onClick={(e) => {
             // If we're not dragging, handle the click
             // This is a backup click handler in case the mouse events don't trigger properly
@@ -234,11 +238,13 @@ export default function CardItem({ card }: CardItemProps) {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <p className="text-sm text-blue-800 break-words pr-6">{card.title}</p>
+          <p className="text-sm font-medium text-blue-800 break-words pr-6 leading-snug">{card.title}</p>
           {card.description && (
-            <div className="mt-2 text-xs text-blue-600">
-              <span className="inline-block mr-1">📝</span>
-              Есть описание
+            <div className="mt-2 text-xs text-blue-600 flex items-center">
+              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-100 rounded-full mr-2">
+                <span className="text-blue-600">📝</span>
+              </span>
+              <span>Есть описание</span>
             </div>
           )}
         </div>

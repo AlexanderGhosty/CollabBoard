@@ -21,7 +21,13 @@ export default function BoardTemplate() {
   const board = useBoardStore(state => state.active);
   const moveCard = useBoardStore(state => state.moveCard);
   const moveList = useBoardStore(state => state.moveList);
+  const createList = useBoardStore(state => state.createList);
   const set = useBoardStore.setState;
+
+  // Define the createList callback
+  const handleCreateList = useCallback(() => {
+    createList('Новый список');
+  }, [createList]);
 
   // State to track the currently active (dragged) item
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -185,12 +191,27 @@ export default function BoardTemplate() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="board-container w-full overflow-visible">
+      <div className="board-container w-full overflow-visible page-enter animate-fade-in">
         <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-4 overflow-x-auto pb-6 items-start w-full h-[calc(100vh-140px)] pt-2 board-scroll-container">
+          <div className="flex gap-5 overflow-x-auto pb-8 items-start w-full h-[calc(100vh-140px)] pt-3 board-scroll-container
+            bg-gradient-to-br from-blue-50/50 to-indigo-100/50 rounded-xl p-4">
             {listsWithValidIds.map((list) => (
               <SortableListColumn key={list.id} list={list} />
             ))}
+
+            {/* Add a "Add List" button at the end */}
+            <div
+              onClick={handleCreateList}
+              className="w-72 shrink-0 rounded-2xl bg-white/60 border border-dashed border-blue-200 p-4 h-32
+                flex items-center justify-center cursor-pointer hover:bg-white/80 transition-all duration-300
+                hover:shadow-md hover:border-blue-300 backdrop-blur-sm hover:scale-105 active:scale-95"
+            >
+              <div className="text-blue-600 font-medium flex flex-col items-center gap-2">
+                <span className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">+</span>
+                <span>Добавить список</span>
+              </div>
+            </div>
+
             {/* Add an empty div at the end to ensure there's space for scrolling */}
             <div className="w-4 shrink-0"></div>
           </div>

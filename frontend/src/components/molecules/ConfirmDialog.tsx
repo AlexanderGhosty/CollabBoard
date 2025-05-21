@@ -65,17 +65,38 @@ export default function ConfirmDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-50 rounded-2xl bg-white p-6 shadow-lg backdrop:bg-black backdrop:bg-opacity-50"
+      className="fixed inset-0 z-50 rounded-2xl bg-white p-6 shadow-modal backdrop:bg-black backdrop:bg-opacity-50
+        modal-enter animate-modal-in border border-blue-100 max-w-md w-full"
       onClose={onCancel}
     >
-      <div className="flex flex-col gap-4">
-        <h3 className="text-xl font-bold">{title}</h3>
-        <p className="text-zinc-600">{message}</p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onCancel}>
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center gap-3">
+          {variant === 'danger' ? (
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0">
+              <span className="text-xl">⚠</span>
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+              <span className="text-xl">ℹ</span>
+            </div>
+          )}
+          <h3 className="text-xl font-bold text-blue-800">{title}</h3>
+        </div>
+
+        <p className="text-blue-700 pl-2 border-l-2 border-blue-200">{message}</p>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button
+            variant="secondary"
+            onClick={onCancel}
+            className="hover:!bg-white"
+          >
             {cancelLabel}
           </Button>
-          <Button variant={variant} onClick={onConfirm}>
+          <Button
+            variant={variant}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </div>

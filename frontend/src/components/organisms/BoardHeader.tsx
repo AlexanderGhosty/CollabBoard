@@ -23,23 +23,26 @@ export default function BoardHeader() {
   if (!board) return null;
 
   return (
-    <header className="mb-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
+    <header className="mb-6 flex items-center justify-between page-enter animate-fade-in">
+      <div className="flex items-center gap-4">
         <Button
           variant="secondary"
           onClick={handleBackClick}
-          className="!px-3 !py-1"
+          className="!px-4 !py-2 !rounded-xl hover:!shadow-md transition-all duration-200 hover:!translate-x-[-2px]"
           title="Back to boards list"
         >
           ← Назад
         </Button>
-        <h2 className="text-2xl font-bold text-blue-800">{board.name}</h2>
+        <h2 className="text-2xl font-bold text-blue-800 bg-white/70 px-4 py-2 rounded-xl shadow-sm backdrop-blur-sm">
+          {board.name}
+        </h2>
       </div>
       <Button
-        variant="secondary"
+        variant="primary"
         onClick={handleCreateList}
+        className="hover:!shadow-md transition-all duration-200 hover:!translate-y-[-2px] !px-4 !py-2"
       >
-        ＋ Список
+        ＋ Добавить список
       </Button>
     </header>
   );
