@@ -257,7 +257,17 @@ export const boardService = {
       // Log the normalized list for debugging
       console.log("Normalized list after move:", normalizedList);
 
-      // The backend will broadcast the event to all clients
+      // Add the current list count to the WebSocket event data
+      // This will help clients determine if they need to apply the update
+      const wsData = {
+        ...normalizedList,
+        _expectedListCount: board.lists.length
+      };
+
+      // Send a WebSocket event with the list count to help other clients
+      // determine if they need to apply the update
+      sendWS({ event: 'list_moved', data: wsData });
+
       return normalizedList;
     } catch (error) {
       console.error(`Error moving list ${listId}:`, error);
@@ -438,7 +448,17 @@ export const boardService = {
 
       await api.delete(deleteEndpoint);
       console.log("List deleted successfully");
-      sendWS({ event: 'list_deleted', data: { listId } });
+
+      // Send WebSocket event with the updated list count after deletion
+      // This helps other clients know they need to refresh their list positions
+      const remainingListCount = board.lists.length - 1; // Subtract 1 for the deleted list
+      sendWS({
+        event: 'list_deleted',
+        data: {
+          listId,
+          _expectedListCount: remainingListCount
+        }
+      });
     } catch (error) {
       console.error("Error deleting list:", error);
       throw error;
