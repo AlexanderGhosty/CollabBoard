@@ -547,10 +547,30 @@ export const useBoardStore = create<BoardState>()(
         set((s) => {
           if (!s.active) return;
 
+          // Get the current list positions for debugging
+          const currentPositions = s.active.lists.map(l => ({ id: l.id, position: l.position }));
+          console.log("Current list positions before deletion:", currentPositions);
+
           const listIndex = s.active.lists.findIndex((l: List) => l.id === listId);
           if (listIndex !== -1) {
             console.log(`Removing list ${listId} from board ${s.active.id}`);
             s.active.lists.splice(listIndex, 1);
+
+            // After deletion, normalize the positions of remaining lists
+            // This ensures positions are sequential (1, 2, 3, ...) without gaps
+            s.active.lists.sort((a: List, b: List) => a.position - b.position);
+
+            // Reassign positions to be sequential
+            s.active.lists.forEach((list, idx) => {
+              const newPosition = idx + 1;
+              if (list.position !== newPosition) {
+                console.log(`Normalizing list ${list.id} position from ${list.position} to ${newPosition}`);
+                list.position = newPosition;
+              }
+            });
+
+            console.log("List positions after normalization:",
+              s.active.lists.map(l => ({ id: l.id, position: l.position })));
           }
         });
       } catch (error) {
@@ -763,12 +783,34 @@ export const useBoardStore = create<BoardState>()(
 
             console.log("Received list_moved event:", rawList);
 
+            // Get the current list positions for debugging
+            const currentPositions = board.lists.map(l => ({ id: l.id, position: l.position }));
+            console.log("Current list positions before applying WebSocket event:", currentPositions);
+
             // Check if this is a WebSocket event for a change we initiated
-            // If it's our own change, we've already updated the UI optimistically
-            const isOwnChange = board.lists.some(l => l.id === listId && l.position === position);
-            if (isOwnChange) {
+            // Only ignore if the list exists AND has the exact same position AND the total list count matches
+            // This prevents ignoring events after list deletion where positions may have been normalized
+            const listExists = board.lists.some(l => l.id === listId);
+            const hasMatchingPosition = board.lists.some(l => l.id === listId && l.position === position);
+            const expectedListCount = rawList._expectedListCount;
+            const actualListCount = board.lists.length;
+
+            // If we have position mismatch or list count mismatch, we should apply the update
+            const shouldApplyUpdate = !listExists || !hasMatchingPosition ||
+                                     (expectedListCount && expectedListCount !== actualListCount);
+
+            if (!shouldApplyUpdate) {
               console.log(`Ignoring list_moved event for list ${listId} as it matches our local state`);
               break;
+            } else {
+              console.log(`Applying list_moved event for list ${listId} (position=${position})`);
+              if (!listExists) {
+                console.log(`List ${listId} not found in local state, applying update`);
+              } else if (!hasMatchingPosition) {
+                console.log(`List ${listId} has different position in local state, applying update`);
+              } else if (expectedListCount && expectedListCount !== actualListCount) {
+                console.log(`List count mismatch (expected=${expectedListCount}, actual=${actualListCount}), applying update`);
+              }
             }
 
             // Update the list position directly without reloading the board
@@ -810,6 +852,10 @@ export const useBoardStore = create<BoardState>()(
                 board.lists.map(l => ({ id: l.id, position: l.position })));
             } else {
               console.log(`List with ID ${listId} not found, cannot update position`);
+
+              // If the list doesn't exist locally but we received a move event,
+              // it might be due to a sync issue. Consider refreshing the board data.
+              console.log("List not found locally but received move event. Consider refreshing board data.");
             }
             break;
           }
@@ -887,16 +933,41 @@ export const useBoardStore = create<BoardState>()(
           }
           case 'list_deleted': {
             // Handle both formats: { listId } or { id }
-            const listId = (data as any).listId || (data as any).id;
+            const rawData = data as any;
+            const listId = rawData.listId || rawData.id;
             if (!listId) {
-              console.error("Received list_deleted event without listId:", data);
+              console.error("Received list_deleted event without listId:", rawData);
               break;
             }
+
+            console.log("Received list_deleted event:", rawData);
+
+            // Get the current list positions for debugging
+            const currentPositions = board.lists.map(l => ({ id: l.id, position: l.position }));
+            console.log("Current list positions before deletion:", currentPositions);
 
             const listIndex = board.lists.findIndex((l: List) => l.id === String(listId));
             if (listIndex !== -1) {
               console.log(`Removing list ${listId} from board ${board.id} via WebSocket`);
               board.lists.splice(listIndex, 1);
+
+              // After deletion, normalize the positions of remaining lists
+              // This ensures positions are sequential (1, 2, 3, ...) without gaps
+              board.lists.sort((a: List, b: List) => a.position - b.position);
+
+              // Reassign positions to be sequential
+              board.lists.forEach((list, idx) => {
+                const newPosition = idx + 1;
+                if (list.position !== newPosition) {
+                  console.log(`Normalizing list ${list.id} position from ${list.position} to ${newPosition}`);
+                  list.position = newPosition;
+                }
+              });
+
+              console.log("List positions after normalization:",
+                board.lists.map(l => ({ id: l.id, position: l.position })));
+            } else {
+              console.log(`List ${listId} not found in board ${board.id}, cannot remove`);
             }
             break;
           }
