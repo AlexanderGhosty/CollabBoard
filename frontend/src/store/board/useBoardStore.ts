@@ -16,7 +16,6 @@ export const useBoardStore = create<BoardState>()(
     activeBoard: null,
     boardMembers: {},
     isCardModalOpen: false,
-    isMemberModalOpen: false,
     loading: false,
     error: null,
 
@@ -27,19 +26,13 @@ export const useBoardStore = create<BoardState>()(
       });
     },
 
-    setMemberModalOpen(isOpen) {
-      set((s) => {
-        s.isMemberModalOpen = isOpen;
-      });
-    },
-
     // Board operations
     async fetchBoards() {
       set((s) => { s.loading = true; s.error = null; });
-      
+
       try {
         const boards = await boardService.getBoards();
-        
+
         set((s) => {
           // Convert array to record
           s.boards = boards.reduce((acc, board) => {
@@ -48,12 +41,12 @@ export const useBoardStore = create<BoardState>()(
             }
             return acc;
           }, {} as Record<string, Board>);
-          
+
           s.loading = false;
         });
       } catch (error) {
         console.error("Failed to fetch boards:", error);
-        
+
         set((s) => {
           s.boards = {};
           s.loading = false;
@@ -64,7 +57,7 @@ export const useBoardStore = create<BoardState>()(
 
     async fetchBoardsByRole() {
       set((s) => { s.loading = true; s.error = null; });
-      
+
       try {
         // Fetch boards where user is owner
         const ownedBoards = await boardService.getBoardsByRole('owner');
@@ -76,7 +69,7 @@ export const useBoardStore = create<BoardState>()(
           const boardsRecord: Record<string, Board> = {};
           const ownedIds: string[] = [];
           const memberIds: string[] = [];
-          
+
           // Process owned boards
           ownedBoards.forEach(board => {
             if (board.id) {
@@ -84,7 +77,7 @@ export const useBoardStore = create<BoardState>()(
               ownedIds.push(board.id);
             }
           });
-          
+
           // Process member boards
           memberBoards.forEach(board => {
             if (board.id) {
@@ -92,7 +85,7 @@ export const useBoardStore = create<BoardState>()(
               memberIds.push(board.id);
             }
           });
-          
+
           s.boards = boardsRecord;
           s.ownedBoardIds = ownedIds;
           s.memberBoardIds = memberIds;
@@ -100,7 +93,7 @@ export const useBoardStore = create<BoardState>()(
         });
       } catch (error) {
         console.error("Failed to fetch boards by role:", error);
-        
+
         set((s) => {
           s.boards = {};
           s.ownedBoardIds = [];
@@ -122,7 +115,7 @@ export const useBoardStore = create<BoardState>()(
       }
 
       set((s) => { s.loading = true; s.error = null; });
-      
+
       try {
         // Always fetch the board from the API to ensure we have the latest data
         const board = await boardService.getBoardById(id);
@@ -146,10 +139,10 @@ export const useBoardStore = create<BoardState>()(
 
         // Connect to WebSocket for real-time updates
         wsClient.connect(id);
-        
+
         // Setup WebSocket subscriptions
         setupWebSocketSubscriptions(id);
-        
+
       } catch (error) {
         console.error("Failed to load board:", error);
 
@@ -165,10 +158,10 @@ export const useBoardStore = create<BoardState>()(
 
     async createBoard(name) {
       set((s) => { s.loading = true; s.error = null; });
-      
+
       try {
         const board = await boardService.createBoard(name);
-        
+
         set((s) => {
           // Add to boards record
           if (board.id) {
@@ -185,7 +178,7 @@ export const useBoardStore = create<BoardState>()(
         return board;
       } catch (error) {
         console.error("Failed to create board:", error);
-        
+
         set((s) => {
           s.loading = false;
           s.error = `Failed to create board: ${error}`;
@@ -200,23 +193,23 @@ export const useBoardStore = create<BoardState>()(
 
     async deleteBoard(boardId) {
       set((s) => { s.loading = true; s.error = null; });
-      
+
       try {
         await boardService.deleteBoard(boardId);
-        
+
         set((s) => {
           // Remove from boards record
           delete s.boards[boardId];
-          
+
           // Remove from owned/member boards
           s.ownedBoardIds = s.ownedBoardIds.filter(id => id !== boardId);
           s.memberBoardIds = s.memberBoardIds.filter(id => id !== boardId);
-          
+
           // Clear active board if it's the one being deleted
           if (s.activeBoard === boardId) {
             s.activeBoard = null;
           }
-          
+
           s.loading = false;
         });
 
@@ -224,7 +217,7 @@ export const useBoardStore = create<BoardState>()(
         useToastStore.getState().success("Доска успешно удалена");
       } catch (error) {
         console.error(`Error deleting board ${boardId}:`, error);
-        
+
         set((s) => {
           s.loading = false;
           s.error = `Failed to delete board: ${error}`;
@@ -238,7 +231,7 @@ export const useBoardStore = create<BoardState>()(
     async updateBoardName(boardId, name) {
       const boards = get().boards;
       const board = boards[boardId];
-      
+
       if (!board) {
         console.error(`Cannot update board name: board with ID ${boardId} not found`);
         return;
@@ -257,7 +250,7 @@ export const useBoardStore = create<BoardState>()(
       try {
         // Call the API to update the board
         const updatedBoard = await boardService.updateBoard(boardId, name);
-        
+
         // Show success toast
         useToastStore.getState().success("Название доски обновлено");
       } catch (error) {
@@ -281,19 +274,19 @@ export const useBoardStore = create<BoardState>()(
       // This will be implemented in useWebSocketStore.ts
       // and will be called from there
     },
-    
+
     // Cleanup method
     cleanup() {
       // Disconnect WebSocket
       wsClient.disconnect();
-      
+
       // Reset state
       set((s) => {
         s.activeBoard = null;
         s.boardMembers = {};
       });
     },
-    
+
     // Board members
     async fetchBoardMembers(boardId) {
       // This will be implemented in useMembersStore.ts

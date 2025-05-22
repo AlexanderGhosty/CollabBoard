@@ -42,7 +42,6 @@ export interface BoardState extends BaseState {
 
   // UI state
   isCardModalOpen: boolean;
-  isMemberModalOpen: boolean;
 
   // Core board operations
   fetchBoards: () => Promise<void>;
@@ -54,7 +53,6 @@ export interface BoardState extends BaseState {
 
   // Modal state management
   setCardModalOpen: (isOpen: boolean) => void;
-  setMemberModalOpen: (isOpen: boolean) => void;
 
   // WebSocket event handling
   applyWS: (msg: WSMessage) => void;
