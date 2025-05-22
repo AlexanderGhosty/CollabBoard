@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { boardService, Card } from '@/services/boardService';
+import { Card } from '@/services/boardService';
+import { cardService } from '@/services/cardService';
 import { useToastStore } from '@/store/useToastStore';
 import { CardsState } from './types';
 import { sortCards, getNextCardPosition } from '@/utils/board/sorting';
@@ -38,7 +39,7 @@ export const useCardsStore = create<CardsState>()(
         console.log(`Calculated position for new card: ${position}`);
 
         // Create the card
-        const card = await boardService.createCard(listId, title, description, position);
+        const card = await cardService.createCard(listId, title, description, position);
 
         console.log("Card created successfully:", card);
 
@@ -113,7 +114,7 @@ export const useCardsStore = create<CardsState>()(
 
       try {
         // Call API to update the card
-        const updatedCard = await boardService.updateCard(cardId, card.listId, updates);
+        const updatedCard = await cardService.updateCard(cardId, card.listId, updates);
       } catch (error) {
         console.error(`Error updating card ${cardId}:`, error);
 
@@ -146,7 +147,7 @@ export const useCardsStore = create<CardsState>()(
 
       try {
         // Call API to duplicate the card
-        const duplicatedCard = await boardService.duplicateCard(cardId);
+        const duplicatedCard = await cardService.duplicateCard(cardId);
 
         set((s) => {
           // Add to cards record
@@ -231,7 +232,7 @@ export const useCardsStore = create<CardsState>()(
 
       try {
         // Call API to move the card
-        await boardService.moveCard(cardId, toListId, toPos);
+        await cardService.moveCard(cardId, toListId, toPos);
       } catch (error) {
         console.error(`Error moving card ${cardId} to list ${toListId}:`, error);
 
@@ -258,7 +259,7 @@ export const useCardsStore = create<CardsState>()(
       const listId = card.listId;
 
       try {
-        await boardService.deleteCard(cardId, listId);
+        await cardService.deleteCard(cardId, listId);
 
         set((s) => {
           // Remove from cards record

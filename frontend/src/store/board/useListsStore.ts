@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { boardService, List } from '@/services/boardService';
+import { List } from '@/services/boardService';
+import { listService } from '@/services/listService';
 import { useToastStore } from '@/store/useToastStore';
 import { ListsState } from './types';
 import { useBoardStore } from './useBoardStore';
@@ -78,7 +79,7 @@ export const useListsStore = create<ListsState>()(
         console.log(`Calculated position for new list: ${position}`);
 
         // Create the list
-        const list = await boardService.createList(boardId, title, position);
+        const list = await listService.createList(boardId, title, position);
         console.log("List created successfully:", list);
 
         // Ensure the list has a valid ID
@@ -149,7 +150,7 @@ export const useListsStore = create<ListsState>()(
 
       try {
         // Call API to update the list
-        const updatedList = await boardService.updateList(listId, title);
+        const updatedList = await listService.updateList(listId, title);
       } catch (error) {
         console.error(`Error updating list ${listId}:`, error);
 
@@ -208,7 +209,7 @@ export const useListsStore = create<ListsState>()(
         });
 
         // Call API to persist the change
-        await boardService.moveList(listId, position);
+        await listService.moveList(listId, position);
 
         // Show success toast
         useToastStore.getState().success(`Список перемещен`);
@@ -256,7 +257,7 @@ export const useListsStore = create<ListsState>()(
       const boardId = list.boardId;
 
       try {
-        await boardService.deleteList(listId);
+        await listService.deleteList(listId);
 
         set((s) => {
           // Remove from lists record
