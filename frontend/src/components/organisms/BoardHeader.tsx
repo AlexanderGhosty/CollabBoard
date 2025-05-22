@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import Button from '@/components/atoms/Button';
 import EditableText from '@/components/atoms/EditableText';
 import { useBoardStore, useListsStore } from '@/store/board';
@@ -30,12 +30,23 @@ export default function BoardHeader() {
   }, [createList]);
 
   // Define the member management modal open/close handlers
+  // Use a ref to track the modal state to avoid unnecessary re-renders
+  const isMemberModalOpenRef = useRef(isMemberModalOpen);
+
   const handleOpenMemberModal = useCallback(() => {
-    setIsMemberModalOpen(true);
+    // Only update if the state is actually changing
+    if (!isMemberModalOpenRef.current) {
+      isMemberModalOpenRef.current = true;
+      setIsMemberModalOpen(true);
+    }
   }, []);
 
   const handleCloseMemberModal = useCallback(() => {
-    setIsMemberModalOpen(false);
+    // Only update if the state is actually changing
+    if (isMemberModalOpenRef.current) {
+      isMemberModalOpenRef.current = false;
+      setIsMemberModalOpen(false);
+    }
   }, []);
 
   // Handle board name update

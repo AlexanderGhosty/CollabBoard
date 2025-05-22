@@ -39,11 +39,11 @@ export interface BoardState extends BaseState {
   memberBoardIds: string[];
   activeBoard: string | null;
   boardMembers: Record<string, BoardMember>;
-  
+
   // UI state
   isCardModalOpen: boolean;
   isMemberModalOpen: boolean;
-  
+
   // Core board operations
   fetchBoards: () => Promise<void>;
   fetchBoardsByRole: () => Promise<void>;
@@ -51,14 +51,14 @@ export interface BoardState extends BaseState {
   createBoard: (name: string) => Promise<Board>;
   deleteBoard: (boardId: string) => Promise<void>;
   updateBoardName: (boardId: string, name: string) => Promise<void>;
-  
+
   // Modal state management
   setCardModalOpen: (isOpen: boolean) => void;
   setMemberModalOpen: (isOpen: boolean) => void;
-  
+
   // WebSocket event handling
   applyWS: (msg: WSMessage) => void;
-  
+
   // Cleanup
   cleanup: () => void;
 }
@@ -67,12 +67,12 @@ export interface BoardState extends BaseState {
 export interface ListsState extends BaseState {
   lists: Record<string, List>;
   boardLists: Record<string, string[]>;
-  
+
   createList: (boardId: string, title: string) => Promise<void>;
   updateList: (listId: string, title: string) => Promise<void>;
   moveList: (listId: string, position: number) => Promise<void>;
   deleteList: (listId: string) => Promise<void>;
-  
+
   // Selectors
   getListsByBoardId: (boardId: string) => List[];
   getSortedListsByBoardId: (boardId: string) => List[];
@@ -82,13 +82,13 @@ export interface ListsState extends BaseState {
 export interface CardsState extends BaseState {
   cards: Record<string, Card>;
   listCards: Record<string, string[]>;
-  
+
   createCard: (listId: string, title: string, description?: string) => Promise<void>;
   updateCard: (cardId: string, updates: { title?: string; description?: string }) => Promise<void>;
   duplicateCard: (cardId: string) => Promise<void>;
   moveCard: (cardId: string, toListId: string, toPos: number) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
-  
+
   // Selectors
   getCardsByListId: (listId: string) => Card[];
   getSortedCardsByListId: (listId: string) => Card[];
@@ -98,11 +98,12 @@ export interface CardsState extends BaseState {
 export interface MembersState extends BaseState {
   members: Record<string, BoardMember>;
   boardMembers: Record<string, string[]>;
-  
+
   fetchBoardMembers: (boardId?: string) => Promise<void>;
   inviteMember: (email: string, role?: 'owner' | 'member') => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
-  
+  updateUserRoleInBoard: (boardId: string, members: any[]) => void;
+
   // Selectors
   getMembersByBoardId: (boardId: string) => BoardMember[];
   isUserBoardOwner: (boardId: string, userId: string) => boolean;
@@ -127,9 +128,9 @@ export interface WebSocketState {
 }
 
 // Combined store type
-export interface CombinedBoardStore extends 
-  BoardState, 
-  ListsState, 
-  CardsState, 
-  MembersState, 
+export interface CombinedBoardStore extends
+  BoardState,
+  ListsState,
+  CardsState,
+  MembersState,
   WebSocketState {}

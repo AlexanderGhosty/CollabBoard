@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, KeyboardEvent } from 'react';
+/**
+ * MemberManagementModal Component
+ *
+ * A modal dialog for managing board members, including inviting new members
+ * and removing existing ones. Only board owners can add/remove members.
+ */
+import { useState, useEffect, useRef, KeyboardEvent, useMemo } from 'react';
 import { z } from 'zod';
 import Button from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -7,7 +13,35 @@ import { useBoardStore, useMembersStore } from '@/store/board';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import { emailSchema } from '@/utils/validate';
-import { BoardMember } from '@/store/board/types';
+
+
+
+// Define interfaces locally to avoid import issues
+interface BoardMember {
+  userId: string;
+  boardId: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'member';
+}
+
+// Define Board interface for type safety
+interface Board {
+  id: string;
+  ID?: number;
+  Name: string;
+  OwnerID?: number;
+  ownerId?: string;
+  role?: 'owner' | 'member';
+  CreatedAt?: string;
+}
+
+// Define User interface for type safety
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface MemberManagementModalProps {
   isOpen: boolean;
@@ -23,79 +57,75 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
   const [memberToRemove, setMemberToRemove] = useState<{ userId: string; name: string } | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // Get state and actions from the stores
-  const activeBoard = useBoardStore(state => state.activeBoard);
-  const boards = useBoardStore(state => state.boards);
-  const setMemberModalOpen = useBoardStore(state => state.setMemberModalOpen);
-  const boardMembers = useMembersStore(state => activeBoard ? state.getMembersByBoardId(activeBoard) : []);
-  const fetchBoardMembers = useMembersStore(state => state.fetchBoardMembers);
-  const inviteMember = useMembersStore(state => state.inviteMember);
-  const removeMember = useMembersStore(state => state.removeMember);
+  // Get board state directly to avoid unnecessary re-renders
+  // Using separate selectors to minimize dependencies
+  const activeBoard = useBoardStore((state: any) => state.activeBoard);
+  const boards = useBoardStore((state: any) => state.boards) as Record<string, Board>;
 
   // Get the active board object
   const active = activeBoard ? boards[activeBoard] : null;
 
-  const currentUser = useAuthStore(state => state.user);
+  // Get members store actions directly
+  const fetchBoardMembers = useMembersStore((state: any) => state.fetchBoardMembers);
+  const inviteMember = useMembersStore((state: any) => state.inviteMember);
+  const removeMember = useMembersStore((state: any) => state.removeMember);
+
+  // Get board members directly from the store to avoid infinite loops
+  const boardMembers = useMembersStore(
+    (state: any) => {
+      if (!activeBoard) return [];
+      const memberIds = state.boardMembers[activeBoard] || [];
+      return memberIds.map((id: string) => state.members[id]).filter(Boolean) as BoardMember[];
+    }
+  );
+
+  // Get current user with stable reference
+  const currentUser = useAuthStore((state: any) => state.user) as User;
   const toast = useToastStore();
 
-  // Fetch board members when the modal opens
+  // Track store loading state
+  const isStoreLoading = useMembersStore((state: any) => state.loading);
+
+  // Fetch board members when the modal opens or activeBoard changes
   useEffect(() => {
-    if (isOpen) {
-      if (activeBoard) {
-        try {
-          console.log('Modal opened, fetching board members for board:', active);
-          fetchBoardMembers(activeBoard);
-        } catch (error) {
-          console.error('Error fetching board members:', error);
-          toast.error('Не удалось загрузить список участников');
-        }
-      } else {
-        console.warn('Modal opened but no active board is selected');
+    // Only fetch if we have an active board and the modal is open
+    if (!activeBoard || !isOpen) return;
+
+    // Define the load function inside the effect to avoid dependency issues
+    const loadMembers = async () => {
+      try {
+        await fetchBoardMembers(activeBoard);
+      } catch (error) {
+        console.error('Error fetching board members:', error);
+        toast.error('Не удалось загрузить список участников');
       }
-    }
-  }, [isOpen, activeBoard, active, fetchBoardMembers, toast]);
+    };
 
-  // Force refresh board members when the component mounts
-  useEffect(() => {
-    if (activeBoard) {
-      console.log('MemberManagementModal mounted, forcing refresh of board members');
-      console.log('Active board:', active);
-      console.log('Current user:', currentUser);
-      fetchBoardMembers(activeBoard);
-    }
-  }, [activeBoard, active, fetchBoardMembers, currentUser]);
+    // Load members when the modal opens
+    loadMembers();
 
-  // Handle dialog open/close
+    // We'll rely on the store's WebSocket subscriptions instead of creating our own
+    // This avoids potential infinite loops from multiple subscriptions triggering each other
+  }, [isOpen, activeBoard, fetchBoardMembers, toast]);
+
+  // Simplified dialog management without store updates
   useEffect(() => {
     const dialog = dialogRef.current;
+    if (!dialog) return;
 
-    if (isOpen && dialog) {
-      // Update global state to track modal open state
-      setMemberModalOpen(true);
+    // Don't update global state here to avoid potential loops
+    // setMemberModalOpen(isOpen);
 
+    if (isOpen) {
       // Only call showModal if the dialog is not already open
       if (!dialog.open) {
         try {
           dialog.showModal();
         } catch (error) {
           console.error('Error opening dialog:', error);
-          // If showModal fails, try to reset the dialog state
-          dialog.close();
-          // Try again after a short delay
-          setTimeout(() => {
-            if (!dialog.open) {
-              try {
-                dialog.showModal();
-              } catch (innerError) {
-                console.error('Failed to open dialog after retry:', innerError);
-              }
-            }
-          }, 10);
         }
       }
-    } else if (dialog) {
-      // Update global state when modal closes
-      setMemberModalOpen(false);
+    } else {
       dialog.close();
     }
 
@@ -103,11 +133,11 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
     return () => {
       if (dialog && dialog.open) {
         dialog.close();
-        // Make sure global state is updated when component unmounts
-        setMemberModalOpen(false);
+        // Don't update global state here to avoid potential loops
+        // setMemberModalOpen(false);
       }
     };
-  }, [isOpen, setMemberModalOpen]);
+  }, [isOpen]);
 
   const handleDialogClick = (e: React.MouseEvent) => {
     // Close the dialog if the backdrop is clicked
@@ -138,9 +168,15 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
     setEmailError(null);
     setInviteSuccess(false);
 
+    // Get trimmed email for consistency
+    const trimmedEmail = email.trim();
+
+    // Early return if email is empty
+    if (!trimmedEmail) return;
+
     // Validate email format
     try {
-      emailSchema.parse(email);
+      emailSchema.parse(trimmedEmail);
     } catch (error) {
       if (error instanceof z.ZodError) {
         setEmailError(error.errors[0].message);
@@ -148,77 +184,51 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
       }
     }
 
-    if (!email.trim()) return;
-
-    // Check if user is already a member
-    const isAlreadyMember = safeBoardMembers.some(
-      (member) => member.email?.toLowerCase() === email.trim().toLowerCase()
+    // Check if user is already a member - use proper null check
+    const isAlreadyMember = boardMembers.some(
+      (member: BoardMember) => member.email && member.email.toLowerCase() === trimmedEmail.toLowerCase()
     );
-
-    console.log("Checking if email is already a member:");
-    console.log("- Email to invite:", email.trim().toLowerCase());
-    console.log("- Existing member emails:", safeBoardMembers.map(m => m.email?.toLowerCase()));
-    console.log("- Is already a member?", isAlreadyMember);
 
     if (isAlreadyMember) {
       setEmailError('Этот пользователь уже является участником доски');
-      toast.error('Этот пользователь уже является участником доски');
+      // Don't show toast here to avoid duplication with store error handling
       return;
     }
 
-    // Check if current user is the owner
-    if (!isOwner) {
-      setEmailError('Только владелец доски может приглашать участников');
-      toast.error('Только владелец доски может приглашать участников');
-      return;
-    }
+    // The store already checks if the user is an owner, so we don't need to check here
+    // This avoids redundant permission checks
 
     setLoading(true);
     try {
-      console.log("Attempting to invite user with email:", email.trim());
-      console.log("Current user ID:", currentUser?.id);
-      console.log("Is current user the owner?", isOwner);
-
       if (!activeBoard) {
         throw new Error("Нет активной доски");
       }
 
-      await inviteMember(email.trim());
-      setEmail(''); // Clear the input on success
+      // Pass the role parameter explicitly for clarity
+      await inviteMember(trimmedEmail, 'member');
+
+      // Update UI state on success
+      setEmail(''); // Clear the input
       setInviteSuccess(true);
-      setEmailError(null); // Clear any previous errors
 
-      // Show success toast
-      toast.success(`Пользователь ${email.trim()} успешно приглашен на доску`);
-
-      // Refresh the members list
-      if (activeBoard) {
-        await fetchBoardMembers(activeBoard);
-      }
+      // Success toast is shown by the store, no need to duplicate
     } catch (error) {
       console.error('Error inviting member:', error);
       setInviteSuccess(false);
 
-      // Handle specific error cases
+      // Set error message in the UI but don't show toast (store will handle it)
       if (error instanceof Error) {
-        console.log("Error message:", error.message);
-
         if (error.message.includes('не найден') || error.message.includes('not found')) {
           setEmailError('Пользователь с таким email не найден');
-          toast.error('Пользователь с таким email не найден');
         } else if (error.message.includes('владелец') || error.message.includes('owner')) {
           setEmailError(error.message);
-          toast.error(error.message);
         } else if (error.message.includes('уже является') || error.message.includes('already')) {
           setEmailError('Этот пользователь уже является участником доски');
-          toast.error('Этот пользователь уже является участником доски');
         } else {
           setEmailError(error.message);
-          toast.error(error.message);
         }
       } else {
         setEmailError('Не удалось пригласить пользователя');
-        toast.error('Не удалось пригласить пользователя');
       }
     } finally {
       setLoading(false);
@@ -233,13 +243,8 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
       return;
     }
 
-    console.log("Preparing to remove member with userId:", userId);
-    console.log("Current user ID:", currentUser?.id);
-    console.log("Is current user the owner?", isOwner);
-
-    // Find the member in the list
-    const member = safeBoardMembers.find(m => String(m.userId) === String(userId));
-    console.log("Member to remove:", member);
+    // Find the member in the list with proper type safety
+    const member = boardMembers.find((m: BoardMember) => String(m.userId) === String(userId));
 
     if (!member) {
       toast.error('Пользователь не найден на этой доске');
@@ -274,15 +279,10 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
     try {
       setLoading(true);
       await removeMember(memberToRemove.userId);
-      // Toast notification is now handled in the useBoardStore.removeMember function
-
-      // Refresh the members list
-      if (activeBoard) {
-        await fetchBoardMembers(activeBoard);
-      }
+      // Toast notification is handled in the store
     } catch (error) {
       console.error('Error removing member:', error);
-      // Error toast notifications are now handled in the useBoardStore.removeMember function
+      // Error handling is done in the store
     } finally {
       setLoading(false);
       setConfirmDialogOpen(false);
@@ -295,46 +295,30 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
     setMemberToRemove(null);
   };
 
-  // Safe access to boardMembers
-  const safeBoardMembers = Array.isArray(boardMembers) ? boardMembers : [];
+  // Check if current user is the owner of the board
+  const isOwner = useMemo(() => {
+    if (!activeBoard || !currentUser || !active) return false;
 
-  // Check if current user is the owner of the board (multiple ways)
-  const isOwnerByRole = active?.role === 'owner';
+    // Check if user has owner role in board.role
+    const isOwnerByRole = active.role === 'owner';
 
-  // Convert IDs to strings for comparison
-  const currentUserIdStr = currentUser?.id ? String(currentUser.id) : '';
+    // Convert IDs to strings for comparison
+    const currentUserIdStr = String(currentUser.id);
 
-  const isUserOwnerInMembers = safeBoardMembers.some(m =>
-    String(m.userId) === currentUserIdStr && m.role === 'owner');
+    // Check if user has owner role in members list
+    const isUserOwnerInMembers = boardMembers.some(
+      (m: BoardMember) => String(m.userId) === currentUserIdStr && m.role === 'owner'
+    );
 
-  // Check both uppercase and lowercase ownerId properties
-  const ownerIdFromUpperCase = active?.OwnerID ? String(active.OwnerID) : undefined;
-  const ownerIdFromLowerCase = active?.ownerId ? String(active.ownerId) : undefined;
-  const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
-  const isOwnerByBoardData = ownerId === currentUserIdStr;
+    // Check both uppercase and lowercase ownerId properties
+    const ownerIdFromUpperCase = active.OwnerID ? String(active.OwnerID) : undefined;
+    const ownerIdFromLowerCase = active.ownerId ? String(active.ownerId) : undefined;
+    const ownerId = ownerIdFromUpperCase || ownerIdFromLowerCase;
+    const isOwnerByBoardData = ownerId === currentUserIdStr;
 
-  // Combined check - user is owner if any of the checks pass
-  const isOwner = isOwnerByRole || isUserOwnerInMembers || isOwnerByBoardData;
-
-  // Add debug logs to see why the form might not be showing
-  console.log("Active board:", active);
-  console.log("User role on board:", active?.role);
-  console.log("Current user ID (string):", currentUserIdStr);
-  console.log("Owner ID from uppercase:", ownerIdFromUpperCase);
-  console.log("Owner ID from lowercase:", ownerIdFromLowerCase);
-  console.log("Combined owner ID:", ownerId);
-  console.log("Is user owner by role?", isOwnerByRole);
-  console.log("Is user owner by members check?", isUserOwnerInMembers);
-  console.log("Is user owner by board data?", isOwnerByBoardData);
-  console.log("Is user owner (combined)?", isOwner);
-  console.log("Current user:", currentUser);
-  console.log("Board members:", safeBoardMembers);
-
-  // Log member user IDs for comparison
-  if (safeBoardMembers.length > 0) {
-    console.log("Member user IDs (as strings):", safeBoardMembers.map(m => String(m.userId)));
-    console.log("Member with owner role:", safeBoardMembers.find(m => m.role === 'owner'));
-  }
+    // Combined check - user is owner if any of the checks pass
+    return isOwnerByRole || isUserOwnerInMembers || isOwnerByBoardData;
+  }, [activeBoard, active, boardMembers, currentUser]);
 
   return (
     <dialog
@@ -366,12 +350,12 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
           <div className="mb-4">
             <h4 className="text-md font-semibold text-blue-700 mb-2">Пригласить участника</h4>
             <div className="flex flex-col gap-3">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   type="email"
                   placeholder="Email пользователя"
                   value={email}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setEmail(e.target.value);
                     // Clear error when user starts typing again
                     if (emailError) setEmailError(null);
@@ -380,20 +364,21 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
                   error={emailError || undefined}
                   className="flex-grow"
                   autoFocus
-                  disabled={loading}
+                  disabled={loading || isStoreLoading}
                 />
                 <Button
                   onClick={handleInvite}
-                  loading={loading}
-                  disabled={!email.trim() || loading}
+                  loading={loading || isStoreLoading}
+                  disabled={!email.trim() || loading || isStoreLoading}
+                  className="w-full sm:w-auto"
                 >
                   Добавить
                 </Button>
               </div>
 
               {inviteSuccess && !emailError && (
-                <div className="text-sm text-green-600 bg-green-50 p-2 rounded-xl border border-green-100 flex items-center gap-2">
-                  <span className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center text-green-600">✓</span>
+                <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded-xl border border-blue-100 flex items-center gap-2">
+                  <span className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">✓</span>
                   <span>Приглашение успешно отправлено!</span>
                 </div>
               )}
@@ -409,14 +394,14 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-md font-semibold text-blue-700">Участники доски</h4>
             <div className="text-xs text-blue-600">
-              {safeBoardMembers.length > 0 ? `Всего: ${safeBoardMembers.length}` : ''}
+              {boardMembers.length > 0 ? `Всего: ${boardMembers.length}` : ''}
             </div>
           </div>
 
-          <div className="max-h-60 overflow-y-auto border border-blue-100 rounded-xl">
-            {safeBoardMembers.length > 0 ? (
+          <div className="max-h-60 overflow-y-auto border border-blue-100 rounded-xl bg-gradient-to-b from-blue-50 to-white">
+            {boardMembers.length > 0 ? (
               <ul className="divide-y divide-blue-100">
-                {safeBoardMembers.map((member) => (
+                {boardMembers.map((member: BoardMember) => (
                   <li key={member.userId} className="p-3 flex items-center justify-between hover:bg-blue-50 transition-colors duration-200">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
@@ -438,7 +423,7 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
                             {member.role === 'owner' ? 'Владелец' : 'Участник'}
                           </span>
                           {member.userId && currentUser?.id && member.userId === currentUser.id && (
-                            <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                            <span className="ml-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                               Вы
                             </span>
                           )}
