@@ -122,6 +122,9 @@ export const boardService = {
       console.log(`API returned non-array lists data:`, listsData);
     }
 
+    // Import the cards store here to avoid circular dependencies
+    const { useCardsStore } = await import('@/store/board/useCardsStore');
+
     // Step 3: Fetch board members to determine the current user's role
     let userRole: 'owner' | 'member' = 'member'; // Default to member
     try {
@@ -217,6 +220,9 @@ export const boardService = {
       return normalizedList;
     });
 
+    // Get the cards store to update it with the fetched cards
+    const cardsStore = useCardsStore.getState();
+
     // Step 4: For each list, fetch its cards
     for (const list of processedLists) {
       try {
@@ -224,19 +230,46 @@ export const boardService = {
         console.log(`Raw cards data for list ${list.id}:`, cardsData);
 
         // Process cards data - handle both uppercase and lowercase property names
-        list.cards = (cardsData || []).map((card: any) => ({
-          ...card,
-          id: String(card.ID || card.id),
-          listId: String(card.ListID || card.listId || list.id),
-          title: card.Title || card.title || '',
-          // Handle the description field which could be a string or a pgtype.Text structure
-          description: typeof card.Description === 'string'
-            ? card.Description
-            : (card.Description?.String !== undefined
-              ? card.Description.String
-              : (card.description || '')),
-          position: card.Position || card.position || 0
-        }));
+        const normalizedCards = (cardsData || []).map((card: any) => {
+          // Create a properly normalized card object
+          const normalizedCard = {
+            id: String(card.ID || card.id),
+            listId: String(card.ListID || card.listId || list.id),
+            title: card.Title || card.title || '',
+            // Handle the description field which could be a string or a pgtype.Text structure
+            description: typeof card.Description === 'string'
+              ? card.Description
+              : (card.Description?.String !== undefined
+                ? card.Description.String
+                : (card.description || '')),
+            position: card.Position || card.position || 0
+          };
+
+          return normalizedCard;
+        });
+
+        // Add the normalized cards to the list
+        list.cards = normalizedCards;
+
+        // Update the cards store with these cards
+        useCardsStore.setState(state => {
+          // Add each card to the cards record
+          normalizedCards.forEach(card => {
+            state.cards[card.id] = card;
+
+            // Make sure the listCards relationship is properly set up
+            if (!state.listCards[list.id]) {
+              state.listCards[list.id] = [];
+            }
+
+            // Add the card ID to the list's cards if not already there
+            if (!state.listCards[list.id].includes(card.id)) {
+              state.listCards[list.id].push(card.id);
+            }
+          });
+        });
+
+        console.log(`Added ${normalizedCards.length} cards to store for list ${list.id}`);
       } catch (error) {
         console.error(`Error fetching cards for list ${list.id}:`, error);
         list.cards = []; // Ensure cards is at least an empty array if fetch fails
@@ -470,6 +503,11 @@ export const boardService = {
 
       console.log("Raw card data from API:", data);
 
+      // Ensure we have a valid response
+      if (!data) {
+        throw new Error("No data returned from API");
+      }
+
       // Normalize the response to ensure it has the expected lowercase property names
       const normalizedCard: Card = {
         id: String(data.ID || data.id || Date.now()),
@@ -483,6 +521,34 @@ export const boardService = {
             : (data.description || description)),
         position: data.Position || data.position || position
       };
+
+      console.log("Normalized card:", normalizedCard);
+
+      // Import the cards store here to avoid circular dependencies
+      const { useCardsStore } = await import('@/store/board/useCardsStore');
+
+      // Ensure the card is in the store
+      useCardsStore.setState(state => {
+        // Add to cards record
+        state.cards[normalizedCard.id] = normalizedCard;
+
+        // Add to listCards relationship
+        if (!state.listCards[listId]) {
+          state.listCards[listId] = [];
+        }
+
+        // Check if card already exists in the relationship
+        if (!state.listCards[listId].includes(normalizedCard.id)) {
+          state.listCards[listId].push(normalizedCard.id);
+        }
+      });
+
+      // Debug the state after update
+      setTimeout(() => {
+        const cardsStore = useCardsStore.getState();
+        console.log(`After card creation in service - Cards for list ${listId}:`,
+          cardsStore.getCardsByListId(listId));
+      }, 0);
 
       sendWS({ event: 'card_created', data: normalizedCard });
       return normalizedCard;

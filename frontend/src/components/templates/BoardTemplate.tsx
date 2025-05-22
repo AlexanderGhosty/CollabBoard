@@ -36,6 +36,10 @@ export default function BoardTemplate() {
   const listsState = useListsStore(state => state.lists);
   const boardListsState = useListsStore(state => state.boardLists);
 
+  // Subscribe to cards store changes
+  const cardsState = useCardsStore(state => state.cards);
+  const listCardsState = useCardsStore(state => state.listCards);
+
   // Function to load data from stores
   const loadBoardData = useCallback(() => {
     if (!activeBoard) {
@@ -79,9 +83,15 @@ export default function BoardTemplate() {
     const cardsData = {};
 
     listsData.forEach(list => {
+      // Get cards for this list
       const listCards = cardsStore.getSortedCardsByListId(list.id);
+
+      // Debug the cards data
+      console.log(`Raw cards data for list ${list.id}:`, cardsStore.listCards[list.id]);
+      console.log(`Found ${listCards.length} cards for list ${list.id}:`, listCards);
+
+      // Store the cards for this list
       cardsData[list.id] = listCards;
-      console.log(`Found ${listCards.length} cards for list ${list.id}`);
     });
 
     setListCards(cardsData);
@@ -94,13 +104,13 @@ export default function BoardTemplate() {
     loadBoardData();
   }, [loadBoardData]);
 
-  // Reload data when lists store changes
+  // Reload data when lists or cards store changes
   useEffect(() => {
     if (activeBoard) {
-      console.log('Lists store changed, reloading board data');
+      console.log('Lists or cards store changed, reloading board data');
       loadBoardData();
     }
-  }, [listsState, boardListsState, activeBoard, loadBoardData]);
+  }, [listsState, boardListsState, cardsState, listCardsState, activeBoard, loadBoardData]);
 
   // Subscribe to WebSocket events to update our local state
   useEffect(() => {
@@ -131,7 +141,10 @@ export default function BoardTemplate() {
       // Card events
       subscribeWS('card_created', (data) => {
         console.log('BoardTemplate received card_created event:', data);
-        loadBoardData();
+        // Force immediate update of the UI
+        setTimeout(() => {
+          loadBoardData();
+        }, 0);
       }),
       subscribeWS('card_updated', (data) => {
         console.log('BoardTemplate received card_updated event:', data);

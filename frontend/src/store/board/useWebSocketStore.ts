@@ -45,6 +45,8 @@ export const useWebSocketStore = create<WebSocketState>()(
     },
 
     handleCardCreated(data) {
+      console.log("Handling card_created event with data:", data);
+
       const cardId = extractCardId(data);
       const listId = normalizeId(data.ListID || data.listId);
 
@@ -61,6 +63,8 @@ export const useWebSocketStore = create<WebSocketState>()(
         description: extractDescription(data),
         position: data.Position || data.position || 0
       };
+
+      console.log("Normalized card from WebSocket:", normalizedCard);
 
       // Update the cards store
       const cardsStore = useCardsStore.getState();
@@ -82,6 +86,18 @@ export const useWebSocketStore = create<WebSocketState>()(
         });
 
         console.log(`Added new card ${cardId} to list ${listId} via WebSocket`);
+
+        // Debug the state after update
+        setTimeout(() => {
+          const updatedState = useCardsStore.getState();
+          console.log(`After WebSocket update - Cards for list ${listId}:`,
+            updatedState.getCardsByListId(listId));
+
+          // Force a state update to trigger UI refresh
+          useCardsStore.setState(state => ({ ...state }));
+        }, 0);
+      } else {
+        console.log(`Card ${cardId} already exists in store, skipping`);
       }
     },
 
