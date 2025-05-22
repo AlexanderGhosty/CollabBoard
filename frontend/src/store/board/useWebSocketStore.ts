@@ -376,7 +376,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         if (boardId) {
           console.log(`Refreshing lists for board ${boardId} after list deletion`);
           // Force a refresh of the lists for this board
-          boardService.getLists(boardId).then(lists => {
+          boardService.fetchLists(boardId).then(lists => {
             if (Array.isArray(lists)) {
               useListsStore.getState().setLists(lists, boardId);
             } else {

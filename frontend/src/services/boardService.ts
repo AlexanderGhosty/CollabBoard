@@ -21,6 +21,39 @@ export type Board = {
   lists: List[]
 };
 
+// Standalone function to fetch lists for a board
+export async function fetchLists(boardId: string): Promise<List[]> {
+  try {
+    console.log(`Fetching lists for board ${boardId}`);
+    const { data } = await api.get<any[]>(`/boards/${boardId}/lists`);
+    console.log("Raw lists data from API:", data);
+
+    // Check if data is an array
+    if (!Array.isArray(data)) {
+      console.error("Expected array of lists but got:", data);
+      return [];
+    }
+
+    // Process lists data - handle both uppercase and lowercase property names
+    return data.map((list: any) => {
+      // Extract ID from various possible formats
+      const listId = String(list.ID || list.id || '');
+
+      // Create a normalized list object
+      return {
+        id: listId,
+        boardId: String(list.BoardID || list.boardId || list.board_id || boardId),
+        title: list.Title || list.title || '',
+        position: list.Position || list.position || 0,
+        cards: [] // Initialize empty cards array for each list
+      };
+    });
+  } catch (error) {
+    console.error(`Error fetching lists for board ${boardId}:`, error);
+    return [];
+  }
+}
+
 const ENDPOINTS = {
   boards: '/boards',
   board:  (id: string)        => `/boards/${id}`,
@@ -738,6 +771,12 @@ export const boardService = {
       console.error("Error updating board:", error);
       throw error;
     }
+  },
+
+  /** Получить списки для доски */
+  async fetchBoardLists(boardId: string): Promise<List[]> {
+    // Use the standalone fetchLists function
+    return fetchLists(boardId);
   },
 
   /** Получить список участников доски */
