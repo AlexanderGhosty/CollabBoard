@@ -1,6 +1,7 @@
 import { api } from '@/services/api';
 import { sendWS } from '@/services/websocket';
 import { useBoardStore } from '@/store/board';
+import { useListsStore } from '@/store/board/useListsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /** Типы сущностей (минимально‑необходимые) */
@@ -541,12 +542,17 @@ export const boardService = {
       console.log(`Updating list ${listId} with title: ${title}`);
 
       // Find the board ID for this list
-      const board = useBoardStore.getState().active;
-      if (!board) {
+      const boardStore = useBoardStore.getState();
+      const activeBoard = boardStore.activeBoard;
+
+      if (!activeBoard) {
         throw new Error("No active board found");
       }
 
-      const list = board.lists.find(l => l.id === listId);
+      // Get the list from the lists store
+      const listsStore = useListsStore.getState();
+      const list = listsStore.lists[listId];
+
       if (!list) {
         throw new Error(`List with ID ${listId} not found in active board`);
       }
@@ -584,12 +590,17 @@ export const boardService = {
       console.log(`Deleting list ${listId}`);
 
       // Find the board ID for this list
-      const board = useBoardStore.getState().active;
-      if (!board) {
+      const boardStore = useBoardStore.getState();
+      const activeBoard = boardStore.activeBoard;
+
+      if (!activeBoard) {
         throw new Error("No active board found");
       }
 
-      const list = board.lists.find(l => l.id === listId);
+      // Get the list from the lists store
+      const listsStore = useListsStore.getState();
+      const list = listsStore.lists[listId];
+
       if (!list) {
         throw new Error(`List with ID ${listId} not found in active board`);
       }
@@ -601,19 +612,21 @@ export const boardService = {
       const deleteEndpoint = `${ENDPOINTS.lists(boardId)}/${listId}`;
       console.log(`Using delete endpoint: ${deleteEndpoint}`);
 
-      await api.delete(deleteEndpoint);
-      console.log("List deleted successfully");
+      const response = await api.delete(deleteEndpoint);
+      console.log("List deleted successfully", response);
 
-      // Send WebSocket event with the updated list count after deletion
-      // This helps other clients know they need to refresh their list positions
-      const remainingListCount = board.lists.length - 1; // Subtract 1 for the deleted list
+      // Send WebSocket event with the proper format to match backend's format
+      // The backend sends: { id: listId } where id is a number
+      // We'll send the same format but ensure it's a string to avoid type issues
       sendWS({
         event: 'list_deleted',
         data: {
-          listId,
-          _expectedListCount: remainingListCount
+          id: listId, // Use 'id' to match the backend format
+          boardId: boardId // Include boardId to help with synchronization
         }
       });
+
+      console.log(`Sent list_deleted WebSocket event for list ${listId} on board ${boardId}`);
     } catch (error) {
       console.error("Error deleting list:", error);
       throw error;

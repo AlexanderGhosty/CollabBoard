@@ -241,7 +241,7 @@ export const useListsStore = create<ListsState>()(
         });
 
         // Show success toast
-        useToastStore.getState().success("Список удален");
+        useToastStore.getState().success("Список успешно удален");
       } catch (error) {
         console.error(`Error deleting list ${listId}:`, error);
 

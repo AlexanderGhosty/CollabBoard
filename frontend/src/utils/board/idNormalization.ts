@@ -18,8 +18,11 @@ export function normalizeId(id: string | number | undefined): string | undefined
  * @returns The normalized board ID as a string or undefined
  */
 export function extractBoardId(obj: any): string | undefined {
+  // Handle both string and number formats
   const boardId = obj.ID || obj.BoardID || obj.boardId || obj.board_id || obj.id;
-  return normalizeId(boardId);
+
+  // Ensure we convert to string even if it's a number
+  return boardId !== undefined ? String(boardId) : undefined;
 }
 
 /**
@@ -28,8 +31,11 @@ export function extractBoardId(obj: any): string | undefined {
  * @returns The normalized list ID as a string or undefined
  */
 export function extractListId(obj: any): string | undefined {
+  // Handle both string and number formats
   const listId = obj.ID || obj.id || obj.ListID || obj.listId;
-  return normalizeId(listId);
+
+  // Ensure we convert to string even if it's a number
+  return listId !== undefined ? String(listId) : undefined;
 }
 
 /**
@@ -38,8 +44,11 @@ export function extractListId(obj: any): string | undefined {
  * @returns The normalized card ID as a string or undefined
  */
 export function extractCardId(obj: any): string | undefined {
+  // Handle both string and number formats
   const cardId = obj.ID || obj.id || obj.CardID || obj.cardId;
-  return normalizeId(cardId);
+
+  // Ensure we convert to string even if it's a number
+  return cardId !== undefined ? String(cardId) : undefined;
 }
 
 /**
@@ -48,8 +57,11 @@ export function extractCardId(obj: any): string | undefined {
  * @returns The normalized user ID as a string or undefined
  */
 export function extractUserId(obj: any): string | undefined {
+  // Handle both string and number formats
   const userId = obj.UserID || obj.userId || obj.user_id;
-  return normalizeId(userId);
+
+  // Ensure we convert to string even if it's a number
+  return userId !== undefined ? String(userId) : undefined;
 }
 
 /**

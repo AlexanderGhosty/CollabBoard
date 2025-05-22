@@ -32,6 +32,10 @@ export default function BoardTemplate() {
   const activeBoard = useBoardStore(state => state.activeBoard);
   const boards = useBoardStore(state => state.boards);
 
+  // Subscribe to lists store changes
+  const listsState = useListsStore(state => state.lists);
+  const boardListsState = useListsStore(state => state.boardLists);
+
   // Function to load data from stores
   const loadBoardData = useCallback(() => {
     if (!activeBoard) {
@@ -85,10 +89,18 @@ export default function BoardTemplate() {
     console.log("Board data loaded successfully");
   }, [activeBoard, boards]);
 
-  // Load data from stores
+  // Load data from stores initially
   useEffect(() => {
     loadBoardData();
   }, [loadBoardData]);
+
+  // Reload data when lists store changes
+  useEffect(() => {
+    if (activeBoard) {
+      console.log('Lists store changed, reloading board data');
+      loadBoardData();
+    }
+  }, [listsState, boardListsState, activeBoard, loadBoardData]);
 
   // Subscribe to WebSocket events to update our local state
   useEffect(() => {

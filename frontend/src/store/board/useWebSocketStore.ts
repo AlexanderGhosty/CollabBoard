@@ -8,6 +8,7 @@ import { useBoardStore } from './useBoardStore';
 import { useListsStore } from './useListsStore';
 import { useCardsStore } from './useCardsStore';
 import { useMembersStore } from './useMembersStore';
+import * as boardService from '@/services/boardService';
 import {
   normalizeId,
   extractBoardId,
@@ -334,19 +335,37 @@ export const useWebSocketStore = create<WebSocketState>()(
     },
 
     handleListDeleted(data) {
-      const listId = extractListId(data);
+      // Extract the list ID, handling both string and number formats
+      const rawListId = data.id || data.ID || data.listId || data.ListID;
+      const listId = rawListId ? String(rawListId) : undefined;
 
       if (!listId) {
         console.error("Received list_deleted event without ID:", data);
         return;
       }
 
+      console.log(`Processing list_deleted event for list ${listId}`);
+
       // Get the current list
       const listsStore = useListsStore.getState();
       const list = listsStore.lists[listId];
 
+      // If the list is not found, it might have been already deleted locally
+      // In this case, we can't do much except log it and refresh the board data
       if (!list) {
-        console.error(`Could not find list ${listId}`);
+        console.log(`List ${listId} not found in store, might have been already deleted`);
+
+        // Get the board ID from the event data if available
+        const boardId = data.boardId || useBoardStore.getState().activeBoard?.id;
+        if (boardId) {
+          console.log(`Refreshing lists for board ${boardId} after list deletion`);
+          // Force a refresh of the lists for this board
+          boardService.getLists(boardId).then(lists => {
+            useListsStore.getState().setLists(lists, boardId);
+          }).catch(err => {
+            console.error(`Failed to refresh lists for board ${boardId}:`, err);
+          });
+        }
         return;
       }
 
