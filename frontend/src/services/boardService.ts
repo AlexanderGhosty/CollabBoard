@@ -433,8 +433,8 @@ export const boardService = {
       throw new Error("No active board found");
     }
 
-    // Get the list from the lists store
-    const listsStore = require('@/store/board/useListsStore').useListsStore.getState();
+    // Get the list from the lists store - using proper ES module import
+    const listsStore = useListsStore.getState();
     const list = listsStore.lists[listId];
 
     if (!list) {

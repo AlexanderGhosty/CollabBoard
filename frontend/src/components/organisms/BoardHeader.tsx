@@ -81,15 +81,7 @@ export default function BoardHeader() {
           </span>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        <Button
-          variant="primary"
-          onClick={handleCreateList}
-          className="hover:!shadow-md transition-all duration-200 hover:!translate-y-[-2px] !px-4 !py-2"
-        >
-          ＋ Добавить список
-        </Button>
-      </div>
+
     </header>
   );
 }
