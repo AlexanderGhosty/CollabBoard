@@ -204,12 +204,21 @@ export const useWebSocketStore = create<WebSocketState>()(
 
     handleListCreated(data) {
       const listId = extractListId(data);
-      const boardId = extractBoardId(data);
+      let boardId = extractBoardId(data);
+
+      // Проверка на случай, если boardId в сообщении неверный
+      const activeBoardId = useBoardStore.getState().activeBoard;
+      if (activeBoardId && (!boardId || boardId !== activeBoardId)) {
+        console.log(`Correcting boardId from ${boardId} to active board ${activeBoardId}`);
+        boardId = activeBoardId;
+      }
 
       if (!listId || !boardId) {
         console.error("Received list_created event with missing ID or boardId:", data);
         return;
       }
+
+      console.log(`Processing list_created event for list ${listId} on board ${boardId}`);
 
       // Create a normalized list object
       const normalizedList = {
@@ -225,6 +234,7 @@ export const useWebSocketStore = create<WebSocketState>()(
 
       // Check if list already exists to prevent duplicates
       if (!listsStore.lists[listId]) {
+        console.log(`Adding new list ${listId} to board ${boardId}`);
         useListsStore.setState(state => {
           // Add to lists record
           state.lists[listId] = normalizedList;
@@ -240,6 +250,8 @@ export const useWebSocketStore = create<WebSocketState>()(
         });
 
         console.log(`Added new list ${listId} to board ${boardId} via WebSocket`);
+      } else {
+        console.log(`List ${listId} already exists in store, skipping`);
       }
     },
 

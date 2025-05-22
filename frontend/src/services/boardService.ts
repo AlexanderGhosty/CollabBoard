@@ -114,6 +114,13 @@ export const boardService = {
     const { data: listsData } = await api.get<any[]>(ENDPOINTS.lists(id));
     console.log("Raw lists data:", listsData);
 
+    // Debug log to help diagnose list processing issues
+    if (Array.isArray(listsData)) {
+      console.log(`API returned ${listsData.length} lists for board ${id}`);
+    } else {
+      console.log(`API returned non-array lists data:`, listsData);
+    }
+
     // Step 3: Fetch board members to determine the current user's role
     let userRole: 'owner' | 'member' = 'member'; // Default to member
     try {
@@ -189,15 +196,24 @@ export const boardService = {
 
     // Process lists data - handle both uppercase and lowercase property names
     const processedLists = (listsData || []).map((list: any) => {
-      const listId = String(list.ID || list.id);
-      return {
-        ...list,
+      // Extract ID from various possible formats
+      const listId = String(list.ID || list.id || '');
+
+      // Extract boardId from various possible formats
+      const boardId = String(list.BoardID || list.boardId || list.board_id || id);
+
+      // Create a normalized list object
+      const normalizedList = {
         id: listId,
-        boardId: String(list.BoardID || list.boardId || list.board_id || id),
+        boardId: boardId,
         title: list.Title || list.title || '',
         position: list.Position || list.position || 0,
         cards: [] // Initialize empty cards array for each list
       };
+
+      console.log(`Normalized list: ${listId}, boardId: ${boardId}, title: ${normalizedList.title}`);
+
+      return normalizedList;
     });
 
     // Step 4: For each list, fetch its cards
@@ -296,6 +312,8 @@ export const boardService = {
 
   /** Создать список */
   async createList(boardId: string, title: string, position: number): Promise<List> {
+    console.log(`Creating list "${title}" at position ${position} for board ${boardId}`);
+
     const { data } = await api.post<any>(ENDPOINTS.lists(boardId), {
       title,
       position
@@ -314,14 +332,25 @@ export const boardService = {
       cards: []
     };
 
+    console.log("Normalized list data:", list);
+
+    // Убедимся, что boardId в списке соответствует текущей доске
+    if (list.boardId !== boardId) {
+      console.log(`Correcting list.boardId from ${list.boardId} to ${boardId}`);
+      list.boardId = boardId;
+    }
+
     // Add a flag to the WebSocket data to indicate this was created locally
     // This could be used by other clients to handle the event differently
     const wsData = {
       ...list,
-      _locallyCreated: true
+      _locallyCreated: true,
+      boardId: boardId // Явно указываем правильный boardId
     };
 
+    console.log("Sending WebSocket event list_created with data:", wsData);
     sendWS({ event: 'list_created', data: wsData });
+
     return list;
   },
 

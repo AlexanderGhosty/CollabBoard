@@ -34,16 +34,40 @@ export default function BoardTemplate() {
 
   // Function to load data from stores
   const loadBoardData = useCallback(() => {
-    if (!activeBoard) return;
+    if (!activeBoard) {
+      console.log("No active board, skipping loadBoardData");
+      return;
+    }
+
+    console.log(`Loading data for board ${activeBoard}`);
 
     // Get board data
     const boardData = boards[activeBoard];
-    if (!boardData) return;
+    if (!boardData) {
+      console.log(`Board data not found for ID ${activeBoard}`);
+      return;
+    }
 
     setBoard(boardData);
 
     // Get lists for this board
-    const listsData = useListsStore.getState().getSortedListsByBoardId(activeBoard);
+    const listsStore = useListsStore.getState();
+
+    // Debug the state of the lists store
+    console.log('Lists store state:', {
+      lists: listsStore.lists,
+      boardLists: listsStore.boardLists,
+      activeBoardId: activeBoard
+    });
+
+    const listsData = listsStore.getSortedListsByBoardId(activeBoard);
+    console.log(`Found ${listsData.length} lists for board ${activeBoard}:`, listsData);
+
+    // If no lists were found but we know they should exist, log a warning
+    if (listsData.length === 0) {
+      console.warn(`No lists found for board ${activeBoard} in the store. This might indicate a data synchronization issue.`);
+    }
+
     setLists(listsData);
 
     // Get cards for each list
@@ -51,11 +75,14 @@ export default function BoardTemplate() {
     const cardsData = {};
 
     listsData.forEach(list => {
-      cardsData[list.id] = cardsStore.getSortedCardsByListId(list.id);
+      const listCards = cardsStore.getSortedCardsByListId(list.id);
+      cardsData[list.id] = listCards;
+      console.log(`Found ${listCards.length} cards for list ${list.id}`);
     });
 
     setListCards(cardsData);
     setIsLoading(false);
+    console.log("Board data loaded successfully");
   }, [activeBoard, boards]);
 
   // Load data from stores
@@ -67,33 +94,70 @@ export default function BoardTemplate() {
   useEffect(() => {
     if (!activeBoard) return;
 
+    console.log(`Setting up WebSocket subscriptions for board ${activeBoard}`);
+
     // Set up WebSocket subscriptions for real-time updates
     const unsubscribers = [
       // List events
-      subscribeWS('list_created', () => loadBoardData()),
-      subscribeWS('list_updated', () => loadBoardData()),
-      subscribeWS('list_moved', () => loadBoardData()),
-      subscribeWS('list_deleted', () => loadBoardData()),
+      subscribeWS('list_created', (data) => {
+        console.log('BoardTemplate received list_created event:', data);
+        loadBoardData();
+      }),
+      subscribeWS('list_updated', (data) => {
+        console.log('BoardTemplate received list_updated event:', data);
+        loadBoardData();
+      }),
+      subscribeWS('list_moved', (data) => {
+        console.log('BoardTemplate received list_moved event:', data);
+        loadBoardData();
+      }),
+      subscribeWS('list_deleted', (data) => {
+        console.log('BoardTemplate received list_deleted event:', data);
+        loadBoardData();
+      }),
 
       // Card events
-      subscribeWS('card_created', () => loadBoardData()),
-      subscribeWS('card_updated', () => loadBoardData()),
-      subscribeWS('card_moved', () => loadBoardData()),
-      subscribeWS('card_deleted', () => loadBoardData()),
+      subscribeWS('card_created', (data) => {
+        console.log('BoardTemplate received card_created event:', data);
+        loadBoardData();
+      }),
+      subscribeWS('card_updated', (data) => {
+        console.log('BoardTemplate received card_updated event:', data);
+        loadBoardData();
+      }),
+      subscribeWS('card_moved', (data) => {
+        console.log('BoardTemplate received card_moved event:', data);
+        loadBoardData();
+      }),
+      subscribeWS('card_deleted', (data) => {
+        console.log('BoardTemplate received card_deleted event:', data);
+        loadBoardData();
+      }),
     ];
 
     // Clean up subscriptions when component unmounts
     return () => {
+      console.log(`Cleaning up WebSocket subscriptions for board ${activeBoard}`);
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
   }, [activeBoard, loadBoardData]);
 
   // Define the createList callback
-  const handleCreateList = useCallback(() => {
+  const handleCreateList = useCallback(async () => {
     if (activeBoard) {
-      createList(activeBoard, 'Новый список');
+      console.log(`Creating new list for board ${activeBoard}`);
+      try {
+        await createList(activeBoard, 'Новый список');
+        console.log("List created, reloading board data");
+        // Обновляем данные доски после создания списка
+        setTimeout(() => loadBoardData(), 100);
+      } catch (error) {
+        console.error("Error creating list:", error);
+      }
+    } else {
+      console.error("Cannot create list: no active board");
     }
-  }, [createList, activeBoard]);
+  }, [createList, activeBoard, loadBoardData]);
 
   // State to track the currently active (dragged) item
   const [activeId, setActiveId] = useState<string | null>(null);

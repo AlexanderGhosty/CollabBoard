@@ -6,6 +6,8 @@ import { useToastStore } from '@/store/useToastStore';
 import { BoardState } from './types';
 import { normalizeId, extractBoardId } from '@/utils/board/idNormalization';
 import { setupWebSocketSubscriptions } from './useWebSocketStore';
+import { useListsStore } from './useListsStore';
+import { useMembersStore } from './useMembersStore';
 
 export const useBoardStore = create<BoardState>()(
   immer((set, get) => ({
@@ -126,6 +128,47 @@ export const useBoardStore = create<BoardState>()(
           return;
         }
 
+        // Update the lists store with the lists from the board
+        const listsStore = useListsStore.getState();
+
+        // Clear existing lists for this board to prevent duplicates
+        if (listsStore.boardLists[id]) {
+          console.log(`Clearing existing lists for board ${id}`);
+          const existingListIds = [...listsStore.boardLists[id]];
+          existingListIds.forEach(listId => {
+            delete listsStore.lists[listId];
+          });
+          listsStore.boardLists[id] = [];
+        }
+
+        // Add the new lists to the lists store
+        if (board.lists && board.lists.length > 0) {
+          console.log(`Adding ${board.lists.length} lists to store for board ${id}`);
+
+          board.lists.forEach(list => {
+            if (!list.id) {
+              console.error("List without ID:", list);
+              return;
+            }
+
+            // Add to lists record
+            listsStore.lists[list.id] = list;
+
+            // Add to boardLists relationship
+            if (!listsStore.boardLists[id]) {
+              listsStore.boardLists[id] = [];
+            }
+
+            if (!listsStore.boardLists[id].includes(list.id)) {
+              listsStore.boardLists[id].push(list.id);
+            }
+          });
+
+          console.log(`Added ${board.lists.length} lists to store for board ${id}`);
+        } else {
+          console.log(`No lists found for board ${id}`);
+        }
+
         set((s) => {
           // Update the board in the boards record
           s.boards[board.id] = board;
@@ -135,7 +178,7 @@ export const useBoardStore = create<BoardState>()(
         });
 
         // Fetch board members
-        await get().fetchBoardMembers(id);
+        await useMembersStore.getState().fetchBoardMembers(id);
 
         // Connect to WebSocket for real-time updates
         wsClient.connect(id);
@@ -288,9 +331,9 @@ export const useBoardStore = create<BoardState>()(
     },
 
     // Board members
-    async fetchBoardMembers(boardId) {
-      // This will be implemented in useMembersStore.ts
-      // and will be called from there
+    async fetchBoardMembers(boardId: string) {
+      // Delegate to the members store
+      return useMembersStore.getState().fetchBoardMembers(boardId);
     }
   }))
 );
