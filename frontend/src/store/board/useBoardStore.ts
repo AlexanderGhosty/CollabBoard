@@ -131,42 +131,14 @@ export const useBoardStore = create<BoardState>()(
         // Update the lists store with the lists from the board
         const listsStore = useListsStore.getState();
 
-        // Clear existing lists for this board to prevent duplicates
-        if (listsStore.boardLists[id]) {
-          console.log(`Clearing existing lists for board ${id}`);
-          const existingListIds = [...listsStore.boardLists[id]];
-          existingListIds.forEach(listId => {
-            delete listsStore.lists[listId];
-          });
-          listsStore.boardLists[id] = [];
-        }
-
-        // Add the new lists to the lists store
-        if (board.lists && board.lists.length > 0) {
-          console.log(`Adding ${board.lists.length} lists to store for board ${id}`);
-
-          board.lists.forEach(list => {
-            if (!list.id) {
-              console.error("List without ID:", list);
-              return;
-            }
-
-            // Add to lists record
-            listsStore.lists[list.id] = list;
-
-            // Add to boardLists relationship
-            if (!listsStore.boardLists[id]) {
-              listsStore.boardLists[id] = [];
-            }
-
-            if (!listsStore.boardLists[id].includes(list.id)) {
-              listsStore.boardLists[id].push(list.id);
-            }
-          });
-
-          console.log(`Added ${board.lists.length} lists to store for board ${id}`);
+        // Use the setLists method to safely update the lists for this board
+        if (board.lists && Array.isArray(board.lists)) {
+          console.log(`Setting ${board.lists.length} lists for board ${id} using setLists`);
+          listsStore.setLists(board.lists, id);
         } else {
           console.log(`No lists found for board ${id}`);
+          // Still clear any existing lists for this board
+          listsStore.setLists([], id);
         }
 
         set((s) => {

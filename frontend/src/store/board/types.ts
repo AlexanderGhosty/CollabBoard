@@ -70,6 +70,7 @@ export interface ListsState extends BaseState {
   updateList: (listId: string, title: string) => Promise<void>;
   moveList: (listId: string, position: number) => Promise<void>;
   deleteList: (listId: string) => Promise<void>;
+  setLists: (lists: List[], boardId: string) => void;
 
   // Selectors
   getListsByBoardId: (boardId: string) => List[];

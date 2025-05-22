@@ -356,12 +356,16 @@ export const useWebSocketStore = create<WebSocketState>()(
         console.log(`List ${listId} not found in store, might have been already deleted`);
 
         // Get the board ID from the event data if available
-        const boardId = data.boardId || useBoardStore.getState().activeBoard?.id;
+        const boardId = data.boardId || data.BoardID || useBoardStore.getState().activeBoard;
         if (boardId) {
           console.log(`Refreshing lists for board ${boardId} after list deletion`);
           // Force a refresh of the lists for this board
           boardService.getLists(boardId).then(lists => {
-            useListsStore.getState().setLists(lists, boardId);
+            if (Array.isArray(lists)) {
+              useListsStore.getState().setLists(lists, boardId);
+            } else {
+              console.error(`Invalid lists data received for board ${boardId}:`, lists);
+            }
           }).catch(err => {
             console.error(`Failed to refresh lists for board ${boardId}:`, err);
           });

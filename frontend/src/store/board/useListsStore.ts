@@ -25,6 +25,46 @@ export const useListsStore = create<ListsState>()(
       return sortLists(lists);
     },
 
+    // Utility methods
+    setLists(lists, boardId) {
+      console.log(`Setting ${lists.length} lists for board ${boardId}`);
+
+      set((s) => {
+        // Clear existing lists for this board to prevent duplicates
+        if (s.boardLists[boardId]) {
+          const existingListIds = [...s.boardLists[boardId]];
+          existingListIds.forEach(listId => {
+            delete s.lists[listId];
+          });
+          s.boardLists[boardId] = [];
+        }
+
+        // Add the new lists
+        if (lists && lists.length > 0) {
+          lists.forEach(list => {
+            if (!list.id) {
+              console.error("List without ID:", list);
+              return;
+            }
+
+            // Add to lists record
+            s.lists[list.id] = list;
+
+            // Add to boardLists relationship
+            if (!s.boardLists[boardId]) {
+              s.boardLists[boardId] = [];
+            }
+
+            if (!s.boardLists[boardId].includes(list.id)) {
+              s.boardLists[boardId].push(list.id);
+            }
+          });
+        }
+      });
+
+      console.log(`Successfully set ${lists.length} lists for board ${boardId}`);
+    },
+
     // List operations
     async createList(boardId, title) {
       set((s) => { s.loading = true; s.error = null; });
