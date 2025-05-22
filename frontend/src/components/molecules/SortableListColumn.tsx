@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { List } from '@/services/boardService';
 import ListColumn from '@/components/organisms/ListColumn';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore } from '@/store/board';
 
 interface Props {
   list: List;

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import BoardHeader from '@/components/organisms/BoardHeader';
 import BoardTemplate from '@/components/templates/BoardTemplate';
 import Header from '@/components/organisms/Header';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore } from '@/store/board';
 import { subscribeWS } from '@/services/websocket';
 import './BoardPage.css';
 
@@ -13,7 +13,11 @@ export default function BoardPage() {
 
   // Use specific selectors for the store functions
   const loadBoard = useBoardStore(state => state.loadBoard);
-  const active = useBoardStore(state => state.active);
+  const activeBoard = useBoardStore(state => state.activeBoard);
+  const boards = useBoardStore(state => state.boards);
+
+  // Get the active board object
+  const active = activeBoard ? boards[activeBoard] : null;
 
   // Add board-page class to body when component mounts
   useEffect(() => {

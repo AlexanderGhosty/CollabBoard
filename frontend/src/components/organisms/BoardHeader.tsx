@@ -1,19 +1,21 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import Button from '@/components/atoms/Button';
 import EditableText from '@/components/atoms/EditableText';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore, useListsStore } from '@/store/board';
 import { useNavigate } from 'react-router-dom';
 import { boardNameSchema } from '@/utils/validate';
-import MemberManagementModal from '@/components/molecules/MemberManagementModal';
 
 export default function BoardHeader() {
   const navigate = useNavigate();
-  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
 
   // Use specific selectors for each piece of state/action needed
-  const board = useBoardStore(state => state.active);
-  const createList = useBoardStore(state => state.createList);
+  const activeBoard = useBoardStore(state => state.activeBoard);
+  const boards = useBoardStore(state => state.boards);
+  const createList = useListsStore(state => state.createList);
   const updateBoardName = useBoardStore(state => state.updateBoardName);
+
+  // Get the active board object
+  const board = activeBoard ? boards[activeBoard] : null;
 
   // Define all hooks before any conditional returns
   const handleBackClick = useCallback(() => {
@@ -24,15 +26,6 @@ export default function BoardHeader() {
   const handleCreateList = useCallback(() => {
     createList('Новый список');
   }, [createList]);
-
-  // Define the member management modal open/close handlers
-  const handleOpenMemberModal = useCallback(() => {
-    setIsMemberModalOpen(true);
-  }, []);
-
-  const handleCloseMemberModal = useCallback(() => {
-    setIsMemberModalOpen(false);
-  }, []);
 
   // Handle board name update
   const handleBoardNameUpdate = useCallback(async (newName: string) => {
@@ -88,29 +81,7 @@ export default function BoardHeader() {
           </span>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        <Button
-          variant="secondary"
-          onClick={handleOpenMemberModal}
-          className="hover:!shadow-md transition-all duration-200 hover:!translate-y-[-2px] !px-4 !py-2"
-          title="Manage board members"
-        >
-          👥 Участники
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleCreateList}
-          className="hover:!shadow-md transition-all duration-200 hover:!translate-y-[-2px] !px-4 !py-2"
-        >
-          ＋ Добавить список
-        </Button>
-      </div>
 
-      {/* Member Management Modal */}
-      <MemberManagementModal
-        isOpen={isMemberModalOpen}
-        onClose={handleCloseMemberModal}
-      />
     </header>
   );
 }

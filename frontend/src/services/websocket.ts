@@ -44,7 +44,9 @@ class WebSocketClient {
     // если было старое соединение — закрываем
     if (this.socket) this.socket.close();
 
-    this.boardId = boardId;
+    // Убедимся, что boardId - строка
+    this.boardId = String(boardId);
+    console.log(`Connecting to WebSocket for board ${this.boardId}`);
     this.openSocket();
   }
 
@@ -77,9 +79,11 @@ class WebSocketClient {
   private openSocket() {
     const token = useAuthStore.getState().token;
     const url = `${import.meta.env.VITE_WS_URL}/${this.boardId}?token=${token}`;
+    console.log(`Opening WebSocket connection to: ${url}`);
     this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
+      console.log(`WebSocket connection established for board ${this.boardId}`);
       // запускаем heartbeat (ping‑pong)
       this.heartbeatId = window.setInterval(() => {
         if (this.socket?.readyState === WebSocket.OPEN) {
@@ -91,20 +95,23 @@ class WebSocketClient {
     this.socket.onmessage = (e) => {
       try {
         const msg: WSMessage = JSON.parse(e.data);
+        console.log(`WebSocket message received: ${msg.event}`, msg.data);
         const handlers = this.subscriptions.get(msg.event);
         if (handlers) handlers.forEach((cb) => cb(msg.data));
-      } catch {
-        // игнорируем неверный JSON
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
       }
     };
 
-    this.socket.onclose = () => {
+    this.socket.onclose = (event) => {
+      console.log(`WebSocket connection closed for board ${this.boardId}. Code: ${event.code}, Reason: ${event.reason}`);
       this.cleanup();
       // пытаемся переподключиться раз в 3 сек
       this.reconnectId = window.setTimeout(() => this.openSocket(), 3_000);
     };
 
-    this.socket.onerror = () => {
+    this.socket.onerror = (error) => {
+      console.error(`WebSocket error for board ${this.boardId}:`, error);
       this.socket?.close();
     };
   }

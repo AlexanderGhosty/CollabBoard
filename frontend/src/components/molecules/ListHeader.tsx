@@ -3,7 +3,7 @@ import { List } from '@/services/boardService';
 import Button from '@/components/atoms/Button';
 import EditableText from '@/components/atoms/EditableText';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useListsStore } from '@/store/board';
 
 interface Props {
   list: List;
@@ -14,8 +14,8 @@ export default function ListHeader({ list, onAddCard }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Use individual selectors for each store function to prevent infinite re-renders
-  const deleteList = useBoardStore(state => state.deleteList);
-  const updateList = useBoardStore(state => state.updateList);
+  const deleteList = useListsStore(state => state.deleteList);
+  const updateList = useListsStore(state => state.updateList);
 
   const handleAddCard = () => {
     console.log(`Add card button clicked for list:`, list);

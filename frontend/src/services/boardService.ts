@@ -1,6 +1,7 @@
 import { api } from '@/services/api';
 import { sendWS } from '@/services/websocket';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore } from '@/store/board';
+import { useListsStore } from '@/store/board/useListsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /** Типы сущностей (минимально‑необходимые) */
@@ -19,6 +20,39 @@ export type Board = {
   role?: 'owner' | 'member'; // Added for board sharing feature
   lists: List[]
 };
+
+// Standalone function to fetch lists for a board
+export async function fetchLists(boardId: string): Promise<List[]> {
+  try {
+    console.log(`Fetching lists for board ${boardId}`);
+    const { data } = await api.get<any[]>(`/boards/${boardId}/lists`);
+    console.log("Raw lists data from API:", data);
+
+    // Check if data is an array
+    if (!Array.isArray(data)) {
+      console.error("Expected array of lists but got:", data);
+      return [];
+    }
+
+    // Process lists data - handle both uppercase and lowercase property names
+    return data.map((list: any) => {
+      // Extract ID from various possible formats
+      const listId = String(list.ID || list.id || '');
+
+      // Create a normalized list object
+      return {
+        id: listId,
+        boardId: String(list.BoardID || list.boardId || list.board_id || boardId),
+        title: list.Title || list.title || '',
+        position: list.Position || list.position || 0,
+        cards: [] // Initialize empty cards array for each list
+      };
+    });
+  } catch (error) {
+    console.error(`Error fetching lists for board ${boardId}:`, error);
+    return [];
+  }
+}
 
 const ENDPOINTS = {
   boards: '/boards',
@@ -114,6 +148,16 @@ export const boardService = {
     const { data: listsData } = await api.get<any[]>(ENDPOINTS.lists(id));
     console.log("Raw lists data:", listsData);
 
+    // Debug log to help diagnose list processing issues
+    if (Array.isArray(listsData)) {
+      console.log(`API returned ${listsData.length} lists for board ${id}`);
+    } else {
+      console.log(`API returned non-array lists data:`, listsData);
+    }
+
+    // Import the cards store here to avoid circular dependencies
+    const { useCardsStore } = await import('@/store/board/useCardsStore');
+
     // Step 3: Fetch board members to determine the current user's role
     let userRole: 'owner' | 'member' = 'member'; // Default to member
     try {
@@ -189,16 +233,28 @@ export const boardService = {
 
     // Process lists data - handle both uppercase and lowercase property names
     const processedLists = (listsData || []).map((list: any) => {
-      const listId = String(list.ID || list.id);
-      return {
-        ...list,
+      // Extract ID from various possible formats
+      const listId = String(list.ID || list.id || '');
+
+      // Extract boardId from various possible formats
+      const boardId = String(list.BoardID || list.boardId || list.board_id || id);
+
+      // Create a normalized list object
+      const normalizedList = {
         id: listId,
-        boardId: String(list.BoardID || list.boardId || list.board_id || id),
+        boardId: boardId,
         title: list.Title || list.title || '',
         position: list.Position || list.position || 0,
         cards: [] // Initialize empty cards array for each list
       };
+
+      console.log(`Normalized list: ${listId}, boardId: ${boardId}, title: ${normalizedList.title}`);
+
+      return normalizedList;
     });
+
+    // Get the cards store to update it with the fetched cards
+    const cardsStore = useCardsStore.getState();
 
     // Step 4: For each list, fetch its cards
     for (const list of processedLists) {
@@ -207,19 +263,46 @@ export const boardService = {
         console.log(`Raw cards data for list ${list.id}:`, cardsData);
 
         // Process cards data - handle both uppercase and lowercase property names
-        list.cards = (cardsData || []).map((card: any) => ({
-          ...card,
-          id: String(card.ID || card.id),
-          listId: String(card.ListID || card.listId || list.id),
-          title: card.Title || card.title || '',
-          // Handle the description field which could be a string or a pgtype.Text structure
-          description: typeof card.Description === 'string'
-            ? card.Description
-            : (card.Description?.String !== undefined
-              ? card.Description.String
-              : (card.description || '')),
-          position: card.Position || card.position || 0
-        }));
+        const normalizedCards = (cardsData || []).map((card: any) => {
+          // Create a properly normalized card object
+          const normalizedCard = {
+            id: String(card.ID || card.id),
+            listId: String(card.ListID || card.listId || list.id),
+            title: card.Title || card.title || '',
+            // Handle the description field which could be a string or a pgtype.Text structure
+            description: typeof card.Description === 'string'
+              ? card.Description
+              : (card.Description?.String !== undefined
+                ? card.Description.String
+                : (card.description || '')),
+            position: card.Position || card.position || 0
+          };
+
+          return normalizedCard;
+        });
+
+        // Add the normalized cards to the list
+        list.cards = normalizedCards;
+
+        // Update the cards store with these cards
+        useCardsStore.setState(state => {
+          // Add each card to the cards record
+          normalizedCards.forEach(card => {
+            state.cards[card.id] = card;
+
+            // Make sure the listCards relationship is properly set up
+            if (!state.listCards[list.id]) {
+              state.listCards[list.id] = [];
+            }
+
+            // Add the card ID to the list's cards if not already there
+            if (!state.listCards[list.id].includes(card.id)) {
+              state.listCards[list.id].push(card.id);
+            }
+          });
+        });
+
+        console.log(`Added ${normalizedCards.length} cards to store for list ${list.id}`);
       } catch (error) {
         console.error(`Error fetching cards for list ${list.id}:`, error);
         list.cards = []; // Ensure cards is at least an empty array if fetch fails
@@ -296,6 +379,8 @@ export const boardService = {
 
   /** Создать список */
   async createList(boardId: string, title: string, position: number): Promise<List> {
+    console.log(`Creating list "${title}" at position ${position} for board ${boardId}`);
+
     const { data } = await api.post<any>(ENDPOINTS.lists(boardId), {
       title,
       position
@@ -314,14 +399,25 @@ export const boardService = {
       cards: []
     };
 
+    console.log("Normalized list data:", list);
+
+    // Убедимся, что boardId в списке соответствует текущей доске
+    if (list.boardId !== boardId) {
+      console.log(`Correcting list.boardId from ${list.boardId} to ${boardId}`);
+      list.boardId = boardId;
+    }
+
     // Add a flag to the WebSocket data to indicate this was created locally
     // This could be used by other clients to handle the event differently
     const wsData = {
       ...list,
-      _locallyCreated: true
+      _locallyCreated: true,
+      boardId: boardId // Явно указываем правильный boardId
     };
 
+    console.log("Sending WebSocket event list_created with data:", wsData);
     sendWS({ event: 'list_created', data: wsData });
+
     return list;
   },
 
@@ -330,12 +426,17 @@ export const boardService = {
     console.log(`Moving list ${listId} to position ${position}`);
 
     // Find the board ID for this list
-    const board = useBoardStore.getState().active;
-    if (!board) {
+    const boardStore = useBoardStore.getState();
+    const activeBoard = boardStore.activeBoard;
+
+    if (!activeBoard) {
       throw new Error("No active board found");
     }
 
-    const list = board.lists.find(l => l.id === listId);
+    // Get the list from the lists store - using proper ES module import
+    const listsStore = useListsStore.getState();
+    const list = listsStore.lists[listId];
+
     if (!list) {
       throw new Error(`List with ID ${listId} not found in active board`);
     }
@@ -379,9 +480,10 @@ export const boardService = {
 
       // Add the current list count to the WebSocket event data
       // This will help clients determine if they need to apply the update
+      const boardLists = listsStore.getListsByBoardId(boardId);
       const wsData = {
         ...normalizedList,
-        _expectedListCount: board.lists.length
+        _expectedListCount: boardLists.length
       };
 
       // Send a WebSocket event with the list count to help other clients
@@ -434,6 +536,11 @@ export const boardService = {
 
       console.log("Raw card data from API:", data);
 
+      // Ensure we have a valid response
+      if (!data) {
+        throw new Error("No data returned from API");
+      }
+
       // Normalize the response to ensure it has the expected lowercase property names
       const normalizedCard: Card = {
         id: String(data.ID || data.id || Date.now()),
@@ -447,6 +554,34 @@ export const boardService = {
             : (data.description || description)),
         position: data.Position || data.position || position
       };
+
+      console.log("Normalized card:", normalizedCard);
+
+      // Import the cards store here to avoid circular dependencies
+      const { useCardsStore } = await import('@/store/board/useCardsStore');
+
+      // Ensure the card is in the store
+      useCardsStore.setState(state => {
+        // Add to cards record
+        state.cards[normalizedCard.id] = normalizedCard;
+
+        // Add to listCards relationship
+        if (!state.listCards[listId]) {
+          state.listCards[listId] = [];
+        }
+
+        // Check if card already exists in the relationship
+        if (!state.listCards[listId].includes(normalizedCard.id)) {
+          state.listCards[listId].push(normalizedCard.id);
+        }
+      });
+
+      // Debug the state after update
+      setTimeout(() => {
+        const cardsStore = useCardsStore.getState();
+        console.log(`After card creation in service - Cards for list ${listId}:`,
+          cardsStore.getCardsByListId(listId));
+      }, 0);
 
       sendWS({ event: 'card_created', data: normalizedCard });
       return normalizedCard;
@@ -506,12 +641,17 @@ export const boardService = {
       console.log(`Updating list ${listId} with title: ${title}`);
 
       // Find the board ID for this list
-      const board = useBoardStore.getState().active;
-      if (!board) {
+      const boardStore = useBoardStore.getState();
+      const activeBoard = boardStore.activeBoard;
+
+      if (!activeBoard) {
         throw new Error("No active board found");
       }
 
-      const list = board.lists.find(l => l.id === listId);
+      // Get the list from the lists store
+      const listsStore = useListsStore.getState();
+      const list = listsStore.lists[listId];
+
       if (!list) {
         throw new Error(`List with ID ${listId} not found in active board`);
       }
@@ -549,12 +689,17 @@ export const boardService = {
       console.log(`Deleting list ${listId}`);
 
       // Find the board ID for this list
-      const board = useBoardStore.getState().active;
-      if (!board) {
+      const boardStore = useBoardStore.getState();
+      const activeBoard = boardStore.activeBoard;
+
+      if (!activeBoard) {
         throw new Error("No active board found");
       }
 
-      const list = board.lists.find(l => l.id === listId);
+      // Get the list from the lists store
+      const listsStore = useListsStore.getState();
+      const list = listsStore.lists[listId];
+
       if (!list) {
         throw new Error(`List with ID ${listId} not found in active board`);
       }
@@ -566,19 +711,21 @@ export const boardService = {
       const deleteEndpoint = `${ENDPOINTS.lists(boardId)}/${listId}`;
       console.log(`Using delete endpoint: ${deleteEndpoint}`);
 
-      await api.delete(deleteEndpoint);
-      console.log("List deleted successfully");
+      const response = await api.delete(deleteEndpoint);
+      console.log("List deleted successfully", response);
 
-      // Send WebSocket event with the updated list count after deletion
-      // This helps other clients know they need to refresh their list positions
-      const remainingListCount = board.lists.length - 1; // Subtract 1 for the deleted list
+      // Send WebSocket event with the proper format to match backend's format
+      // The backend sends: { id: listId } where id is a number
+      // We'll send the same format but ensure it's a string to avoid type issues
       sendWS({
         event: 'list_deleted',
         data: {
-          listId,
-          _expectedListCount: remainingListCount
+          id: listId, // Use 'id' to match the backend format
+          boardId: boardId // Include boardId to help with synchronization
         }
       });
+
+      console.log(`Sent list_deleted WebSocket event for list ${listId} on board ${boardId}`);
     } catch (error) {
       console.error("Error deleting list:", error);
       throw error;
@@ -624,6 +771,12 @@ export const boardService = {
       console.error("Error updating board:", error);
       throw error;
     }
+  },
+
+  /** Получить списки для доски */
+  async fetchBoardLists(boardId: string): Promise<List[]> {
+    // Use the standalone fetchLists function
+    return fetchLists(boardId);
   },
 
   /** Получить список участников доски */

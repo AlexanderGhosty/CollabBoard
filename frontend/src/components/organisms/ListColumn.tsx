@@ -5,15 +5,16 @@ import { useCallback, useState, useEffect } from 'react';
 import { List } from '@/services/boardService';
 import CardItem from '@/components/molecules/CardItem';
 import ListHeader from '@/components/molecules/ListHeader';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useCardsStore } from '@/store/board';
 
 interface Props {
   list: List;
 }
 
 export default function ListColumn({ list }: Props) {
-  // Use a specific selector for the createCard function instead of the entire store
-  const createCard = useBoardStore(state => state.createCard);
+  // Use specific selectors for the store functions
+  const createCard = useCardsStore(state => state.createCard);
+  const getSortedCardsByListId = useCardsStore(state => state.getSortedCardsByListId);
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
 
   // Handle window resize
@@ -51,8 +52,14 @@ export default function ListColumn({ list }: Props) {
       : undefined
   };
 
-  // Ensure cards array exists, initialize as empty array if undefined
-  const cards = list.cards || [];
+  // Get cards directly from the store to ensure we have the latest data
+  const storeCards = getSortedCardsByListId(list.id);
+
+  // Use cards from the store if available, otherwise fall back to list.cards
+  const cards = storeCards.length > 0 ? storeCards : (list.cards || []);
+
+  // Log the cards for debugging
+  console.log(`ListColumn rendering for list ${list.id} with ${cards.length} cards:`, cards);
 
   // Filter out any cards without valid IDs to prevent key prop errors
   const validCards = cards.filter(card => card && card.id);
