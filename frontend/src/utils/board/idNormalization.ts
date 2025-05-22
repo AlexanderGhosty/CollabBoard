@@ -18,7 +18,7 @@ export function normalizeId(id: string | number | undefined): string | undefined
  * @returns The normalized board ID as a string or undefined
  */
 export function extractBoardId(obj: any): string | undefined {
-  const boardId = obj.BoardID || obj.boardId || obj.board_id || obj.id;
+  const boardId = obj.ID || obj.BoardID || obj.boardId || obj.board_id || obj.id;
   return normalizeId(boardId);
 }
 

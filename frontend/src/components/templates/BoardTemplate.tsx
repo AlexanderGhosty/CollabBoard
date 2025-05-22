@@ -5,43 +5,88 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-  DragOverEvent,
-  DragStartEvent,
-  Active
+  DragStartEvent
 } from '@dnd-kit/core';
-import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import { useCallback, useState } from 'react';
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useCallback, useState, useEffect } from 'react';
 import { useBoardStore, useListsStore, useCardsStore } from '@/store/board';
 import { List, Card } from '@/services/boardService';
+import { subscribeWS } from '@/services/websocket';
 import DragOverlay from '@/components/molecules/DragOverlay';
 import SortableListColumn from '@/components/molecules/SortableListColumn';
 
 export default function BoardTemplate() {
-  // Use specific selectors for each piece of state/action needed
-  const activeBoard = useBoardStore(state => state.activeBoard);
-  const boards = useBoardStore(state => state.boards);
+  // State for board data
+  const [board, setBoard] = useState(null);
+  const [lists, setLists] = useState([]);
+  const [listCards, setListCards] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Get store actions
   const moveCard = useCardsStore(state => state.moveCard);
   const moveList = useListsStore(state => state.moveList);
   const createList = useListsStore(state => state.createList);
   const isCardModalOpen = useBoardStore(state => state.isCardModalOpen);
 
-  // Get the active board object
-  const board = activeBoard ? boards[activeBoard] : null;
+  // Get active board ID once
+  const activeBoard = useBoardStore(state => state.activeBoard);
+  const boards = useBoardStore(state => state.boards);
 
-  // Get lists for this board
-  const lists = useListsStore(state => state.getSortedListsByBoardId(activeBoard || ''));
+  // Function to load data from stores
+  const loadBoardData = useCallback(() => {
+    if (!activeBoard) return;
 
-  // Create a complete board object with lists and cards
-  const completeBoard = board ? {
-    ...board,
-    lists: lists.map(list => {
-      const cards = useCardsStore.getState().getSortedCardsByListId(list.id);
-      return {
-        ...list,
-        cards
-      };
-    })
-  } : null;
+    // Get board data
+    const boardData = boards[activeBoard];
+    if (!boardData) return;
+
+    setBoard(boardData);
+
+    // Get lists for this board
+    const listsData = useListsStore.getState().getSortedListsByBoardId(activeBoard);
+    setLists(listsData);
+
+    // Get cards for each list
+    const cardsStore = useCardsStore.getState();
+    const cardsData = {};
+
+    listsData.forEach(list => {
+      cardsData[list.id] = cardsStore.getSortedCardsByListId(list.id);
+    });
+
+    setListCards(cardsData);
+    setIsLoading(false);
+  }, [activeBoard, boards]);
+
+  // Load data from stores
+  useEffect(() => {
+    loadBoardData();
+  }, [loadBoardData]);
+
+  // Subscribe to WebSocket events to update our local state
+  useEffect(() => {
+    if (!activeBoard) return;
+
+    // Set up WebSocket subscriptions for real-time updates
+    const unsubscribers = [
+      // List events
+      subscribeWS('list_created', () => loadBoardData()),
+      subscribeWS('list_updated', () => loadBoardData()),
+      subscribeWS('list_moved', () => loadBoardData()),
+      subscribeWS('list_deleted', () => loadBoardData()),
+
+      // Card events
+      subscribeWS('card_created', () => loadBoardData()),
+      subscribeWS('card_updated', () => loadBoardData()),
+      subscribeWS('card_moved', () => loadBoardData()),
+      subscribeWS('card_deleted', () => loadBoardData()),
+    ];
+
+    // Clean up subscriptions when component unmounts
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }, [activeBoard, loadBoardData]);
 
   // Define the createList callback
   const handleCreateList = useCallback(() => {
@@ -121,8 +166,8 @@ export default function BoardTemplate() {
       });
 
       // Find the source and target lists
-      const sourceList = completeBoard?.lists.find(l => l.id === sourceListId);
-      const destinationList = completeBoard?.lists.find(l => l.id === targetList);
+      const sourceList = lists.find(l => l.id === sourceListId);
+      const destinationList = lists.find(l => l.id === targetList);
 
       if (!sourceList || !destinationList) {
         console.error("Could not find source or destination list");
@@ -131,8 +176,9 @@ export default function BoardTemplate() {
 
       // Calculate the position in the target list
       // For simplicity, we'll add it to the end of the target list
-      const position = destinationList.cards.length > 0
-        ? Math.max(...destinationList.cards.map((c: Card) => c.position)) + 1
+      const targetCards = listCards[targetList] || [];
+      const position = targetCards.length > 0
+        ? Math.max(...targetCards.map((c: Card) => c.position)) + 1
         : 1;
 
       // Call the API to move the card
@@ -144,8 +190,8 @@ export default function BoardTemplate() {
     if (activeData.type === 'list') {
       console.log("List drag detected");
 
-      const oldIdx = completeBoard?.lists.findIndex((l: List) => l.id === active.id) ?? -1;
-      const newIdx = completeBoard?.lists.findIndex((l: List) => l.id === over.id) ?? -1;
+      const oldIdx = lists.findIndex((l: List) => l.id === active.id);
+      const newIdx = lists.findIndex((l: List) => l.id === over.id);
 
       if (oldIdx === -1 || newIdx === -1) {
         console.log("Could not find list indexes:", {
@@ -163,7 +209,7 @@ export default function BoardTemplate() {
       }
 
       // Get the list being moved
-      const movingList = completeBoard?.lists[oldIdx];
+      const movingList = lists[oldIdx];
       if (!movingList) {
         console.error("Could not find the list being moved");
         return;
@@ -174,7 +220,7 @@ export default function BoardTemplate() {
       let newPosition: number;
 
       // Sort lists by position to ensure correct order
-      const sortedLists = [...(completeBoard?.lists || [])].sort((a, b) => a.position - b.position);
+      const sortedLists = [...lists].sort((a, b) => a.position - b.position);
 
       // Log the current positions of all lists
       console.log("Current list positions:", sortedLists.map(l => ({ id: l.id, position: l.position })));
@@ -197,24 +243,27 @@ export default function BoardTemplate() {
       }
 
       console.log(`Final position for list ${movingList.id}: ${newPosition}`);
-
-
       console.log("New position calculated:", newPosition);
 
       // Call the API to persist the change
-      // The moveList function will handle the optimistic update
       moveList(movingList.id, newPosition);
     }
-  }, [completeBoard, moveCard, moveList]);
+  }, [lists, listCards, moveCard, moveList]);
 
   // Add the conditional return after all hooks are defined
-  if (!completeBoard) return null;
+  if (isLoading || !board) return null;
 
-  // Ensure all lists have valid IDs for keys
-  const listsWithValidIds = completeBoard.lists.filter(list => list && list.id);
+  // Filter lists to ensure all have valid IDs
+  const listsWithValidIds = lists.filter(list => list && list.id);
 
   // Extract IDs for SortableContext
   const listIds = listsWithValidIds.map(list => list.id);
+
+  // Create a complete list object with cards for each list
+  const listsWithCards = listsWithValidIds.map(list => ({
+    ...list,
+    cards: listCards[list.id] || []
+  }));
 
   return (
     <DndContext
@@ -229,7 +278,7 @@ export default function BoardTemplate() {
         <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
           <div className="flex gap-5 overflow-x-auto pb-8 items-start w-full h-[calc(100vh-140px)] pt-3 board-scroll-container
             bg-gradient-to-br from-blue-50/50 to-indigo-100/50 rounded-xl p-4">
-            {listsWithValidIds.map((list) => (
+            {listsWithCards.map((list) => (
               <SortableListColumn key={list.id} list={list} />
             ))}
 
