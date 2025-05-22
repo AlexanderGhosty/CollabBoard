@@ -5,7 +5,7 @@ import { Card } from '@/services/boardService';
 import Button from '@/components/atoms/Button';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import CardDetailModal from '@/components/molecules/CardDetailModal';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore, useCardsStore } from '@/store/board';
 
 export interface CardItemProps {
   card: Card;
@@ -14,7 +14,7 @@ export interface CardItemProps {
 export default function CardItem({ card }: CardItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const deleteCard = useBoardStore(state => state.deleteCard);
+  const deleteCard = useCardsStore(state => state.deleteCard);
   const isCardModalOpen = useBoardStore(state => state.isCardModalOpen);
 
   // Refs for tracking drag vs click

@@ -1,6 +1,6 @@
 import { api } from '@/services/api';
 import { sendWS } from '@/services/websocket';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore } from '@/store/board';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /** Типы сущностей (минимально‑необходимые) */
@@ -330,12 +330,17 @@ export const boardService = {
     console.log(`Moving list ${listId} to position ${position}`);
 
     // Find the board ID for this list
-    const board = useBoardStore.getState().active;
-    if (!board) {
+    const boardStore = useBoardStore.getState();
+    const activeBoard = boardStore.activeBoard;
+
+    if (!activeBoard) {
       throw new Error("No active board found");
     }
 
-    const list = board.lists.find(l => l.id === listId);
+    // Get the list from the lists store
+    const listsStore = require('@/store/board/useListsStore').useListsStore.getState();
+    const list = listsStore.lists[listId];
+
     if (!list) {
       throw new Error(`List with ID ${listId} not found in active board`);
     }
@@ -379,9 +384,10 @@ export const boardService = {
 
       // Add the current list count to the WebSocket event data
       // This will help clients determine if they need to apply the update
+      const boardLists = listsStore.getListsByBoardId(boardId);
       const wsData = {
         ...normalizedList,
-        _expectedListCount: board.lists.length
+        _expectedListCount: boardLists.length
       };
 
       // Send a WebSocket event with the list count to help other clients

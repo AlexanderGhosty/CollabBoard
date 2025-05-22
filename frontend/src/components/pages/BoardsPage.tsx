@@ -3,49 +3,60 @@ import { Link } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import Header from '@/components/organisms/Header';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore } from '@/store/board';
 import { subscribeWS } from '@/services/websocket';
+import { Board } from '@/services/boardService';
 
 export default function BoardsPage() {
-  const store = useBoardStore();
-  const { boards, ownedBoards, memberBoards } = store;
+  // Get state and actions from the store
+  const fetchBoardsByRole = useBoardStore(state => state.fetchBoardsByRole);
+  const createBoard = useBoardStore(state => state.createBoard);
+  const deleteBoard = useBoardStore(state => state.deleteBoard);
+  const boards = useBoardStore(state => state.boards);
+  const ownedBoardIds = useBoardStore(state => state.ownedBoardIds);
+  const memberBoardIds = useBoardStore(state => state.memberBoardIds);
+
+  // Convert normalized data to arrays for display
+  const ownedBoards = ownedBoardIds.map(id => boards[id]).filter(Boolean);
+  const memberBoards = memberBoardIds.map(id => boards[id]).filter(Boolean);
+
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [boardToDelete, setBoardToDelete] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     // Fetch boards by role when component mounts
-    store.fetchBoardsByRole();
+    fetchBoardsByRole();
 
     // Subscribe to board_created, board_updated, and board_deleted events for real-time updates
     const unsubscribeCreated = subscribeWS('board_created', (data: any) => {
       console.log('BoardsPage received board_created event:', data);
       // Refresh the boards list to show the new board
-      store.fetchBoardsByRole();
+      fetchBoardsByRole();
     });
 
     const unsubscribeUpdated = subscribeWS('board_updated', (data: any) => {
       console.log('BoardsPage received board_updated event:', data);
       // Refresh the boards list to show updated board names
-      store.fetchBoardsByRole();
+      fetchBoardsByRole();
     });
 
     const unsubscribeDeleted = subscribeWS('board_deleted', (data: any) => {
       console.log('BoardsPage received board_deleted event:', data);
       // Refresh the boards list to remove the deleted board
-      store.fetchBoardsByRole();
+      fetchBoardsByRole();
     });
 
     const unsubscribeMemberAdded = subscribeWS('member_added', (data: any) => {
       console.log('BoardsPage received member_added event:', data);
       // Refresh the boards list to show newly shared boards
-      store.fetchBoardsByRole();
+      fetchBoardsByRole();
     });
 
     const unsubscribeMemberRemoved = subscribeWS('member_removed', (data: any) => {
       console.log('BoardsPage received member_removed event:', data);
       // Refresh the boards list to remove unshared boards
-      store.fetchBoardsByRole();
+      fetchBoardsByRole();
     });
 
     // Cleanup subscriptions when component unmounts
@@ -63,7 +74,7 @@ export default function BoardsPage() {
     if (!name.trim()) return;
     setCreating(true);
     try {
-      await store.createBoard(name.trim());
+      await createBoard(name.trim());
       setName('');
     } finally {
       setCreating(false);
@@ -81,13 +92,13 @@ export default function BoardsPage() {
 
   const handleDeleteConfirm = useCallback(async () => {
     if (boardToDelete) {
-      await store.deleteBoard(boardToDelete.id);
+      await deleteBoard(boardToDelete.id);
       setBoardToDelete(null);
     }
-  }, [boardToDelete, store]);
+  }, [boardToDelete, deleteBoard]);
 
   // Function to render a board card
-  const renderBoardCard = (board: any, canDelete = false) => {
+  const renderBoardCard = (board: Board, canDelete = false) => {
     // Ensure board ID is a string and not undefined
     const boardId = board.id ? String(board.id) : null;
     if (!boardId) {

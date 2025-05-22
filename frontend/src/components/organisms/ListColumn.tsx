@@ -5,7 +5,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { List } from '@/services/boardService';
 import CardItem from '@/components/molecules/CardItem';
 import ListHeader from '@/components/molecules/ListHeader';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useCardsStore } from '@/store/board';
 
 interface Props {
   list: List;
@@ -13,7 +13,7 @@ interface Props {
 
 export default function ListColumn({ list }: Props) {
   // Use a specific selector for the createCard function instead of the entire store
-  const createCard = useBoardStore(state => state.createCard);
+  const createCard = useCardsStore(state => state.createCard);
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
 
   // Handle window resize

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import Button from '@/components/atoms/Button';
 import EditableText from '@/components/atoms/EditableText';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore, useListsStore } from '@/store/board';
 import { useNavigate } from 'react-router-dom';
 import { boardNameSchema } from '@/utils/validate';
 import MemberManagementModal from '@/components/molecules/MemberManagementModal';
@@ -11,9 +11,13 @@ export default function BoardHeader() {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
 
   // Use specific selectors for each piece of state/action needed
-  const board = useBoardStore(state => state.active);
-  const createList = useBoardStore(state => state.createList);
+  const activeBoard = useBoardStore(state => state.activeBoard);
+  const boards = useBoardStore(state => state.boards);
+  const createList = useListsStore(state => state.createList);
   const updateBoardName = useBoardStore(state => state.updateBoardName);
+
+  // Get the active board object
+  const board = activeBoard ? boards[activeBoard] : null;
 
   // Define all hooks before any conditional returns
   const handleBackClick = useCallback(() => {

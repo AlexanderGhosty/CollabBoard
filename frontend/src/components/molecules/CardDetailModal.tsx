@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/services/boardService';
 import Button from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore, useCardsStore } from '@/store/board';
 
 interface CardDetailModalProps {
   card: Card;
@@ -15,7 +15,7 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const updateCard = useBoardStore(state => state.updateCard);
+  const updateCard = useCardsStore(state => state.updateCard);
   const setCardModalOpen = useBoardStore(state => state.setCardModalOpen);
 
   // Reset form when card changes

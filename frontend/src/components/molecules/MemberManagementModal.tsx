@@ -3,10 +3,11 @@ import { z } from 'zod';
 import Button from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
-import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardStore, useMembersStore } from '@/store/board';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import { emailSchema } from '@/utils/validate';
+import { BoardMember } from '@/store/board/types';
 
 interface MemberManagementModalProps {
   isOpen: boolean;
@@ -22,17 +23,28 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
   const [memberToRemove, setMemberToRemove] = useState<{ userId: string; name: string } | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const { boardMembers, active, fetchBoardMembers, inviteMember, removeMember, setMemberModalOpen } = useBoardStore();
+  // Get state and actions from the stores
+  const activeBoard = useBoardStore(state => state.activeBoard);
+  const boards = useBoardStore(state => state.boards);
+  const setMemberModalOpen = useBoardStore(state => state.setMemberModalOpen);
+  const boardMembers = useMembersStore(state => activeBoard ? state.getMembersByBoardId(activeBoard) : []);
+  const fetchBoardMembers = useMembersStore(state => state.fetchBoardMembers);
+  const inviteMember = useMembersStore(state => state.inviteMember);
+  const removeMember = useMembersStore(state => state.removeMember);
+
+  // Get the active board object
+  const active = activeBoard ? boards[activeBoard] : null;
+
   const currentUser = useAuthStore(state => state.user);
   const toast = useToastStore();
 
   // Fetch board members when the modal opens
   useEffect(() => {
     if (isOpen) {
-      if (active && active.id) {
+      if (activeBoard) {
         try {
           console.log('Modal opened, fetching board members for board:', active);
-          fetchBoardMembers();
+          fetchBoardMembers(activeBoard);
         } catch (error) {
           console.error('Error fetching board members:', error);
           toast.error('Не удалось загрузить список участников');
@@ -41,17 +53,17 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
         console.warn('Modal opened but no active board is selected');
       }
     }
-  }, [isOpen, active, fetchBoardMembers, toast]);
+  }, [isOpen, activeBoard, active, fetchBoardMembers, toast]);
 
   // Force refresh board members when the component mounts
   useEffect(() => {
-    if (active && active.id) {
+    if (activeBoard) {
       console.log('MemberManagementModal mounted, forcing refresh of board members');
       console.log('Active board:', active);
       console.log('Current user:', currentUser);
-      fetchBoardMembers();
+      fetchBoardMembers(activeBoard);
     }
-  }, [active, fetchBoardMembers, currentUser]);
+  }, [activeBoard, active, fetchBoardMembers, currentUser]);
 
   // Handle dialog open/close
   useEffect(() => {
@@ -167,6 +179,10 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
       console.log("Current user ID:", currentUser?.id);
       console.log("Is current user the owner?", isOwner);
 
+      if (!activeBoard) {
+        throw new Error("Нет активной доски");
+      }
+
       await inviteMember(email.trim());
       setEmail(''); // Clear the input on success
       setInviteSuccess(true);
@@ -176,7 +192,9 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
       toast.success(`Пользователь ${email.trim()} успешно приглашен на доску`);
 
       // Refresh the members list
-      await fetchBoardMembers();
+      if (activeBoard) {
+        await fetchBoardMembers(activeBoard);
+      }
     } catch (error) {
       console.error('Error inviting member:', error);
       setInviteSuccess(false);
@@ -251,7 +269,7 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
   };
 
   const handleConfirmRemove = async () => {
-    if (!memberToRemove) return;
+    if (!memberToRemove || !activeBoard) return;
 
     try {
       setLoading(true);
@@ -259,7 +277,9 @@ export default function MemberManagementModal({ isOpen, onClose }: MemberManagem
       // Toast notification is now handled in the useBoardStore.removeMember function
 
       // Refresh the members list
-      await fetchBoardMembers();
+      if (activeBoard) {
+        await fetchBoardMembers(activeBoard);
+      }
     } catch (error) {
       console.error('Error removing member:', error);
       // Error toast notifications are now handled in the useBoardStore.removeMember function
