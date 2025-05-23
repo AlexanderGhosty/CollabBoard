@@ -6,6 +6,7 @@ import LoginPage     from '@/components/pages/LoginPage';
 import RegisterPage  from '@/components/pages/RegisterPage';
 import BoardsPage    from '@/components/pages/BoardsPage';
 import BoardPage     from '@/components/pages/BoardPage';
+import AccountSettingsPage from '@/components/pages/AccountSettingsPage';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import Toast, { ToastContainer } from '@/components/atoms/Toast';
@@ -114,6 +115,16 @@ export default function App() {
               <Protected>
                 <ErrorBoundary>
                   <BoardPage />
+                </ErrorBoundary>
+              </Protected>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <Protected>
+                <ErrorBoundary>
+                  <AccountSettingsPage />
                 </ErrorBoundary>
               </Protected>
             }

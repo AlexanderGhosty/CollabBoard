@@ -8,7 +8,7 @@ export default function AuthTemplate({ children }: { children: React.ReactNode }
 
         <div className="mt-6 text-center">
           <Link to="/welcome" className="text-sm text-blue-600 hover:text-blue-800">
-            ← Back to welcome page
+            ← Назад на стартовую страницу
           </Link>
         </div>
       </div>

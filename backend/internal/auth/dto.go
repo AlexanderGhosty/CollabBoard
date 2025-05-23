@@ -11,6 +11,11 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword" binding:"required"`
+	NewPassword     string `json:"newPassword" binding:"required,min=6"`
+}
+
 type AuthResponse struct {
 	Token string     `json:"token"`
 	User  UserPublic `json:"user"`

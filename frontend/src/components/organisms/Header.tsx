@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
 import { useAuthStore } from '@/store/useAuthStore';
 import { wsClient } from '@/services/websocket';
@@ -21,7 +21,7 @@ export default function Header() {
     logout();
 
     // Show success message
-    addToast('You have been successfully logged out', 3000);
+    addToast('Вы успешно вышли из учетной записи', 3000);
 
     // Redirect to login page
     navigate('/login');
@@ -41,9 +41,15 @@ export default function Header() {
 
         <div className="flex items-center gap-4">
           {user && (
-            <span className="text-blue-800">
-              {user.name}
-            </span>
+            <>
+              <Link
+                to="/account"
+                className="text-blue-800 hover:text-blue-600 transition-colors duration-200"
+                title="Account Settings"
+              >
+                {user.name}
+              </Link>
+            </>
           )}
           <Button
             variant="secondary"

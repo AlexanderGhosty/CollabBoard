@@ -7,6 +7,7 @@ import (
 	"time"
 
 	db "backend/internal/db/sqlc"
+
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -22,6 +23,7 @@ func NewService(q *db.Queries, secret string) *Service {
 
 var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrInvalidPassword    = errors.New("current password is incorrect")
 )
 
 func (s *Service) Register(ctx context.Context, name, email, password string) (string, UserPublic, error) {
@@ -59,6 +61,32 @@ func (s *Service) GetUserByID(ctx context.Context, id int32) (UserPublic, error)
 		return UserPublic{}, err
 	}
 	return UserPublic{ID: u.ID, Name: u.Name, Email: u.Email}, nil
+}
+
+func (s *Service) ChangePassword(ctx context.Context, userID int32, currentPassword, newPassword string) error {
+	// Get the user to verify the current password
+	user, err := s.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Verify the current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return ErrInvalidPassword
+	}
+
+	// Hash the new password
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// Update the password hash
+	_, err = s.queries.UpdatePasswordHash(ctx, db.UpdatePasswordHashParams{
+		ID:           userID,
+		PasswordHash: string(newHash),
+	})
+	return err
 }
 
 func (s *Service) generateToken(userID int32) (string, error) {
