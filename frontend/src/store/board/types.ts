@@ -100,7 +100,7 @@ export interface MembersState extends BaseState {
 
   fetchBoardMembers: (boardId?: string) => Promise<void>;
   inviteMember: (email: string, role?: 'owner' | 'member') => Promise<void>;
-  removeMember: (userId: string) => Promise<void>;
+  removeMember: (userId: string, boardId?: string) => Promise<void>;
   leaveBoard: () => Promise<void>;
   updateUserRoleInBoard: (boardId: string, members: any[]) => void;
 

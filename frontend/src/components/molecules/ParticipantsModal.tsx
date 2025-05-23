@@ -140,7 +140,8 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
     setIsRemoving(userId);
 
     try {
-      await removeMember(userId);
+      // Pass the boardId explicitly to ensure the API is called with the expected parameters
+      await removeMember(userId, boardId);
       success('Пользователь был удален из доски');
     } catch (err) {
       console.error('Error removing member:', err);

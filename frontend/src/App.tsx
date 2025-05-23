@@ -1,6 +1,6 @@
 // src/App.tsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy, Component, ErrorInfo, ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Suspense, lazy, Component, ErrorInfo, ReactNode, useEffect } from 'react';
 import WelcomePage   from '@/components/pages/WelcomePage';
 import LoginPage     from '@/components/pages/LoginPage';
 import RegisterPage  from '@/components/pages/RegisterPage';
@@ -9,6 +9,7 @@ import BoardPage     from '@/components/pages/BoardPage';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import Toast, { ToastContainer } from '@/components/atoms/Toast';
+import useNavigateAndReload, { setNavigateFunction } from '@/hooks/useNavigateAndReload';
 import './App.css';
 
 // Error boundary component to catch errors in child components
@@ -48,9 +49,23 @@ function Protected({ children }: { children: JSX.Element }) {
   return isAuth ? children : <Navigate to="/welcome" replace />;
 }
 
+// Component to provide navigation function to non-component code
+function NavigationProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+
+  // Register the navigate function for use outside of components
+  useEffect(() => {
+    setNavigateFunction(navigate);
+    return () => setNavigateFunction(() => {}); // Cleanup
+  }, [navigate]);
+
+  return <>{children}</>;
+}
+
 export default function App() {
   const toasts = useToastStore((state) => state.toasts);
   const removeToast = useToastStore((state) => state.removeToast);
+
   return (
     <BrowserRouter>
       {/* Toast container */}
@@ -67,33 +82,46 @@ export default function App() {
         ))}
       </ToastContainer>
 
-      <Routes>
-        <Route path="/welcome" element={<WelcomePage />} />
-        <Route path="/login"    element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route
-          path="/"
-          element={
-            <Protected>
-              <ErrorBoundary>
-                <BoardsPage />
-              </ErrorBoundary>
-            </Protected>
-          }
-        />
-        <Route
-          path="/board/:id"
-          element={
-            <Protected>
-              <ErrorBoundary>
-                <BoardPage />
-              </ErrorBoundary>
-            </Protected>
-          }
-        />
-        {/* Redirect unauthenticated users to welcome page */}
-        <Route path="*" element={<Navigate to="/welcome" replace />} />
-      </Routes>
+      {/* Register navigation function for use outside of components */}
+      <NavigationProvider>
+        <Routes>
+          <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/login"    element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/"
+            element={
+              <Protected>
+                <ErrorBoundary>
+                  <BoardsPage />
+                </ErrorBoundary>
+              </Protected>
+            }
+          />
+          <Route
+            path="/boards"
+            element={
+              <Protected>
+                <ErrorBoundary>
+                  <BoardsPage />
+                </ErrorBoundary>
+              </Protected>
+            }
+          />
+          <Route
+            path="/board/:id"
+            element={
+              <Protected>
+                <ErrorBoundary>
+                  <BoardPage />
+                </ErrorBoundary>
+              </Protected>
+            }
+          />
+          {/* Redirect unauthenticated users to welcome page */}
+          <Route path="*" element={<Navigate to="/welcome" replace />} />
+        </Routes>
+      </NavigationProvider>
     </BrowserRouter>
   );
 }

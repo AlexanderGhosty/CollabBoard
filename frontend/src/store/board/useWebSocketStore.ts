@@ -558,7 +558,7 @@ export const useWebSocketStore = create<WebSocketState>()(
       const boardStore = useBoardStore.getState();
       const isActiveBoard = !boardId || boardStore.activeBoard === boardId;
 
-      // If we're the user being removed, redirect to home
+      // If we're the user being removed, handle it properly
       if (currentUserId && userId === currentUserId) {
         // We've been removed from this board
         useToastStore.getState().error("Вы были удалены с доски");
@@ -567,11 +567,42 @@ export const useWebSocketStore = create<WebSocketState>()(
         // Clean up WebSocket connection
         wsClient.disconnect();
 
+        // Remove this board from the boards list in the store
+        useBoardStore.setState(state => {
+          // Remove from boards record
+          if (boardId) {
+            delete state.boards[boardId];
+
+            // Remove from member boards
+            state.memberBoardIds = state.memberBoardIds.filter(id => id !== boardId);
+
+            // Clear active board if it's the one being removed from
+            if (state.activeBoard === boardId) {
+              state.activeBoard = null;
+            }
+          }
+        });
+
+        // Remove from members store
+        useMembersStore.setState(state => {
+          if (boardId && state.boardMembers[boardId]) {
+            delete state.boardMembers[boardId];
+          }
+        });
+
         // Redirect to home page if we're on the board we were removed from
         if (isActiveBoard) {
+          // Use a short timeout to ensure state updates are processed
           setTimeout(() => {
-            window.location.href = '/boards';
-          }, 1500);
+            // Import the navigateTo function which works both inside and outside components
+            import('@/hooks/useNavigateAndReload').then(module => {
+              // Use the navigateTo function which handles both component and non-component contexts
+              module.navigateTo('/boards');
+            }).catch(() => {
+              // Fallback if the import fails
+              window.location.href = '/boards';
+            });
+          }, 100);
         }
       } else if (isActiveBoard) {
         // Someone else was removed from this board, refresh the members list

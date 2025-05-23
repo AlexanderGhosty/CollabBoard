@@ -247,9 +247,10 @@ export const useMembersStore = create<MembersState>()(
       }
     },
 
-    async removeMember(userId) {
+    async removeMember(userId, explicitBoardId = null) {
       const boardStore = useBoardStore.getState();
-      const boardId = boardStore.activeBoard;
+      // Use the explicitly provided boardId if available, otherwise use the active board
+      const boardId = explicitBoardId || boardStore.activeBoard;
 
       if (!boardId) {
         console.error("No active board");

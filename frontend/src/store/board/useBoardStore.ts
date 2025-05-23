@@ -150,34 +150,45 @@ export const useBoardStore = create<BoardState>()(
           // Fetch cards for each list
           console.log(`Fetching cards for ${board.lists.length} lists`);
 
-          // Use Promise.all to fetch cards for all lists in parallel
-          await Promise.all(board.lists.map(async (list) => {
-            try {
-              console.log(`Fetching cards for list ${list.id}`);
-              const cards = await listService.fetchListCards(list.id);
-              console.log(`Fetched ${cards.length} cards for list ${list.id}`);
+          // Import the batchPromises utility
+          const { batchPromises } = await import('@/utils/async/batchPromises');
 
-              // Update the cards store with the fetched cards
-              useCardsStore.setState(state => {
-                // Add each card to the cards record
-                cards.forEach(card => {
-                  state.cards[card.id] = card;
+          // Create an array of card fetching tasks
+          const cardFetchingTasks = board.lists.map(list => {
+            return async () => {
+              try {
+                console.log(`Fetching cards for list ${list.id}`);
+                const cards = await listService.fetchListCards(list.id);
+                console.log(`Fetched ${cards.length} cards for list ${list.id}`);
 
-                  // Make sure the listCards relationship is properly set up
-                  if (!state.listCards[list.id]) {
-                    state.listCards[list.id] = [];
-                  }
+                // Update the cards store with the fetched cards
+                useCardsStore.setState(state => {
+                  // Add each card to the cards record
+                  cards.forEach(card => {
+                    state.cards[card.id] = card;
 
-                  // Add the card ID to the list's cards if not already there
-                  if (!state.listCards[list.id].includes(card.id)) {
-                    state.listCards[list.id].push(card.id);
-                  }
+                    // Make sure the listCards relationship is properly set up
+                    if (!state.listCards[list.id]) {
+                      state.listCards[list.id] = [];
+                    }
+
+                    // Add the card ID to the list's cards if not already there
+                    if (!state.listCards[list.id].includes(card.id)) {
+                      state.listCards[list.id].push(card.id);
+                    }
+                  });
                 });
-              });
-            } catch (error) {
-              console.error(`Error fetching cards for list ${list.id}:`, error);
-            }
-          }));
+
+                return { listId: list.id, success: true };
+              } catch (error) {
+                console.error(`Error fetching cards for list ${list.id}:`, error);
+                return { listId: list.id, success: false, error };
+              }
+            };
+          });
+
+          // Execute the tasks in batches of 3 (or adjust as needed)
+          await batchPromises(cardFetchingTasks, 3);
         } else {
           console.log(`No lists found for board ${id}`);
           // Still clear any existing lists for this board

@@ -32,14 +32,17 @@ const addAuthToken = (cfg: any) => {
 api.interceptors.request.use(addAuthToken);
 authApi.interceptors.request.use(addAuthToken);
 
-// Handle 401 errors
-const handle401 = (err: any) => {
+// Handle authentication errors
+const handleAuthErrors = (err: any) => {
+  // Only handle 401 Unauthorized errors by logging out
+  // Do NOT handle 403 Forbidden errors here, as they should be handled by the specific API calls
   if (err.response?.status === 401) {
+    console.log('Received 401 Unauthorized response, logging out user');
     useAuthStore.getState().logout();
     window.location.href = '/login';
   }
   return Promise.reject(err);
 };
 
-api.interceptors.response.use(res => res, handle401);
-authApi.interceptors.response.use(res => res, handle401);
+api.interceptors.response.use(res => res, handleAuthErrors);
+authApi.interceptors.response.use(res => res, handleAuthErrors);
