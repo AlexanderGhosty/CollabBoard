@@ -10,57 +10,41 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   const theme = useThemeStore(state => state.theme);
   const systemTheme = useThemeStore(state => state.systemTheme);
   const toggleTheme = useThemeStore(state => state.toggleTheme);
-  const setTheme = useThemeStore(state => state.setTheme);
-  
+
   // Determine the current effective theme
   const effectiveTheme = theme === 'system' ? systemTheme : theme;
-  
+
+  // Determine what theme we'll switch TO (opposite of current)
+  const nextTheme = effectiveTheme === 'light' ? 'dark' : 'light';
+
   const handleToggle = useCallback(() => {
     toggleTheme();
   }, [toggleTheme]);
-  
+
   return (
     <button
       onClick={handleToggle}
       className={clsx(
-        'relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2',
-        effectiveTheme === 'dark' 
-          ? 'bg-blue-800 border-blue-700' 
-          : 'bg-blue-100 border-blue-200',
+        'relative w-10 h-10 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 hover:scale-105 active:scale-95',
+        effectiveTheme === 'dark'
+          ? 'bg-dark-blue-100 hover:bg-dark-blue-50 border border-blue-700'
+          : 'bg-blue-50 hover:bg-blue-100 border border-blue-200',
         className
       )}
-      title={`Switch to ${effectiveTheme === 'light' ? 'dark' : 'light'} mode`}
-      aria-label={`Switch to ${effectiveTheme === 'light' ? 'dark' : 'light'} mode`}
+      title={`Switch to ${nextTheme} mode`}
+      aria-label={`Switch to ${nextTheme} mode`}
     >
+      {/* Icon shows what theme we'll switch TO */}
       <span
         className={clsx(
-          'absolute top-1 left-1 w-4 h-4 rounded-full transform transition-transform duration-300',
-          effectiveTheme === 'dark' 
-            ? 'translate-x-6 bg-indigo-200' 
-            : 'translate-x-0 bg-blue-600'
-        )}
-      />
-      
-      {/* Sun icon */}
-      <span 
-        className={clsx(
-          'absolute top-1 left-1 w-4 h-4 flex items-center justify-center text-[10px] transition-opacity duration-300',
-          effectiveTheme === 'dark' ? 'opacity-0' : 'opacity-100 text-white'
+          'absolute inset-0 flex items-center justify-center text-lg transition-all duration-300',
+          effectiveTheme === 'light'
+            ? 'text-blue-600 hover:text-blue-700' // Show moon (switch to dark)
+            : 'text-blue-300 hover:text-blue-200' // Show sun (switch to light)
         )}
         aria-hidden="true"
       >
-        ☀️
-      </span>
-      
-      {/* Moon icon */}
-      <span 
-        className={clsx(
-          'absolute top-1 right-1 w-4 h-4 flex items-center justify-center text-[10px] transition-opacity duration-300',
-          effectiveTheme === 'dark' ? 'opacity-100 text-blue-900' : 'opacity-0'
-        )}
-        aria-hidden="true"
-      >
-        🌙
+        {effectiveTheme === 'light' ? '🌙' : '☀️'}
       </span>
     </button>
   );

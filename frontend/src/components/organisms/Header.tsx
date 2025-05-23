@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
 import ThemeToggle from '@/components/atoms/ThemeToggle';
+import Logo from '@/components/atoms/Logo';
 import { useAuthStore } from '@/store/useAuthStore';
 import { wsClient } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
@@ -36,10 +37,9 @@ export default function Header() {
           className="flex items-center gap-2 transition-all duration-200 hover:opacity-80 hover:scale-[1.02] group"
           title="Go to Home Page"
         >
-          <img
-            src="/logo.svg"
-            alt="CollabBoard Logo"
-            className="h-8 w-8 transition-transform duration-200 group-hover:rotate-[-5deg] filter dark:brightness-125 dark:contrast-125 dark:saturate-150"
+          <Logo
+            size="md"
+            className="transition-transform duration-200 group-hover:rotate-[-5deg]"
           />
           <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400 transition-colors duration-200 group-hover:text-blue-700 dark:group-hover:text-blue-300">CollabBoard</h1>
         </Link>
