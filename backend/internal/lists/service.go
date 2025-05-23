@@ -42,6 +42,11 @@ func (s *Service) ListByBoard(ctx context.Context, userID, boardID int32) ([]db.
 	return s.repo.ListByBoard(ctx, boardID)
 }
 
+// GetListByID retrieves a list by its ID
+func (s *Service) GetListByID(ctx context.Context, listID int32) (db.List, error) {
+	return s.q.GetListByID(ctx, listID)
+}
+
 func (s *Service) Update(ctx context.Context, userID int32, arg db.UpdateListParams) (db.List, error) {
 	lst, err := s.q.GetListByID(ctx, arg.ID)
 	if err != nil {

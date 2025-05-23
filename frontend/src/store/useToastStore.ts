@@ -12,7 +12,7 @@ interface ToastStore {
   toasts: Toast[];
   addToast: (toast: Omit<Toast, 'id'>) => string;
   removeToast: (id: string) => void;
-  
+
   // Convenience methods for common toast types
   success: (message: string, duration?: number) => string;
   error: (message: string, duration?: number) => string;
@@ -24,7 +24,8 @@ export const useToastStore = create<ToastStore>((set, get) => ({
   toasts: [],
 
   addToast: (toast) => {
-    const id = Date.now().toString();
+    // Generate a unique ID by combining timestamp with a random suffix
+    const id = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     set((state) => ({
       toasts: [...state.toasts, { ...toast, id }],
     }));

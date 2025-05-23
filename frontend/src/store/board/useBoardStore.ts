@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { boardService, Board } from '@/services/boardService';
+import { listService } from '@/services/listService';
+import { memberService } from '@/services/memberService';
 import { wsClient } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
 import { BoardState } from './types';
@@ -8,6 +10,7 @@ import { normalizeId, extractBoardId } from '@/utils/board/idNormalization';
 import { setupWebSocketSubscriptions } from './useWebSocketStore';
 import { useListsStore } from './useListsStore';
 import { useMembersStore } from './useMembersStore';
+import { useCardsStore } from './useCardsStore';
 
 export const useBoardStore = create<BoardState>()(
   immer((set, get) => ({
@@ -135,6 +138,38 @@ export const useBoardStore = create<BoardState>()(
         if (board.lists && Array.isArray(board.lists)) {
           console.log(`Setting ${board.lists.length} lists for board ${id} using setLists`);
           listsStore.setLists(board.lists, id);
+
+          // Fetch cards for each list
+          console.log(`Fetching cards for ${board.lists.length} lists`);
+
+          // Use Promise.all to fetch cards for all lists in parallel
+          await Promise.all(board.lists.map(async (list) => {
+            try {
+              console.log(`Fetching cards for list ${list.id}`);
+              const cards = await listService.fetchListCards(list.id);
+              console.log(`Fetched ${cards.length} cards for list ${list.id}`);
+
+              // Update the cards store with the fetched cards
+              useCardsStore.setState(state => {
+                // Add each card to the cards record
+                cards.forEach(card => {
+                  state.cards[card.id] = card;
+
+                  // Make sure the listCards relationship is properly set up
+                  if (!state.listCards[list.id]) {
+                    state.listCards[list.id] = [];
+                  }
+
+                  // Add the card ID to the list's cards if not already there
+                  if (!state.listCards[list.id].includes(card.id)) {
+                    state.listCards[list.id].push(card.id);
+                  }
+                });
+              });
+            } catch (error) {
+              console.error(`Error fetching cards for list ${list.id}:`, error);
+            }
+          }));
         } else {
           console.log(`No lists found for board ${id}`);
           // Still clear any existing lists for this board

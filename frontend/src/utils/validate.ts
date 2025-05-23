@@ -19,3 +19,13 @@ export const boardNameSchema = z
   .string()
   .min(1, 'Board name is required')
   .max(100, 'Board name is too long');
+
+/**
+ * Validate email format
+ * @param email Email to validate
+ * @returns True if email is valid
+ */
+export const isValidEmail = (email: string): boolean => {
+  const result = emailSchema.safeParse(email);
+  return result.success;
+};

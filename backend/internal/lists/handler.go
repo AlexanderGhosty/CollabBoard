@@ -71,10 +71,25 @@ func updateListHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 
-		p := db.UpdateListParams{ID: int32(id), Title: req.Title}
+		// Get the current list to preserve its position if not explicitly provided
+		currentList, err := svc.GetListByID(c.Request.Context(), int32(id))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current list: " + err.Error()})
+			return
+		}
+
+		// Create update params with the current position by default
+		p := db.UpdateListParams{
+			ID:       int32(id),
+			Title:    req.Title,
+			Position: currentList.Position, // Preserve the current position
+		}
+
+		// Only update position if explicitly provided
 		if req.Position != nil {
 			p.Position = *req.Position
 		}
+
 		lst, err := svc.Update(c.Request.Context(), userID, p)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

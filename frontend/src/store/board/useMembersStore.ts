@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { boardService } from '@/services/boardService';
+import { memberService } from '@/services/memberService';
 import { useToastStore } from '@/store/useToastStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { MembersState, BoardMember } from './types';
@@ -42,7 +42,7 @@ export const useMembersStore = create<MembersState>()(
       set((s) => { s.loading = true; s.error = null; });
 
       try {
-        const members = await boardService.getBoardMembers(targetBoardId);
+        const members = await memberService.getBoardMembers(targetBoardId);
 
         set((s) => {
           // Convert array to records
@@ -79,7 +79,7 @@ export const useMembersStore = create<MembersState>()(
 
         // Check if we need to update the user's role in the board store
         // But do it outside of the state setter to avoid triggering unnecessary renders
-        this.updateUserRoleInBoard(targetBoardId, members);
+        get().updateUserRoleInBoard(targetBoardId, members);
       } catch (error) {
         console.error("Failed to fetch board members:", error);
 
@@ -101,7 +101,7 @@ export const useMembersStore = create<MembersState>()(
     updateUserRoleInBoard(boardId, members) {
       // Use a debounced version of this function to prevent rapid updates
       // that could cause infinite loops
-      this._debouncedUpdateUserRole(boardId, members);
+      get()._debouncedUpdateUserRole(boardId, members);
     },
 
     // Private method for the actual role update logic
@@ -207,7 +207,7 @@ export const useMembersStore = create<MembersState>()(
 
       try {
         // Send invitation
-        await boardService.inviteMemberByEmail(boardId, email, role);
+        await memberService.inviteMemberByEmail(boardId, email, role);
 
         // Refresh the members list
         await get().fetchBoardMembers(boardId);
@@ -268,7 +268,7 @@ export const useMembersStore = create<MembersState>()(
       set((s) => { s.loading = true; s.error = null; });
 
       try {
-        await boardService.removeMember(boardId, userId);
+        await memberService.removeMember(boardId, userId);
 
         // Remove member from state
         set((s) => {
