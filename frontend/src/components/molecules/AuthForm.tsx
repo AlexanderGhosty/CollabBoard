@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { Input } from '@/components/atoms/Input';
 import Button from '@/components/atoms/Button';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useToastStore } from '@/store/useToastStore';
 import { emailSchema, passwordSchema, nameSchema } from '@/utils/validate';
+import { handleApiError } from '@/utils/api/errorHandling';
 
 // Different schemas for login and registration
 const loginSchema = z.object({ email: emailSchema, password: passwordSchema });
@@ -12,9 +14,32 @@ const registerSchema = z.object({ name: nameSchema, email: emailSchema, password
 
 type Mode = 'login' | 'register';
 
+/**
+ * Map backend authentication error messages to user-friendly Russian messages
+ */
+function getAuthErrorMessage(errorMessage: string, mode: Mode): string {
+  const message = errorMessage.toLowerCase();
+
+  if (mode === 'login') {
+    if (message.includes('invalid email or password') || message.includes('invalid') || message.includes('unauthorized')) {
+      return 'Неверный email или пароль';
+    }
+  } else if (mode === 'register') {
+    if (message.includes('email already registered') || message.includes('already') || message.includes('exists')) {
+      return 'Пользователь с таким email уже существует';
+    }
+  }
+
+  // Fallback to generic error messages
+  return mode === 'login'
+    ? 'Ошибка входа в систему'
+    : 'Ошибка регистрации';
+}
+
 export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
   const navigate = useNavigate();
   const auth = useAuthStore();
+  const { error: showErrorToast } = useToastStore();
   const [form, set] = useState({ name: '', email: '', password: '' });
   const [err, setErr] = useState<{ name?: string; email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
@@ -40,6 +65,15 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
         await auth.register(form.name, form.email, form.password);
       }
       navigate('/');
+    } catch (error) {
+      // Handle authentication errors
+      console.error('Authentication error:', error);
+
+      const apiError = handleApiError(error);
+      const userMessage = getAuthErrorMessage(apiError.message, mode);
+
+      // Show error toast notification
+      showErrorToast(userMessage);
     } finally {
       setLoading(false);
     }
