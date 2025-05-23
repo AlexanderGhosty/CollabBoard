@@ -69,9 +69,14 @@ export const boardService = {
         return [];
       }
 
-      // Normalize and filter out boards without IDs
+      // Normalize and filter out boards without IDs, explicitly setting the role
       return data
-        .map(board => normalizeBoard(board))
+        .map(board => {
+          const normalizedBoard = normalizeBoard(board);
+          // Explicitly set the role based on the API endpoint used
+          normalizedBoard.role = role;
+          return normalizedBoard;
+        })
         .filter(board => board.id);
     } catch (error) {
       console.error(`Error fetching boards for role ${role}:`, error);

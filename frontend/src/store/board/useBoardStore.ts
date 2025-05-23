@@ -75,18 +75,26 @@ export const useBoardStore = create<BoardState>()(
           const ownedIds: string[] = [];
           const memberIds: string[] = [];
 
-          // Process owned boards
+          // Process owned boards - explicitly set role to 'owner'
           ownedBoards.forEach(board => {
             if (board.id) {
-              boardsRecord[board.id] = board;
+              // Ensure the role is explicitly set to 'owner'
+              boardsRecord[board.id] = {
+                ...board,
+                role: 'owner'
+              };
               ownedIds.push(board.id);
             }
           });
 
-          // Process member boards
+          // Process member boards - explicitly set role to 'member'
           memberBoards.forEach(board => {
             if (board.id) {
-              boardsRecord[board.id] = board;
+              // Ensure the role is explicitly set to 'member'
+              boardsRecord[board.id] = {
+                ...board,
+                role: 'member'
+              };
               memberIds.push(board.id);
             }
           });
