@@ -212,8 +212,7 @@ export const useMembersStore = create<MembersState>()(
         // Refresh the members list
         await get().fetchBoardMembers(boardId);
 
-        // Show success toast
-        useToastStore.getState().success(`Пользователь ${email} успешно приглашен на доску`);
+        // Toast notification is now handled at the component level
 
         set((s) => { s.loading = false; });
         return true;
@@ -286,8 +285,7 @@ export const useMembersStore = create<MembersState>()(
           s.loading = false;
         });
 
-        // Show success toast
-        useToastStore.getState().success('Пользователь удален с доски');
+        // Toast notification is now handled at the component level
       } catch (error) {
         console.error("Failed to remove member:", error);
 

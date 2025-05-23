@@ -531,10 +531,23 @@ export const useWebSocketStore = create<WebSocketState>()(
         console.log("Member added to current board, refreshing members list");
 
         // Refresh the members list
-        setTimeout(() => useMembersStore.getState().fetchBoardMembers(boardId), 0);
+        const membersStore = useMembersStore.getState();
+        setTimeout(() => membersStore.fetchBoardMembers(boardId), 0);
 
-        // Show a toast notification
-        useToastStore.getState().info("Новый участник добавлен на доску");
+        // Get the current user
+        const currentUser = useAuthStore.getState().user;
+        const currentUserId = currentUser ? normalizeId(currentUser.id) : null;
+
+        // Only show notification if the invitation was not initiated by the current user
+        // We can determine this by checking if the event came from a WebSocket broadcast
+        // and not from our own action (which would have already shown a notification in ParticipantsModal)
+        const isExternalEvent = data._source === 'ws' || data._source === 'server';
+
+        // If this is an external event (not triggered by the current user's action)
+        // or if we can't determine the source, show a notification
+        if (isExternalEvent) {
+          useToastStore.getState().info("Новый участник добавлен на доску");
+        }
       }
     },
 
@@ -612,10 +625,19 @@ export const useWebSocketStore = create<WebSocketState>()(
         const membersStore = useMembersStore.getState();
         const members = membersStore.getMembersByBoardId(boardId || boardStore.activeBoard || '');
         const removedMember = members.find(m => normalizeId(m.userId) === userId);
-        const memberName = removedMember ? (removedMember.name || removedMember.email || 'Пользователь') : 'Пользователь';
 
-        // Show a toast notification
-        useToastStore.getState().info(`${memberName} был удален с доски`);
+        // Only show notification if the removal was not initiated by the current user
+        // We can determine this by checking if the event came from a WebSocket broadcast
+        // and not from our own action (which would have already shown a notification in ParticipantsModal)
+        const isExternalEvent = data._source === 'ws' || data._source === 'server';
+
+        // If this is an external event (not triggered by the current user's action)
+        // and we can find the member in our list, show a notification
+        if (isExternalEvent && removedMember) {
+          const memberName = removedMember.name || removedMember.email || 'Пользователь';
+          // Show a toast notification only for removals initiated by other users
+          useToastStore.getState().info(`${memberName} был удален с доски`);
+        }
 
         // Refresh the members list
         setTimeout(() => membersStore.fetchBoardMembers(boardId), 0);
@@ -660,10 +682,18 @@ export const useWebSocketStore = create<WebSocketState>()(
         const membersStore = useMembersStore.getState();
         const members = membersStore.getMembersByBoardId(boardId || boardStore.activeBoard || '');
         const leftMember = members.find(m => normalizeId(m.userId) === userId);
-        const memberName = leftMember ? (leftMember.name || leftMember.email || 'Пользователь') : 'Пользователь';
 
-        // Show a toast notification
-        useToastStore.getState().info(`${memberName} покинул доску`);
+        // Only show notification if the action was not initiated by the current user
+        // We can determine this by checking if the event came from a WebSocket broadcast
+        const isExternalEvent = data._source === 'ws' || data._source === 'server';
+
+        // If this is an external event (not triggered by the current user's action)
+        // and we can find the member in our list, show a notification
+        if (isExternalEvent && leftMember) {
+          const memberName = leftMember.name || leftMember.email || 'Пользователь';
+          // Show a toast notification
+          useToastStore.getState().info(`${memberName} покинул доску`);
+        }
 
         // Refresh the members list
         setTimeout(() => membersStore.fetchBoardMembers(boardId), 0);

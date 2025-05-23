@@ -73,7 +73,7 @@ class WebSocketClient {
       this.subscriptions.set(event, new Set());
     }
     this.subscriptions.get(event)!.add(handler);
-    
+
     // Return a safe unsubscribe function that checks if the subscription set exists
     return () => {
       const handlers = this.subscriptions.get(event);
@@ -103,8 +103,15 @@ class WebSocketClient {
       try {
         const msg: WSMessage = JSON.parse(e.data);
         console.log(`WebSocket message received: ${msg.event}`, msg.data);
+
+        // Mark the data as coming from WebSocket to help prevent duplicate notifications
+        const dataWithSource = {
+          ...msg.data,
+          _source: 'ws'
+        };
+
         const handlers = this.subscriptions.get(msg.event);
-        if (handlers) handlers.forEach((cb) => cb(msg.data));
+        if (handlers) handlers.forEach((cb) => cb(dataWithSource));
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }

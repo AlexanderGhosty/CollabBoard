@@ -125,7 +125,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
     try {
       await inviteMember(email, 'member');
       setEmail('');
-      success('Пользователь был приглашен');
+      success(`Пользователь ${email} успешно приглашен на доску`);
     } catch (err) {
       console.error('Error inviting member:', err);
       showError(err instanceof Error ? err.message : 'Failed to invite user');
@@ -142,7 +142,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
     try {
       // Pass the boardId explicitly to ensure the API is called with the expected parameters
       await removeMember(userId, boardId);
-      success('Пользователь был удален из доски');
+      success('Пользователь удален с доски');
     } catch (err) {
       console.error('Error removing member:', err);
       showError(err instanceof Error ? err.message : 'Failed to remove member');
