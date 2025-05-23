@@ -1,12 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import Button from '@/components/atoms/Button';
 import EditableText from '@/components/atoms/EditableText';
 import { useBoardStore, useListsStore } from '@/store/board';
 import { useNavigate } from 'react-router-dom';
 import { boardNameSchema } from '@/utils/validate';
+import ParticipantsModal from '@/components/molecules/ParticipantsModal';
 
 export default function BoardHeader() {
   const navigate = useNavigate();
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
 
   // Use specific selectors for each piece of state/action needed
   const activeBoard = useBoardStore(state => state.activeBoard);
@@ -82,6 +84,25 @@ export default function BoardHeader() {
         )}
       </div>
 
+      <div>
+        <Button
+          variant="secondary"
+          onClick={() => setShowParticipantsModal(true)}
+          className="!px-4 !py-2 !rounded-xl hover:!shadow-md transition-all duration-200"
+          title="Manage board participants"
+        >
+          Участники
+        </Button>
+      </div>
+
+      {/* Participants Modal */}
+      {activeBoard && (
+        <ParticipantsModal
+          isOpen={showParticipantsModal}
+          onClose={() => setShowParticipantsModal(false)}
+          boardId={activeBoard}
+        />
+      )}
     </header>
   );
 }

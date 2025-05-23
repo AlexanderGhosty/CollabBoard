@@ -79,7 +79,7 @@ export const useMembersStore = create<MembersState>()(
 
         // Check if we need to update the user's role in the board store
         // But do it outside of the state setter to avoid triggering unnecessary renders
-        this.updateUserRoleInBoard(targetBoardId, members);
+        get().updateUserRoleInBoard(targetBoardId, members);
       } catch (error) {
         console.error("Failed to fetch board members:", error);
 
@@ -101,7 +101,7 @@ export const useMembersStore = create<MembersState>()(
     updateUserRoleInBoard(boardId, members) {
       // Use a debounced version of this function to prevent rapid updates
       // that could cause infinite loops
-      this._debouncedUpdateUserRole(boardId, members);
+      get()._debouncedUpdateUserRole(boardId, members);
     },
 
     // Private method for the actual role update logic
