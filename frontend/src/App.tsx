@@ -9,6 +9,7 @@ import BoardPage     from '@/components/pages/BoardPage';
 import AccountSettingsPage from '@/components/pages/AccountSettingsPage';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
+import { initializeTheme } from '@/store/useThemeStore';
 import Toast, { ToastContainer } from '@/components/atoms/Toast';
 import useNavigateAndReload, { setNavigateFunction } from '@/hooks/useNavigateAndReload';
 import './App.css';
@@ -66,6 +67,11 @@ function NavigationProvider({ children }: { children: ReactNode }) {
 export default function App() {
   const toasts = useToastStore((state) => state.toasts);
   const removeToast = useToastStore((state) => state.removeToast);
+
+  // Initialize theme on app load
+  useEffect(() => {
+    initializeTheme();
+  }, []);
 
   return (
     <BrowserRouter>

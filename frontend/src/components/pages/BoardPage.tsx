@@ -66,7 +66,7 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col p-0 bg-gradient-to-br from-blue-50 to-indigo-100 overflow-x-visible">
+    <main className="flex min-h-screen w-full flex-col p-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-dark-blue-300 dark:to-dark-blue-200 overflow-x-visible transition-colors duration-300">
       <Header />
       <div className="w-full px-4 overflow-visible">
         <div className="mx-auto max-w-7xl">

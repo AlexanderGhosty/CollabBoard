@@ -227,8 +227,8 @@ export default function CardItem({ card }: CardItemProps) {
           style={style}
           {...(isCardModalOpen ? {} : modifiedListeners)} // Only apply listeners if drag is enabled
           {...attributes}
-          className={`rounded-2xl bg-white p-4 shadow-card hover:shadow-card-hover border border-blue-100
-            hover:bg-gradient-to-br hover:from-white hover:to-blue-50
+          className={`rounded-2xl bg-white dark:bg-dark-blue-50 p-4 shadow-card dark:shadow-dark-card hover:shadow-card-hover dark:hover:shadow-dark-card-hover border border-blue-100 dark:border-dark-blue-100
+            hover:bg-gradient-to-br hover:from-white hover:to-blue-50 dark:hover:from-dark-blue-50 dark:hover:to-dark-blue-100
             transition-all duration-300 ease-in-out card-enter animate-scale-in
             ${isDragging ? 'opacity-60 rotate-1 scale-105' : 'opacity-100'}
             ${isCardModalOpen ? 'cursor-default' : 'cursor-grab'}`}
@@ -243,11 +243,11 @@ export default function CardItem({ card }: CardItemProps) {
           onTouchMove={isCardModalOpen ? undefined : handleTouchMove}
           onTouchEnd={isCardModalOpen ? undefined : handleTouchEnd}
         >
-          <p className="text-sm font-medium text-blue-800 break-words pr-6 leading-snug">{card.title}</p>
+          <p className="text-sm font-medium text-blue-800 dark:text-blue-300 break-words pr-6 leading-snug transition-colors duration-300">{card.title}</p>
           {card.description && (
-            <div className="mt-2 text-xs text-blue-600 flex items-center">
-              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-100 rounded-full mr-2">
-                <span className="text-blue-600">📝</span>
+            <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 flex items-center transition-colors duration-300">
+              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-100 dark:bg-blue-900 rounded-full mr-2 transition-colors duration-300">
+                <span className="text-blue-600 dark:text-blue-400">📝</span>
               </span>
               <span>Есть описание</span>
             </div>

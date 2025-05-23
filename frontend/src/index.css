@@ -128,17 +128,32 @@ dialog::backdrop {
 ::-webkit-scrollbar-track {
   background: rgba(219, 234, 254, 0.5);
   border-radius: 8px;
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(37, 99, 235, 0.6);
   border-radius: 8px;
   border: 2px solid rgba(219, 234, 254, 0.5);
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, border 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(37, 99, 235, 0.8);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5); /* dark-blue-50 with opacity */
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.6); /* blue-500 with opacity */
+  border: 2px solid rgba(30, 41, 59, 0.5); /* dark-blue-50 with opacity */
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.8); /* blue-500 with more opacity */
 }
 
 :root {
@@ -147,7 +162,7 @@ dialog::backdrop {
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
+  color: #1e40af; /* blue-800 */
   background-color: #eff6ff; /* blue-50 - match the app's gradient background */
 
   font-synthesis: none;
@@ -156,13 +171,27 @@ dialog::backdrop {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark mode styles */
+.dark {
+  color: #dbeafe; /* blue-100 */
+  background-color: #0f172a; /* dark-blue-300 */
+}
+
 a {
   font-weight: 500;
   color: #2563eb; /* blue-600 */
   text-decoration: inherit;
+  transition: color 0.3s ease;
 }
 a:hover {
   color: #1d4ed8; /* blue-700 */
+}
+
+.dark a {
+  color: #60a5fa; /* blue-400 */
+}
+.dark a:hover {
+  color: #93c5fd; /* blue-300 */
 }
 
 body {
@@ -175,6 +204,12 @@ body {
   overflow-x: hidden; /* Prevent horizontal scrolling by default */
   background-image: linear-gradient(to bottom right, #eff6ff, #e0f2fe, #dbeafe);
   background-attachment: fixed;
+  transition: background-image 0.5s ease;
+}
+
+/* Dark mode background */
+.dark body {
+  background-image: linear-gradient(to bottom right, #0f172a, #1e1e3a, #1a1a2e);
 }
 
 /* Custom utility classes for animations and effects */
@@ -196,10 +231,24 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+.dark .card-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .card-shadow:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .glass-effect {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background 0.3s ease, border 0.3s ease;
+}
+
+.dark .glass-effect {
+  background: rgba(15, 23, 42, 0.7); /* dark-blue-300 with opacity */
+  border: 1px solid rgba(30, 41, 59, 0.3); /* dark-blue-50 with opacity */
 }
 
 /* Modal animations */
@@ -231,12 +280,27 @@ dialog {
   max-width: 90vw;
   max-height: 90vh;
   overflow: auto;
+  background-color: white;
+  color: #1e40af; /* blue-800 */
+  transition: background-color 0.3s ease, color 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dark dialog {
+  background-color: #1e293b; /* dark-blue-50 */
+  color: #dbeafe; /* blue-100 */
+  border: 1px solid rgba(30, 58, 138, 0.3); /* blue-900 with opacity */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
 }
 
 /* Standard scrollbar properties for Firefox and other browsers */
 .board-scroll-container {
   scrollbar-width: auto;
   scrollbar-color: rgba(37, 99, 235, 0.7) rgba(219, 234, 254, 0.7);
+  transition: scrollbar-color 0.3s ease;
+}
+
+.dark .board-scroll-container {
+  scrollbar-color: rgba(59, 130, 246, 0.7) rgba(30, 41, 59, 0.5);
 }
 
 /* Ensure #root takes full width and height of body */
@@ -271,15 +335,8 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #1e40af; /* blue-800 */
-    background-color: #eff6ff; /* blue-50 */
-  }
-  a:hover {
-    color: #1d4ed8; /* blue-700 */
-  }
-  button {
-    background-color: #dbeafe; /* blue-100 */
-  }
-}
+/*
+  Note: We're not using prefers-color-scheme media query for theme switching anymore
+  as we have a manual theme toggle. The theme is controlled by the .dark class
+  which is applied based on user preference and system settings.
+*/

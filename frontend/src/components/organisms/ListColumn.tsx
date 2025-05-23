@@ -44,13 +44,15 @@ export default function ListColumn({ list }: Props) {
 
   const style = {
     backgroundColor: isOver
-      ? 'rgba(219, 234, 254, 0.5)' // Light blue background when hovering
-      : 'rgba(255, 255, 255, 0.95)', // Slightly transparent white by default
+      ? 'var(--list-hover-bg, rgba(219, 234, 254, 0.5))' // Light blue background when hovering
+      : 'var(--list-bg, rgba(255, 255, 255, 0.95))', // Slightly transparent white by default
     transition: 'all 0.3s ease',
     boxShadow: isOver
-      ? '0 4px 12px rgba(37, 99, 235, 0.15)'
+      ? 'var(--list-hover-shadow, 0 4px 12px rgba(37, 99, 235, 0.15))'
       : undefined
   };
+
+  // CSS variables for list styling are now managed globally by the theme store
 
   // Get cards directly from the store to ensure we have the latest data
   const storeCards = getSortedCardsByListId(list.id);
@@ -71,8 +73,8 @@ export default function ListColumn({ list }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      className="w-72 shrink-0 rounded-2xl bg-white p-4 flex flex-col shadow-list border border-indigo-100 max-h-full
-        list-enter animate-slide-in transition-all duration-300 ease-in-out hover:shadow-lg"
+      className="w-72 shrink-0 rounded-2xl bg-white dark:bg-dark-blue-50 p-4 flex flex-col shadow-list dark:shadow-dark-list border border-indigo-100 dark:border-dark-blue-100 max-h-full
+        list-enter animate-slide-in transition-all duration-300 ease-in-out hover:shadow-lg dark:hover:shadow-dark-list"
     >
       <ListHeader
         list={list}
@@ -93,7 +95,7 @@ export default function ListColumn({ list }: Props) {
           ))}
 
           {validCards.length === 0 && (
-            <div className="flex items-center justify-center h-20 rounded-xl bg-blue-50/50 border border-dashed border-blue-200 text-blue-400 text-sm">
+            <div className="flex items-center justify-center h-20 rounded-xl bg-blue-50/50 dark:bg-blue-900/30 border border-dashed border-blue-200 dark:border-blue-800 text-blue-400 dark:text-blue-300 text-sm transition-colors duration-300">
               Нет карточек
             </div>
           )}

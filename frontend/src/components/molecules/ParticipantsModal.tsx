@@ -190,8 +190,8 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
   return (
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-[1000] rounded-2xl bg-white p-6 shadow-xl
-        w-full max-w-md modal-enter animate-modal-in border border-blue-100 m-auto"
+      className="fixed inset-0 z-[1000] rounded-2xl bg-white dark:bg-dark-blue-50 p-6 shadow-xl dark:shadow-dark-modal
+        w-full max-w-md modal-enter animate-modal-in border border-blue-100 dark:border-dark-blue-100 m-auto transition-colors duration-300"
       onClose={onClose}
       onClick={handleDialogClick}
       style={{ pointerEvents: 'auto' }}
@@ -202,11 +202,11 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
         style={{ pointerEvents: 'auto' }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold text-blue-800">Управление участниками</h3>
+          <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 transition-colors duration-300">Управление участниками</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600
-              hover:bg-blue-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300
+              hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700"
           >
             ✕
           </button>
@@ -214,25 +214,27 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
 
         {/* Members list */}
         <div className="flex flex-col gap-3 max-h-60 overflow-y-auto">
-          <h4 className="font-medium text-blue-700">Текущие участники</h4>
+          <h4 className="font-medium text-blue-700 dark:text-blue-400 transition-colors duration-300">Текущие участники</h4>
           {boardMembersList.length === 0 ? (
-            <p className="text-blue-600 text-sm italic">Загрузка участников...</p>
+            <p className="text-blue-600 dark:text-blue-400 text-sm italic transition-colors duration-300">Загрузка участников...</p>
           ) : (
             boardMembersList.map((member) => (
               <div
                 key={member.userId}
-                className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100"
+                className="flex items-center justify-between p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 transition-colors duration-300"
               >
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{member.name}</span>
+                    <span className="font-medium text-blue-800 dark:text-blue-300 transition-colors duration-300">{member.name}</span>
                     {currentUser && member.userId === currentUser.id && (
-                      <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Вы</span>
+                      <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full transition-colors duration-300">Вы</span>
                     )}
                   </div>
-                  <span className="text-sm text-blue-600">{member.email}</span>
-                  <span className={`text-xs mt-1 px-2 py-0.5 rounded-full inline-block w-fit
-                    ${member.role === 'owner' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                  <span className="text-sm text-blue-600 dark:text-blue-400 transition-colors duration-300">{member.email}</span>
+                  <span className={`text-xs mt-1 px-2 py-0.5 rounded-full inline-block w-fit transition-colors duration-300
+                    ${member.role === 'owner'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300'
+                      : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-300'}`}>
                     {member.role === 'owner' ? 'Владелец' : 'Участник'}
                   </span>
                 </div>
@@ -256,7 +258,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
 
         {/* Leave board button - only visible to members */}
         {currentUser && !isOwner && (
-          <div className="mt-2 border-t border-blue-100 pt-4">
+          <div className="mt-2 border-t border-blue-100 dark:border-blue-800 pt-4 transition-colors duration-300">
             <Button
               variant="danger"
               className="w-full"
@@ -282,8 +284,8 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
 
         {/* Invite form - only visible to owners */}
         {isOwner && (
-          <div className="mt-2 border-t border-blue-100 pt-4">
-            <h4 className="font-medium text-blue-700 mb-3">Пригласить нового участника</h4>
+          <div className="mt-2 border-t border-blue-100 dark:border-blue-800 pt-4 transition-colors duration-300">
+            <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-3 transition-colors duration-300">Пригласить нового участника</h4>
             <div className="flex gap-2">
               <Input
                 type="email"

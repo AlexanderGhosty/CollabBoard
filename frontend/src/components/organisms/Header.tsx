@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
+import ThemeToggle from '@/components/atoms/ThemeToggle';
 import { useAuthStore } from '@/store/useAuthStore';
 import { wsClient } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
@@ -28,7 +29,7 @@ export default function Header() {
   }, [logout, navigate, addToast]);
 
   return (
-    <header className="w-full py-3 px-4 bg-white shadow-sm mb-4">
+    <header className="w-full py-3 px-4 bg-white dark:bg-dark-blue-300 shadow-sm dark:shadow-dark-card mb-4 transition-colors duration-300">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <Link
           to="/"
@@ -38,17 +39,20 @@ export default function Header() {
           <img
             src="/logo.svg"
             alt="CollabBoard Logo"
-            className="h-8 w-8 transition-transform duration-200 group-hover:rotate-[-5deg]"
+            className="h-8 w-8 transition-transform duration-200 group-hover:rotate-[-5deg] filter dark:brightness-125 dark:contrast-125 dark:saturate-150"
           />
-          <h1 className="text-2xl font-bold text-blue-600 transition-colors duration-200 group-hover:text-blue-700">CollabBoard</h1>
+          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400 transition-colors duration-200 group-hover:text-blue-700 dark:group-hover:text-blue-300">CollabBoard</h1>
         </Link>
 
         <div className="flex items-center gap-4">
+          {/* Theme Toggle Button */}
+          <ThemeToggle className="mr-2" />
+
           {user && (
             <>
               <Link
                 to="/account"
-                className="text-blue-800 hover:text-blue-600 transition-colors duration-200"
+                className="text-blue-800 dark:text-blue-300 hover:text-blue-600 dark:hover:text-blue-200 transition-colors duration-200"
                 title="Account Settings"
               >
                 {user.name}

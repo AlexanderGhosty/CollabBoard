@@ -110,11 +110,15 @@ export default function BoardsPage() {
       <div key={boardId} className="relative group">
         <Link
           to={`/board/${boardId}`}
-          className="block rounded-2xl border border-indigo-100 bg-white p-4 shadow-md transition-colors hover:bg-blue-50 h-full"
+          className="block rounded-2xl border border-indigo-100 dark:border-dark-blue-100 bg-white dark:bg-dark-blue-50 p-4 shadow-md dark:shadow-dark-card transition-colors hover:bg-blue-50 dark:hover:bg-dark-blue-100 h-full"
         >
-          <h2 className="text-lg font-semibold text-blue-800 pr-8">{board.name}</h2>
+          <h2 className="text-lg font-semibold text-blue-800 dark:text-blue-300 pr-8">{board.name}</h2>
           {board.role && (
-            <span className={`text-xs px-2 py-1 rounded-full ${board.role === 'owner' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              board.role === 'owner'
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
+            }`}>
               {board.role === 'owner' ? 'Владелец' : 'Участник'}
             </span>
           )}
@@ -136,16 +140,16 @@ export default function BoardsPage() {
   };
 
   return (
-    <main className="w-full min-h-screen p-0 flex flex-col items-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <main className="w-full min-h-screen p-0 flex flex-col items-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-dark-blue-300 dark:to-dark-blue-200 transition-colors duration-300">
       <Header />
       <div className="w-full max-w-7xl px-4">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-bold text-blue-800">Доски</h1>
+          <h1 className="text-3xl font-bold text-blue-800 dark:text-blue-300 transition-colors duration-300">Доски</h1>
           <div className="flex gap-2">
             <input
               type="text"
               placeholder="Название доски"
-              className="w-60 rounded-2xl border border-indigo-100 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+              className="w-60 rounded-2xl border border-indigo-100 dark:border-dark-blue-100 bg-white dark:bg-dark-blue-50 text-blue-800 dark:text-blue-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 transition-colors duration-300"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -157,7 +161,7 @@ export default function BoardsPage() {
 
         {/* My Boards Section */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-blue-700 mb-4">Мои доски</h2>
+          <h2 className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-4 transition-colors duration-300">Мои доски</h2>
           <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {ownedBoards && ownedBoards.length > 0 ? (
               ownedBoards
@@ -165,7 +169,7 @@ export default function BoardsPage() {
                 .map((board) => renderBoardCard(board, true))
                 .filter(Boolean) // Remove null entries
             ) : (
-              <div className="col-span-full text-center py-6 text-blue-600 bg-white rounded-2xl shadow-md border border-indigo-100 p-6">
+              <div className="col-span-full text-center py-6 text-blue-600 dark:text-blue-300 bg-white dark:bg-dark-blue-50 rounded-2xl shadow-md dark:shadow-dark-card border border-indigo-100 dark:border-dark-blue-100 p-6 transition-colors duration-300">
                 У вас пока нет собственных досок. Создайте первую доску, используя форму выше.
               </div>
             )}
@@ -174,7 +178,7 @@ export default function BoardsPage() {
 
         {/* Shared With Me Section */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-indigo-700 mb-4">Доски, к которым у меня есть доступ</h2>
+          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-4 transition-colors duration-300">Доски, к которым у меня есть доступ</h2>
           <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {memberBoards && memberBoards.length > 0 ? (
               memberBoards
@@ -182,7 +186,7 @@ export default function BoardsPage() {
                 .map((board) => renderBoardCard(board, false))
                 .filter(Boolean) // Remove null entries
             ) : (
-              <div className="col-span-full text-center py-6 text-blue-600 bg-white rounded-2xl shadow-md border border-indigo-100 p-6">
+              <div className="col-span-full text-center py-6 text-blue-600 dark:text-blue-300 bg-white dark:bg-dark-blue-50 rounded-2xl shadow-md dark:shadow-dark-card border border-indigo-100 dark:border-dark-blue-100 p-6 transition-colors duration-300">
                 У вас пока нет доступа к чужим доскам. Когда кто-то пригласит вас на свою доску, она появится здесь.
               </div>
             )}

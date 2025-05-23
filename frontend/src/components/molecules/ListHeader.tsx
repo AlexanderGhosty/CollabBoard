@@ -48,8 +48,8 @@ export default function ListHeader({ list, onAddCard }: Props) {
           value={list.title}
           onSave={handleTitleUpdate}
           className="flex-grow max-w-[70%]"
-          textClassName="font-semibold text-blue-800 text-lg"
-          inputClassName="font-semibold text-lg"
+          textClassName="font-semibold text-blue-800 dark:text-blue-300 text-lg transition-colors duration-300"
+          inputClassName="font-semibold text-lg text-blue-800 dark:text-blue-300 dark:bg-dark-blue-100 dark:border-dark-blue-200 transition-colors duration-300"
           placeholder="Enter list title"
           validateEmpty={true}
           emptyErrorMessage="List title cannot be empty"

@@ -66,23 +66,27 @@ export default function BoardHeader() {
         >
           ← Назад
         </Button>
-        <div className="bg-white/70 px-4 py-2 rounded-xl shadow-sm backdrop-blur-sm">
+        <div className="bg-white/70 dark:bg-dark-blue-50/70 px-4 py-2 rounded-xl shadow-sm dark:shadow-dark-card backdrop-blur-sm transition-colors duration-300">
           {board.role === 'owner' ? (
             <EditableText
               value={board.name}
               onSave={handleBoardNameUpdate}
-              textClassName="text-2xl font-bold text-blue-800"
-              inputClassName="text-2xl font-bold text-blue-800"
+              textClassName="text-2xl font-bold text-blue-800 dark:text-blue-300"
+              inputClassName="text-2xl font-bold text-blue-800 dark:text-blue-300 dark:bg-dark-blue-100 dark:border-dark-blue-200"
               placeholder="Enter board name"
               validateEmpty={true}
               emptyErrorMessage="Board name cannot be empty"
             />
           ) : (
-            <h1 className="text-2xl font-bold text-blue-800">{board.name}</h1>
+            <h1 className="text-2xl font-bold text-blue-800 dark:text-blue-300 transition-colors duration-300">{board.name}</h1>
           )}
         </div>
         {board.role && (
-          <span className={`text-xs px-3 py-1.5 rounded-full ${board.role === 'owner' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>
+          <span className={`text-xs px-3 py-1.5 rounded-full transition-colors duration-300 ${
+            board.role === 'owner'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+              : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
+          }`}>
             {board.role === 'owner' ? 'Владелец' : 'Участник'}
           </span>
         )}

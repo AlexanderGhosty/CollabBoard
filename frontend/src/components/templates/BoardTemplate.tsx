@@ -366,7 +366,7 @@ export default function BoardTemplate() {
       <div className={`board-container w-full overflow-visible page-enter animate-fade-in ${isCardModalOpen ? 'dnd-disabled' : ''}`}>
         <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
           <div className="flex gap-5 overflow-x-auto pb-8 items-start w-full h-[calc(100vh-140px)] pt-3 board-scroll-container
-            bg-gradient-to-br from-blue-50/50 to-indigo-100/50 rounded-xl p-4">
+            bg-gradient-to-br from-blue-50/50 to-indigo-100/50 dark:from-dark-blue-300/50 dark:to-dark-blue-200/50 rounded-xl p-4 transition-colors duration-300">
             {listsWithCards.map((list) => (
               <SortableListColumn key={list.id} list={list} />
             ))}
@@ -374,14 +374,14 @@ export default function BoardTemplate() {
             {/* Add a "Add List" button at the end */}
             <div
               onClick={isCardModalOpen ? undefined : handleCreateList}
-              className={`w-72 shrink-0 rounded-2xl bg-white/60 border border-dashed border-blue-200 p-4 h-32
+              className={`w-72 shrink-0 rounded-2xl bg-white/60 dark:bg-dark-blue-50/60 border border-dashed border-blue-200 dark:border-blue-800 p-4 h-32
                 flex items-center justify-center transition-all duration-300
                 backdrop-blur-sm ${isCardModalOpen
                   ? 'opacity-50 cursor-default'
-                  : 'cursor-pointer hover:bg-white/80 hover:shadow-md hover:border-blue-300 hover:scale-105 active:scale-95'}`}
+                  : 'cursor-pointer hover:bg-white/80 dark:hover:bg-dark-blue-100/80 hover:shadow-md dark:hover:shadow-dark-card hover:border-blue-300 dark:hover:border-blue-700 hover:scale-105 active:scale-95'}`}
             >
-              <div className="text-blue-600 font-medium flex flex-col items-center gap-2">
-                <span className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">+</span>
+              <div className="text-blue-600 dark:text-blue-400 font-medium flex flex-col items-center gap-2 transition-colors duration-300">
+                <span className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl transition-colors duration-300">+</span>
                 <span>Добавить список</span>
               </div>
             </div>
