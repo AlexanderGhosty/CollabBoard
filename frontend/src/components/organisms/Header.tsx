@@ -30,14 +30,18 @@ export default function Header() {
   return (
     <header className="w-full py-3 px-4 bg-white shadow-sm mb-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-2">
+        <Link
+          to="/"
+          className="flex items-center gap-2 transition-all duration-200 hover:opacity-80 hover:scale-[1.02] group"
+          title="Go to Home Page"
+        >
           <img
             src="/logo.svg"
             alt="CollabBoard Logo"
-            className="h-8 w-8"
+            className="h-8 w-8 transition-transform duration-200 group-hover:rotate-[-5deg]"
           />
-          <h1 className="text-2xl font-bold text-blue-600">CollabBoard</h1>
-        </div>
+          <h1 className="text-2xl font-bold text-blue-600 transition-colors duration-200 group-hover:text-blue-700">CollabBoard</h1>
+        </Link>
 
         <div className="flex items-center gap-4">
           {user && (
