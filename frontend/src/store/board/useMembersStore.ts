@@ -302,6 +302,58 @@ export const useMembersStore = create<MembersState>()(
           useToastStore.getState().error('Не удалось удалить пользователя');
         }
       }
+    },
+
+    // Leave a board (for members)
+    async leaveBoard() {
+      const boardStore = useBoardStore.getState();
+      const boardId = boardStore.activeBoard;
+
+      if (!boardId) {
+        console.error("No active board");
+        throw new Error("Нет активной доски");
+      }
+
+      const board = boardStore.boards[boardId];
+      if (!board) {
+        console.error("Board not found");
+        throw new Error("Доска не найдена");
+      }
+
+      // Owners cannot leave their own board
+      if (board.role === 'owner') {
+        useToastStore.getState().error("Владелец не может покинуть свою доску");
+        throw new Error("Владелец не может покинуть свою доску");
+      }
+
+      set((s) => { s.loading = true; s.error = null; });
+
+      try {
+        // Call the API to leave the board
+        await memberService.leaveBoard(boardId);
+
+        // Show success toast
+        useToastStore.getState().success("Вы покинули доску");
+
+        // Navigate to the boards list
+        window.location.href = '/boards';
+      } catch (error) {
+        console.error("Failed to leave board:", error);
+
+        set((s) => {
+          s.loading = false;
+          s.error = `Failed to leave board: ${error}`;
+        });
+
+        // Show error toast
+        if (error instanceof Error) {
+          useToastStore.getState().error(error.message);
+        } else {
+          useToastStore.getState().error("Не удалось покинуть доску");
+        }
+
+        throw error;
+      }
     }
   }))
 );

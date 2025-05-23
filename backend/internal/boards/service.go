@@ -132,6 +132,37 @@ func (s *Service) RemoveMember(
 	return nil
 }
 
+// LeaveBoard allows a user to leave a board they are a member of
+func (s *Service) LeaveBoard(
+	ctx context.Context, userID, boardID int32,
+) error {
+	// Get the member to check if they exist and are not an owner
+	member, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Owners cannot leave their own board
+	if member.Role == "owner" {
+		return errors.New("owners cannot leave their own board")
+	}
+
+	// Delete the member
+	if err := s.repo.DeleteMember(ctx, db.DeleteBoardMemberParams{
+		BoardID: boardID, UserID: userID,
+	}); err != nil {
+		return err
+	}
+
+	// Broadcast the event
+	s.hub.Broadcast(boardID, websocket.EventMessage{
+		Event: "member_left", Data: map[string]int32{"userId": userID},
+	})
+	return nil
+}
+
 func (s *Service) AddMemberByEmail(
 	ctx context.Context, userID, boardID int32, email, role string,
 ) (db.BoardMember, error) {

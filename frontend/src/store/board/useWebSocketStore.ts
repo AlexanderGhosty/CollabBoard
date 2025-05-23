@@ -38,6 +38,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         subscribeWS('board_deleted', (data) => get().handleBoardDeleted(data)),
         subscribeWS('member_added', (data) => get().handleMemberAdded(data)),
         subscribeWS('member_removed', (data) => get().handleMemberRemoved(data)),
+        subscribeWS('member_left', (data) => get().handleMemberLeft(data)),
       ];
 
       // Return a cleanup function that unsubscribes from all events
@@ -546,24 +547,32 @@ export const useWebSocketStore = create<WebSocketState>()(
         return;
       }
 
-      // Get the current user ID
+      // Get the current user
       const currentUser = useAuthStore.getState().user;
-      const currentUserId = currentUser ? normalizeId(currentUser.id) : null;
+      if (!currentUser) return;
+
+      // Get the current user ID
+      const currentUserId = normalizeId(currentUser.id);
 
       // Get the current active board
       const boardStore = useBoardStore.getState();
       const isActiveBoard = !boardId || boardStore.activeBoard === boardId;
 
       // If we're the user being removed, redirect to home
-      if (currentUserId && userId === currentUserId && isActiveBoard) {
+      if (currentUserId && userId === currentUserId) {
         // We've been removed from this board
-        useToastStore.getState().info("Вы были удалены с этой доски");
+        useToastStore.getState().error("Вы были удалены с доски");
         console.log("Current user was removed from this board, redirecting to home");
 
-        // Redirect to home page
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1500);
+        // Clean up WebSocket connection
+        wsClient.disconnect();
+
+        // Redirect to home page if we're on the board we were removed from
+        if (isActiveBoard) {
+          setTimeout(() => {
+            window.location.href = '/boards';
+          }, 1500);
+        }
       } else if (isActiveBoard) {
         // Someone else was removed from this board, refresh the members list
         console.log("Another user was removed from this board, refreshing members list");
@@ -576,6 +585,44 @@ export const useWebSocketStore = create<WebSocketState>()(
 
         // Show a toast notification
         useToastStore.getState().info(`${memberName} был удален с доски`);
+
+        // Refresh the members list
+        setTimeout(() => membersStore.fetchBoardMembers(boardId), 0);
+      }
+    },
+
+    handleMemberLeft(data) {
+      const userId = extractUserId(data);
+      const boardId = normalizeId(data.boardId || data.BoardID || data.board_id);
+
+      if (!userId) {
+        console.error("Received member_left event without userId:", data);
+        return;
+      }
+
+      // Get the current user
+      const currentUser = useAuthStore.getState().user;
+      if (!currentUser) return;
+
+      // Get the current user ID
+      const currentUserId = normalizeId(currentUser.id);
+
+      // Get the current active board
+      const boardStore = useBoardStore.getState();
+      const isActiveBoard = !boardId || boardStore.activeBoard === boardId;
+
+      // If we're on the board where the member left, refresh the members list
+      if (isActiveBoard) {
+        console.log(`Member ${userId} left the current board`);
+
+        // Find the member's name if available
+        const membersStore = useMembersStore.getState();
+        const members = membersStore.getMembersByBoardId(boardId || boardStore.activeBoard || '');
+        const leftMember = members.find(m => normalizeId(m.userId) === userId);
+        const memberName = leftMember ? (leftMember.name || leftMember.email || 'Пользователь') : 'Пользователь';
+
+        // Show a toast notification
+        useToastStore.getState().info(`${memberName} покинул доску`);
 
         // Refresh the members list
         setTimeout(() => membersStore.fetchBoardMembers(boardId), 0);

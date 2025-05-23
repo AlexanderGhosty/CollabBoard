@@ -18,14 +18,15 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
   const [emailError, setEmailError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  
+
   // Get current user
   const currentUser = useAuthStore(state => state.user);
-  
+
   // Toast notifications
   const { success, error: showError } = useToastStore();
-  
+
   // Members store
   const {
     members,
@@ -33,13 +34,14 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
     fetchBoardMembers,
     inviteMember,
     removeMember,
+    leaveBoard,
     getMembersByBoardId,
     isUserBoardOwner
   } = useMembersStore();
-  
+
   // Get members for this board
   const boardMembersList = getMembersByBoardId(boardId);
-  
+
   // Check if current user is board owner
   const isOwner = currentUser ? isUserBoardOwner(boardId, currentUser.id) : false;
 
@@ -130,9 +132,9 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
 
   const handleRemoveMember = async (userId: string) => {
     if (!isOwner) return;
-    
+
     setIsRemoving(userId);
-    
+
     try {
       await removeMember(userId);
       success('Member has been removed from the board');
@@ -141,6 +143,23 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
       showError(err instanceof Error ? err.message : 'Failed to remove member');
     } finally {
       setIsRemoving(null);
+    }
+  };
+
+  // Handle leaving a board
+  const handleLeaveBoard = async () => {
+    if (!currentUser || isOwner) return;
+
+    if (window.confirm('Вы уверены, что хотите покинуть эту доску?')) {
+      setIsLeaving(true);
+      try {
+        await leaveBoard();
+        // No need to fetch members or close modal as we'll be redirected
+      } catch (err) {
+        console.error('Error leaving board:', err);
+        showError(err instanceof Error ? err.message : 'Failed to leave board');
+        setIsLeaving(false);
+      }
     }
   };
 
@@ -178,8 +197,8 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
             <p className="text-blue-600 text-sm italic">Загрузка участников...</p>
           ) : (
             boardMembersList.map((member) => (
-              <div 
-                key={member.userId} 
+              <div
+                key={member.userId}
                 className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100"
               >
                 <div className="flex flex-col">
@@ -195,7 +214,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
                     {member.role === 'owner' ? 'Владелец' : 'Участник'}
                   </span>
                 </div>
-                
+
                 {/* Only show remove button for non-owners and if current user is owner */}
                 {isOwner && member.role !== 'owner' && (
                   <Button
@@ -212,6 +231,21 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
             ))
           )}
         </div>
+
+        {/* Leave board button - only visible to members */}
+        {currentUser && !isOwner && (
+          <div className="mt-2 border-t border-blue-100 pt-4">
+            <Button
+              variant="danger"
+              className="w-full"
+              onClick={handleLeaveBoard}
+              loading={isLeaving}
+              disabled={isLeaving}
+            >
+              Покинуть доску
+            </Button>
+          </div>
+        )}
 
         {/* Invite form - only visible to owners */}
         {isOwner && (

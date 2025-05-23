@@ -67,15 +67,19 @@ export default function BoardHeader() {
           ← Назад
         </Button>
         <div className="bg-white/70 px-4 py-2 rounded-xl shadow-sm backdrop-blur-sm">
-          <EditableText
-            value={board.name}
-            onSave={handleBoardNameUpdate}
-            textClassName="text-2xl font-bold text-blue-800"
-            inputClassName="text-2xl font-bold text-blue-800"
-            placeholder="Enter board name"
-            validateEmpty={true}
-            emptyErrorMessage="Board name cannot be empty"
-          />
+          {board.role === 'owner' ? (
+            <EditableText
+              value={board.name}
+              onSave={handleBoardNameUpdate}
+              textClassName="text-2xl font-bold text-blue-800"
+              inputClassName="text-2xl font-bold text-blue-800"
+              placeholder="Enter board name"
+              validateEmpty={true}
+              emptyErrorMessage="Board name cannot be empty"
+            />
+          ) : (
+            <h1 className="text-2xl font-bold text-blue-800">{board.name}</h1>
+          )}
         </div>
         {board.role && (
           <span className={`text-xs px-3 py-1.5 rounded-full ${board.role === 'owner' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>

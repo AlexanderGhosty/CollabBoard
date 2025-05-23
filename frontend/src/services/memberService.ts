@@ -24,7 +24,7 @@ export const memberService = {
       // Normalize the members data
       const normalizedMembers = data.map(member => normalizeBoardMember(member, boardId));
       console.log("Normalized members:", normalizedMembers);
-      
+
       return normalizedMembers;
     } catch (error) {
       console.error("Error fetching board members:", error);
@@ -51,7 +51,7 @@ export const memberService = {
 
       // Send WebSocket event
       sendMemberEvent(WebSocketEventType.MEMBER_ADDED, normalizedMember);
-      
+
       return normalizedMember;
     } catch (error) {
       console.error("Error inviting member:", error);
@@ -70,6 +70,20 @@ export const memberService = {
       sendMemberEvent(WebSocketEventType.MEMBER_REMOVED, { boardId, userId });
     } catch (error) {
       console.error("Error removing member:", error);
+      throw handleApiError(error);
+    }
+  },
+
+  /** Покинуть доску (для участников) */
+  async leaveBoard(boardId: string): Promise<void> {
+    try {
+      console.log(`Leaving board ${boardId}`);
+      await api.post(BOARD_ENDPOINTS.leaveBoard(boardId));
+      console.log("Left board successfully");
+
+      // No need to send WebSocket event here as the backend will broadcast it
+    } catch (error) {
+      console.error("Error leaving board:", error);
       throw handleApiError(error);
     }
   },

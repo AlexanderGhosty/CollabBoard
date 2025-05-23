@@ -9,6 +9,7 @@ export const BOARD_ENDPOINTS = {
   boardMembers: (boardId: string) => `/boards/${boardId}/members`,
   inviteMember: (boardId: string) => `/boards/${boardId}/members/invite`,
   removeMember: (boardId: string, userId: string) => `/boards/${boardId}/members/${userId}`,
+  leaveBoard: (boardId: string) => `/boards/${boardId}/members/leave`,
 };
 
 export const LIST_ENDPOINTS = {

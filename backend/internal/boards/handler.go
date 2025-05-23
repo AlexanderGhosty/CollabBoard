@@ -24,6 +24,7 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g.POST("/:boardId/members", addMemberHandler(svc))
 	g.DELETE("/:boardId/members/:userId", deleteMemberHandler(svc))
 	g.POST("/:boardId/members/invite", inviteMemberByEmailHandler(svc))
+	g.POST("/:boardId/members/leave", leaveBoardHandler(svc))
 }
 
 func createBoardHandler(svc *Service) gin.HandlerFunc {
@@ -235,5 +236,25 @@ func inviteMemberByEmailHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusCreated, member)
+	}
+}
+
+// Handler for a user to leave a board
+func leaveBoardHandler(svc *Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		boardID, _ := strconv.Atoi(c.Param("boardId"))
+		userID := int32(c.GetInt("userID"))
+
+		err := svc.LeaveBoard(c.Request.Context(), userID, int32(boardID))
+		if err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, ErrForbidden) {
+				status = http.StatusForbidden
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Successfully left the board"})
 	}
 }
