@@ -1,202 +1,432 @@
 # CollabBoard
 
 <div align="center">
-  <h3>Instant collaboration in a single space</h3>
-  <p>A real-time collaborative Kanban board application for teams to organize tasks and projects</p>
+  <h3>🚀 Instant collaboration in a single space</h3>
+  <p>A real-time collaborative Kanban board application for teams to organize tasks and projects efficiently</p>
+  
+  ![TypeScript](https://img.shields.io/badge/TypeScript-74.8%25-blue)
+  ![Go](https://img.shields.io/badge/Go-21.4%25-00ADD8)
+  ![CSS](https://img.shields.io/badge/CSS-2.3%25-1572B6)
+  ![License](https://img.shields.io/badge/License-MIT-green)
 </div>
 
-## 🚀 Features
+---
 
-- **Real-time collaboration** - See changes instantly as team members update the board
-- **Drag-and-drop interface** - Intuitive card and list management with smooth animations
-- **User authentication** - Secure login and registration system
-- **Role-based permissions** - Control who can view and edit boards
-- **Responsive design** - Works on desktop and mobile devices
-- **Position normalization** - Automatic background job ensures consistent card ordering
+## 🌟 Overview
+
+CollabBoard is a modern, real-time collaborative Kanban board application that enables teams to organize tasks and projects in a shared digital workspace. Built with a focus on instant collaboration, intuitive design, and seamless real-time updates, CollabBoard provides everything teams need to stay organized and productive.
+
+## ✨ Key Features
+
+### 🔄 Real-time Collaboration
+- **Instant updates** - See changes as they happen across all connected clients
+- **WebSocket integration** - Live synchronization without page refreshes
+- **Multi-user support** - Multiple team members can work simultaneously
+
+### 🎯 Intuitive Interface
+- **Drag-and-drop functionality** - Smooth card and list management with animations
+- **Responsive design** - Optimized for desktop and mobile devices
+- **Clean UI/UX** - Built following Atomic Design principles
+
+### 🔐 Secure & Scalable
+- **JWT authentication** - Secure user login and registration
+- **Role-based permissions** - Board owners and members with different access levels
+- **PostgreSQL backend** - Reliable and scalable data storage
+
+### 🎨 Advanced Features
+- **Position normalization** - Background jobs ensure consistent card ordering
+- **Board sharing** - Invite team members via email
+- **Member management** - Add/remove board participants
+- **Real-time notifications** - Stay updated on board changes
 
 ## 🛠️ Technology Stack
 
-### Frontend
-- **React 19** with TypeScript
-- **Zustand** for state management
-- **React Router v6** for routing
-- **Tailwind CSS** for styling
-- **DND Kit** for drag-and-drop functionality
-- **Zod** for form validation
-- **Vite** for development and building
+### Frontend (React/TypeScript)
+- **React 19** - Latest React with concurrent features
+- **TypeScript** - Type-safe development
+- **Zustand** - Lightweight state management
+- **React Router v7** - Modern routing solution
+- **Tailwind CSS** - Utility-first CSS framework
+- **DND Kit** - Accessible drag-and-drop library
+- **Zod** - Runtime type validation
+- **Vite** - Fast development and build tool
+- **Axios** - HTTP client for API calls
 
-### Backend
-- **Go 1.23** with Gin web framework
-- **PostgreSQL 16** for data storage
-- **WebSockets** for real-time updates
-- **JWT** for authentication
-- **sqlc** for type-safe SQL
+### Backend (Go)
+- **Go 1.23** - Modern Go with latest features
+- **Gin** - High-performance HTTP web framework
+- **PostgreSQL 16** - Advanced relational database
+- **WebSockets** - Real-time bidirectional communication
+- **JWT** - Secure authentication tokens
+- **sqlc** - Generate type-safe Go from SQL
+- **golang-migrate** - Database migration tool
 
-## 📋 Project Structure
+### Infrastructure
+- **Docker** - Containerized deployment
+- **Docker Compose** - Multi-container orchestration
+- **Distroless images** - Secure, minimal production containers
 
-The project follows the **Atomic Design** methodology for organizing components:
+## 📁 Project Architecture
+
+The project follows clean architecture principles and Atomic Design methodology:
 
 ```
-frontend/
-├── src/
-│   ├── components/
-│   │   ├── atoms/       # Basic building blocks (Button, Input, etc.)
-│   │   ├── molecules/   # Groups of atoms (AuthForm, CardItem, etc.)
-│   │   ├── organisms/   # Groups of molecules (BoardHeader, CardList, etc.)
-│   │   ├── templates/   # Page layouts (BoardTemplate, etc.)
-│   │   └── pages/       # Full pages (BoardPage, LoginPage, etc.)
-│   ├── services/        # API and WebSocket services
-│   ├── store/           # Zustand stores
-│   └── utils/           # Utility functions
+CollabBoard/
+├── frontend/                    # React TypeScript application
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── atoms/          # Basic UI components (Button, Input, etc.)
+│   │   │   ├── molecules/      # Component groups (AuthForm, CardItem, etc.)
+│   │   │   ├── organisms/      # Complex components (BoardHeader, CardList, etc.)
+│   │   │   ├── templates/      # Page layouts (BoardTemplate, etc.)
+│   │   │   └── pages/          # Complete pages (BoardPage, LoginPage, etc.)
+│   │   ├── services/           # API and WebSocket services
+│   │   ├── store/              # Zustand state management
+│   │   ├── utils/              # Helper functions and utilities
+│   │   └── types/              # TypeScript type definitions
+│   ├── public/                 # Static assets
+│   └── Dockerfile              # Frontend container configuration
 │
-backend/
-├── cmd/
-│   └── server/          # Application entry point
-├── internal/
-│   ├── auth/            # Authentication
-│   ├── boards/          # Board management
-│   ├── cards/           # Card management
-│   ├── config/          # Configuration
-│   ├── db/              # Database
-│   │   ├── migrations/  # SQL migrations
-│   │   └── sqlc/        # Generated Go code
-│   ├── jobs/            # Background jobs
-│   ├── lists/           # List management
-│   ├── middleware/      # HTTP middleware
-│   └── websocket/       # WebSocket implementation
+├── backend/                     # Go REST API server
+│   ├── cmd/
+│   │   └── server/             # Application entry point
+│   ├── internal/
+│   │   ├── auth/               # Authentication & authorization
+│   │   ├── boards/             # Board management logic
+│   │   ├── cards/              # Card CRUD operations
+│   │   ├── lists/              # List management
+│   │   ├── config/             # Application configuration
+│   │   ├── db/                 # Database layer
+│   │   │   ├── migrations/     # SQL schema migrations
+│   │   │   └── sqlc/           # Generated Go code from SQL
+│   │   ├── jobs/               # Background job processing
+│   │   ├── middleware/         # HTTP middleware functions
+│   │   └── websocket/          # Real-time WebSocket handlers
+│   ├── bin/                    # Compiled binaries
+│   └── Dockerfile              # Backend container configuration
+│
+├── Makefile                    # Build and development commands
+├── docker-compose.yml          # Development environment
+├── docker-compose.prod.yml     # Production configuration
+└── README.md                   # This file
 ```
 
-## 🔄 Real-time Updates
+## 🔄 Real-time Architecture
 
-CollabBoard uses WebSockets to provide real-time updates to all connected clients. When a user makes a change (like moving a card), the following happens:
+CollabBoard implements a sophisticated real-time update system:
 
-1. The frontend sends an API request to update the database
-2. After successful update, the backend broadcasts a WebSocket event to all connected clients
-3. All clients receive the event and update their local state accordingly
+1. **Client Action** - User performs an action (move card, create list, etc.)
+2. **API Call** - Frontend sends HTTP request to backend
+3. **Database Update** - Backend validates and persists changes
+4. **WebSocket Broadcast** - Backend broadcasts event to all connected clients
+5. **State Synchronization** - All clients update their local state
+6. **UI Update** - Changes reflect instantly across all connected sessions
 
-This ensures all users see the same board state in real-time without needing to refresh the page.
+### WebSocket Events
+- `card_created`, `card_updated`, `card_moved`, `card_deleted`
+- `list_created`, `list_updated`, `list_moved`, `list_deleted`
+- `board_created`, `board_updated`, `board_deleted`
+- `member_added`, `member_removed`
 
-## 🔐 Authentication
+## 🔐 Authentication & Security
 
-The application uses JWT (JSON Web Tokens) for authentication:
+### JWT-based Authentication
+- **Registration/Login** - Secure user account management
+- **Token-based Auth** - Stateless authentication using JWT
+- **Password Security** - Bcrypt hashing for password storage
+- **Session Management** - Automatic token refresh and validation
 
-- Users register or login through the `/auth/register` or `/auth/login` endpoints
-- Upon successful authentication, a JWT token is returned
-- This token must be included in the `Authorization: Bearer <token>` header for all API requests
-- WebSocket connections also require authentication via a token query parameter
+### Security Features
+- **CORS Protection** - Configurable cross-origin requests
+- **Input Validation** - Comprehensive request validation
+- **SQL Injection Prevention** - Parameterized queries with sqlc
+- **Rate Limiting** - API endpoint protection (configurable)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 20+
-- Go 1.23+
-- PostgreSQL 16+
-- Docker and Docker Compose (optional)
+Ensure you have the following installed:
+- **Node.js** 20.x or higher
+- **Go** 1.23 or higher
+- **PostgreSQL** 16 or higher
+- **Docker & Docker Compose** (recommended for easy setup)
+- **golang-migrate** (for database migrations)
 
-### Environment Setup
+### Quick Start with Docker
 
-Create a `.env` file in the root directory with the following variables:
-
-```
-POSTGRES_USER=your_db_user
-POSTGRES_PASSWORD=your_db_password
-POSTGRES_DB=collabboard
-POSTGRES_HOST=db
-API_PORT=8080
-JWT_SECRET=your_secret_key
-```
-
-### Development Setup
-
-#### Without Docker
-
-1. **Backend:**
+The fastest way to get CollabBoard running:
 
 ```bash
-# Install Go dependencies
-cd backend
-go mod download
+# Clone the repository
+git clone https://github.com/AlexanderGhosty/CollabBoard.git
+cd CollabBoard
 
-# Run migrations
-migrate -source file://internal/db/migrations -database "postgres://user:password@localhost/collabboard?sslmode=disable" up
-
-# Start the server
-go run cmd/server/main.go
-```
-
-2. **Frontend:**
-
-```bash
-# Install dependencies
-cd frontend
-npm install
-
-# Start development server
-npm run dev
-```
-
-#### With Docker
-
-```bash
 # Start all services
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
+
+# Access the application
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:8080
+```
+
+### Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+# Database Configuration
+POSTGRES_USER=collabboard_user
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=collabboard
+POSTGRES_HOST=localhost  # Use 'db' for Docker
+POSTGRES_PORT=5432
+
+# Application Configuration
+API_PORT=8080
+JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+
+# Frontend Configuration (optional)
+VITE_API_URL=http://localhost:8080
+```
+
+### Manual Development Setup
+
+If you prefer to run services individually:
+
+#### 1. Database Setup
+```bash
+# Start PostgreSQL (if not using Docker)
+createdb collabboard
+
+# Run migrations
+cd backend
+migrate -source file://internal/db/migrations \
+        -database "postgres://user:password@localhost/collabboard?sslmode=disable" \
+        up
+```
+
+#### 2. Backend Setup
+```bash
+cd backend
+
+# Install dependencies
+go mod download
+
+# Build the application
+make backend
+
+# Run the server
+./bin/collabboard
+# OR for development with hot reload
+go run cmd/server/main.go
+```
+
+#### 3. Frontend Setup
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
 ```
 
 ### Production Deployment
 
+For production deployment with optimized containers:
+
 ```bash
-# Build and start production containers
+# Build and start production services
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Monitor services
+docker-compose ps
+docker-compose logs -f
 ```
 
-## 📝 API Documentation
+## 📚 API Documentation
 
-### Authentication
+### Authentication Endpoints
+```
+POST /auth/register          # Create new user account
+POST /auth/login             # Authenticate user
+GET  /auth/me                # Get current user profile
+```
 
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login and get JWT token
-- `GET /auth/me` - Get current user info
+### Board Management
+```
+GET    /api/boards           # List user's boards
+POST   /api/boards           # Create new board
+GET    /api/boards/:id       # Get board details with lists/cards
+PUT    /api/boards/:id       # Update board information
+DELETE /api/boards/:id       # Delete board
+GET    /api/boards/:id/members    # Get board members
+POST   /api/boards/:id/members    # Invite member via email
+DELETE /api/boards/:id/members/:userId  # Remove member
+```
 
-### Boards
+### List Operations
+```
+POST   /api/boards/:boardId/lists    # Create new list
+PUT    /api/lists/:id                # Update list
+DELETE /api/lists/:id                # Delete list
+PUT    /api/lists/:id/position       # Reorder list
+```
 
-- `GET /api/boards` - List all boards for current user
-- `POST /api/boards` - Create a new board
-- `GET /api/boards/:id` - Get a specific board with lists and cards
-- `PUT /api/boards/:id` - Update a board
-- `DELETE /api/boards/:id` - Delete a board
+### Card Operations
+```
+POST   /api/lists/:listId/cards      # Create new card
+GET    /api/cards/:id                # Get card details
+PUT    /api/cards/:id                # Update card
+DELETE /api/cards/:id                # Delete card
+PUT    /api/cards/:id/position       # Move card between lists
+```
 
-### Lists
+### WebSocket Connection
+```
+GET /ws/board/:id?token=<jwt_token>  # Real-time board updates
+```
 
-- `POST /api/boards/:boardId/lists` - Create a new list
-- `PUT /api/lists/:id` - Update a list
-- `DELETE /api/lists/:id` - Delete a list
-- `PUT /api/lists/:id/position` - Update list position
+## 🧪 Testing
 
-### Cards
+### Backend Tests
+```bash
+cd backend
+make test
 
-- `POST /api/lists/:listId/cards` - Create a new card
-- `PUT /api/cards/:id` - Update a card
-- `DELETE /api/cards/:id` - Delete a card
-- `PUT /api/cards/:id/position` - Update card position
+# With coverage
+go test ./... -cover -v
+```
 
-### WebSocket
+### Frontend Tests
+```bash
+cd frontend
+npm run test
 
-- `GET /ws/board/:id?token=<jwt>` - Connect to WebSocket for real-time updates
+# With coverage
+npm run test:coverage
+```
+
+### Integration Tests
+```bash
+# Run full test suite
+make test-all
+```
+
+## 🔧 Development Tools
+
+### Available Make Commands
+```bash
+make backend         # Build backend binary
+make docker-up       # Start development environment
+make docker-down     # Stop all services
+make test           # Run backend tests
+make lint           # Run linting
+make format         # Format code
+make migrate-up     # Apply database migrations
+make migrate-down   # Rollback migrations
+```
+
+### Code Quality
+- **ESLint** - JavaScript/TypeScript linting
+- **Prettier** - Code formatting
+- **golangci-lint** - Go code analysis
+- **TypeScript** - Static type checking
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! Please follow these steps:
 
-Please ensure your code follows the project's coding style and includes appropriate tests.
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
+
+### Development Guidelines
+- Follow existing code style and conventions
+- Add tests for new features
+- Update documentation as needed
+- Ensure all tests pass before submitting PR
+- Use semantic commit messages
+
+### Code Style
+- **Frontend**: Follow React best practices and TypeScript conventions
+- **Backend**: Adhere to Go idioms and patterns
+- **Database**: Use descriptive migration names and comments
+
+## 📋 Roadmap
+
+### Current Features ✅
+- [x] Real-time collaborative Kanban boards
+- [x] User authentication and authorization
+- [x] Drag-and-drop interface
+- [x] Board sharing and member management
+- [x] Responsive design
+- [x] Docker containerization
+
+### Planned Features 🚧
+- [ ] Email notifications for board activities
+- [ ] Card comments and attachments
+- [ ] Time tracking and due dates
+- [ ] Integration with external tools (Slack, GitHub, etc.)
+- [ ] Advanced analytics and reporting
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Database Connection Issues**
+```bash
+# Check PostgreSQL status
+docker-compose ps db
+
+# View database logs
+docker-compose logs db
+```
+
+**WebSocket Connection Problems**
+```bash
+# Check backend logs
+docker-compose logs backend
+
+# Verify JWT token in browser console
+```
+
+**Frontend Build Issues**
+```bash
+# Clear npm cache
+npm cache clean --force
+
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+```
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [React](https://reactjs.org/) - Frontend framework
+- [Go](https://golang.org/) - Backend language
+- [PostgreSQL](https://www.postgresql.org/) - Database
+- [Tailwind CSS](https://tailwindcss.com/) - CSS framework
+- [DND Kit](https://dndkit.com/) - Drag and drop library
+- [Zustand](https://github.com/pmndrs/zustand) - State management
+
+---
+
+<div align="center">
+  <p>Made with ❤️ by <a href="https://github.com/AlexanderGhosty">AlexanderGhosty</a></p>
+  <p>⭐ Star this repository if you find it helpful!</p>
+</div>
