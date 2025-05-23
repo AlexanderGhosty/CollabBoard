@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
+import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import { useMembersStore } from '@/store/board';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
@@ -19,7 +21,9 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const navigate = useNavigate();
 
   // Get current user
   const currentUser = useAuthStore(state => state.user);
@@ -146,20 +150,37 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
     }
   };
 
-  // Handle leaving a board
-  const handleLeaveBoard = async () => {
+  // Handle showing the leave confirmation dialog
+  const handleLeaveClick = () => {
+    if (!currentUser || isOwner) return;
+    setShowLeaveConfirm(true);
+  };
+
+  // Handle the actual board leaving process
+  const handleLeaveConfirm = async () => {
     if (!currentUser || isOwner) return;
 
-    if (window.confirm('Вы уверены, что хотите покинуть эту доску?')) {
-      setIsLeaving(true);
-      try {
-        await leaveBoard();
-        // No need to fetch members or close modal as we'll be redirected
-      } catch (err) {
-        console.error('Error leaving board:', err);
-        showError(err instanceof Error ? err.message : 'Failed to leave board');
-        setIsLeaving(false);
+    setIsLeaving(true);
+    try {
+      const success = await leaveBoard();
+      if (success) {
+        // Close the modal first
+        onClose();
+
+        // Use setTimeout to ensure all state updates are processed
+        // before navigation occurs
+        setTimeout(() => {
+          // Navigate to boards page using React Router
+          // This prevents a full page reload
+          navigate('/');
+        }, 100);
       }
+    } catch (err) {
+      console.error('Error leaving board:', err);
+      showError(err instanceof Error ? err.message : 'Failed to leave board');
+      setIsLeaving(false);
+    } finally {
+      setShowLeaveConfirm(false);
     }
   };
 
@@ -238,7 +259,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
             <Button
               variant="danger"
               className="w-full"
-              onClick={handleLeaveBoard}
+              onClick={handleLeaveClick}
               loading={isLeaving}
               disabled={isLeaving}
             >
@@ -246,6 +267,17 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
             </Button>
           </div>
         )}
+
+        {/* Leave board confirmation dialog */}
+        <ConfirmDialog
+          isOpen={showLeaveConfirm}
+          title="Покинуть доску"
+          message="Вы уверены, что хотите покинуть эту доску? Вы больше не будете иметь доступа к ней."
+          confirmLabel="Покинуть"
+          variant="danger"
+          onConfirm={handleLeaveConfirm}
+          onCancel={() => setShowLeaveConfirm(false)}
+        />
 
         {/* Invite form - only visible to owners */}
         {isOwner && (

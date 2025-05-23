@@ -28,7 +28,7 @@ class WebSocketClient {
   /** id таймера реконнекта */
   private reconnectId: number | null = null;
 
-  private constructor() {} // приватный ctor
+  private constructor() {} // приватный ctor
 
   /** Получить singleton */
   static get instance(): WebSocketClient {
@@ -38,10 +38,10 @@ class WebSocketClient {
 
   /** Подключиться к серверу для указанной доски */
   connect(boardId: string) {
-    // если уже подключены к этой же доске — выходим
+    // если уже подключены к этой же доске — выходим
     if (this.socket && this.boardId === boardId) return;
 
-    // если было старое соединение — закрываем
+    // если было старое соединение — закрываем
     if (this.socket) this.socket.close();
 
     // Убедимся, что boardId - строка
@@ -73,7 +73,14 @@ class WebSocketClient {
       this.subscriptions.set(event, new Set());
     }
     this.subscriptions.get(event)!.add(handler);
-    return () => this.subscriptions.get(event)!.delete(handler); // unsubscribe
+    
+    // Return a safe unsubscribe function that checks if the subscription set exists
+    return () => {
+      const handlers = this.subscriptions.get(event);
+      if (handlers) {
+        handlers.delete(handler);
+      }
+    };
   }
 
   private openSocket() {
@@ -106,7 +113,7 @@ class WebSocketClient {
     this.socket.onclose = (event) => {
       console.log(`WebSocket connection closed for board ${this.boardId}. Code: ${event.code}, Reason: ${event.reason}`);
       this.cleanup();
-      // пытаемся переподключиться раз в 3 сек
+      // пытаемся переподключиться раз в 3 сек
       this.reconnectId = window.setTimeout(() => this.openSocket(), 3_000);
     };
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { subscribeWS, WSMessage } from '@/services/websocket';
+import { subscribeWS, WSMessage, wsClient } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { WebSocketState } from './types';
@@ -611,8 +611,18 @@ export const useWebSocketStore = create<WebSocketState>()(
       const boardStore = useBoardStore.getState();
       const isActiveBoard = !boardId || boardStore.activeBoard === boardId;
 
-      // If we're on the board where the member left, refresh the members list
-      if (isActiveBoard) {
+      // Check if it's the current user who left
+      const isCurrentUser = userId === currentUserId;
+
+      if (isCurrentUser) {
+        // This should not normally happen as the client initiates the leave
+        // But handle it just in case the event comes back to the same client
+        console.log(`Current user (${userId}) left board ${boardId}`);
+
+        // No need to do anything as the client-side state should already be updated
+        // by the leaveBoard function in useMembersStore
+      } else if (isActiveBoard) {
+        // Someone else left the board
         console.log(`Member ${userId} left the current board`);
 
         // Find the member's name if available

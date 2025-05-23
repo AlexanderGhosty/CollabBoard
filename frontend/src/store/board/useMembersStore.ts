@@ -329,14 +329,43 @@ export const useMembersStore = create<MembersState>()(
       set((s) => { s.loading = true; s.error = null; });
 
       try {
+        // First, disconnect WebSocket to prevent reconnection attempts
+        // This is important to do before the API call
+        const wsClient = await import('@/services/websocket').then(m => m.wsClient);
+        wsClient.disconnect();
+
         // Call the API to leave the board
         await memberService.leaveBoard(boardId);
+
+        // Remove this board from the boards list in the store
+        useBoardStore.setState(state => {
+          // Remove from boards record
+          delete state.boards[boardId];
+
+          // Remove from member boards
+          state.memberBoardIds = state.memberBoardIds.filter(id => id !== boardId);
+
+          // Clear active board if it's the one being left
+          if (state.activeBoard === boardId) {
+            state.activeBoard = null;
+          }
+        });
+
+        // Remove from members store
+        set((s) => {
+          s.loading = false;
+
+          // Remove from boardMembers relationship
+          if (s.boardMembers[boardId]) {
+            delete s.boardMembers[boardId];
+          }
+        });
 
         // Show success toast
         useToastStore.getState().success("Вы покинули доску");
 
-        // Navigate to the boards list
-        window.location.href = '/boards';
+        // Return true to indicate success (the component will handle navigation)
+        return true;
       } catch (error) {
         console.error("Failed to leave board:", error);
 
