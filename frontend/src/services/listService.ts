@@ -4,6 +4,7 @@ import { ApiList, normalizeList, ApiCard, normalizeCard } from '@/utils/api/norm
 import { handleApiError } from '@/utils/api/errorHandling';
 import { WebSocketEventType, sendListEvent, sendListDeletedEvent } from '@/utils/websocket/events';
 import { List, Card } from '@/services/boardService';
+import { cardService } from '@/services/cardService';
 import { useBoardStore } from '@/store/board';
 import { useListsStore } from '@/store/board/useListsStore';
 import { useCardsStore } from '@/store/board/useCardsStore';
@@ -35,11 +36,8 @@ export const listService = {
       for (const list of normalizedLists) {
         try {
           console.log(`Fetching cards for list ${list.id}`);
-          const { data: cardsData } = await api.get<ApiCard[]>(CARD_ENDPOINTS.cards(list.id));
-          console.log(`Raw cards data for list ${list.id}:`, cardsData);
-
-          // Normalize the cards data
-          const normalizedCards = (cardsData || []).map(card => normalizeCard(card, list.id));
+          const normalizedCards = await cardService.fetchListCards(list.id);
+          console.log(`Fetched ${normalizedCards.length} cards for list ${list.id}:`, normalizedCards);
 
           // Add the normalized cards to the list
           list.cards = normalizedCards;
@@ -72,6 +70,17 @@ export const listService = {
       return normalizedLists;
     } catch (error) {
       console.error(`Error fetching lists for board ${boardId}:`, error);
+      throw handleApiError(error);
+    }
+  },
+
+  /** Получить карточки для списка */
+  async fetchListCards(listId: string): Promise<Card[]> {
+    try {
+      console.log(`List service: Fetching cards for list ${listId}`);
+      return await cardService.fetchListCards(listId);
+    } catch (error) {
+      console.error(`Error fetching cards for list ${listId}:`, error);
       throw handleApiError(error);
     }
   },
