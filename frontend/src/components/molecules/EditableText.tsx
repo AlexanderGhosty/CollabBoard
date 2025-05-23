@@ -113,24 +113,43 @@ export default function EditableText({
             onBlur={handleBlur}
             disabled={isLoading}
             className={clsx(
-              'w-full rounded border px-2 py-1 outline-none focus:ring-2 transition-colors duration-300',
+              'w-full rounded border px-2 py-1 outline-none focus:ring-2 transition-all duration-300',
               error
-                ? 'border-red-400 dark:border-red-500 focus:ring-red-300 dark:focus:ring-red-600 bg-white dark:bg-dark-blue-50'
-                : 'border-zinc-300 dark:border-dark-blue-200 focus:ring-blue-300 dark:focus:ring-blue-700 bg-white dark:bg-dark-blue-50',
+                ? 'border-red-400 dark:border-red-500 focus:ring-red-300 dark:focus:ring-red-600 bg-white dark:bg-dark-blue-50 text-red-800 dark:text-red-300'
+                : 'border-zinc-300 dark:border-dark-blue-200 focus:ring-blue-300 dark:focus:ring-blue-700 bg-white dark:bg-dark-blue-50 text-blue-800 dark:text-blue-200',
+              isLoading && 'opacity-50 cursor-not-allowed',
               inputClassName
             )}
           />
-          {error && <p className="mt-1 text-xs text-red-500 dark:text-red-400 transition-colors duration-300">{error}</p>}
+          {error && (
+            <p className="mt-1 text-xs text-red-500 dark:text-red-400 transition-colors duration-300">
+              {error}
+            </p>
+          )}
         </div>
       ) : (
         <div
           onClick={handleClick}
           className={clsx(
-            'cursor-pointer rounded px-2 py-1 hover:bg-zinc-200 dark:hover:bg-dark-blue-100 transition-colors duration-300',
+            'cursor-pointer rounded px-2 py-1 hover:bg-zinc-200 dark:hover:bg-dark-blue-100 transition-all duration-300',
+            'focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700',
             textClassName
           )}
+          tabIndex={0}
+          role="button"
+          aria-label={`Edit ${value || placeholder}`}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
         >
-          {value || <span className="text-zinc-400 dark:text-blue-500">{placeholder}</span>}
+          {value || (
+            <span className="text-zinc-400 dark:text-blue-500 transition-colors duration-300">
+              {placeholder}
+            </span>
+          )}
         </div>
       )}
     </div>

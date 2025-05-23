@@ -5,10 +5,12 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-  DragStartEvent
+  DragStartEvent,
+  DragOverEvent,
+  rectIntersection
 } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import { useBoardStore, useListsStore, useCardsStore } from '@/store/board';
 import { List, Card } from '@/services/boardService';
 import { subscribeWS } from '@/services/websocket';
@@ -188,6 +190,7 @@ export default function BoardTemplate() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeData, setActiveData] = useState<any>(null);
 
+  // Define sensors - cannot be memoized as useSensors is itself a hook
   const sensors = useSensors(
     useSensor(PointerSensor, {
       // Activate on a small movement to avoid interfering with click
@@ -196,6 +199,20 @@ export default function BoardTemplate() {
       }
     })
   );
+
+  // Custom collision detection for better performance with many items
+  const collisionDetection = useCallback((args: any) => {
+    // Use rect intersection for better performance with many items
+    const rectIntersectionCollisions = rectIntersection(args);
+
+    // If we have rect intersections, use them
+    if (rectIntersectionCollisions.length > 0) {
+      return rectIntersectionCollisions;
+    }
+
+    // Fallback to closest center for edge cases
+    return closestCenter(args);
+  }, []);
 
   // Handle drag start event
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -357,7 +374,7 @@ export default function BoardTemplate() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       // Disable drag detection completely when a card modal is open

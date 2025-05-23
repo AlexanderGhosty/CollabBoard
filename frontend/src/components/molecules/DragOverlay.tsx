@@ -34,12 +34,48 @@ interface ListDragOverlayProps {
 }
 
 function ListDragOverlay({ list }: ListDragOverlayProps) {
+  // State to track window width for responsive sizing
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+
+  // Update window width and dark mode on changes
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    const handleThemeChange = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+
+    // Set up observers
+    window.addEventListener('resize', handleResize);
+    const observer = new MutationObserver(handleThemeChange);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+    };
+  }, []);
+
+  // Responsive width calculation
+  const getResponsiveWidth = () => {
+    if (windowWidth < 640) return '85%'; // Mobile
+    if (windowWidth < 768) return '280px'; // Small tablet
+    return '288px'; // Desktop
+  };
+
   // Style for the dragged list
   const style: CSSProperties = {
-    width: '288px', // Same as w-72 (18rem = 288px)
+    width: getResponsiveWidth(),
     transform: 'rotate(3deg) scale(1.02)', // Enhanced rotation and slight scale for visual feedback
-    boxShadow: '0 12px 20px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', // Enhanced shadow
-    background: 'linear-gradient(to bottom right, #ffffff, #f0f9ff)', // Subtle gradient
+    boxShadow: isDarkMode
+      ? '0 12px 20px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3)'
+      : '0 12px 20px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+    background: isDarkMode
+      ? 'linear-gradient(to bottom right, #1e293b, #1e1e3a)' // dark-blue-50 to dark-blue-100
+      : 'linear-gradient(to bottom right, #ffffff, #f0f9ff)', // white to blue-50
   };
 
   return (
@@ -52,10 +88,10 @@ function ListDragOverlay({ list }: ListDragOverlayProps) {
     >
       <div
         style={style}
-        className="rounded-2xl p-4 cursor-grabbing z-50 dnd-dragging-animation border border-blue-100"
+        className="rounded-2xl p-4 cursor-grabbing z-50 dnd-dragging-animation border border-blue-100 dark:border-dark-blue-100 transition-colors duration-300"
       >
-        <div className="font-semibold text-blue-800 px-2 mb-3 text-lg">{list.title}</div>
-        <div className="bg-blue-50/80 rounded-xl p-3 text-center text-sm text-blue-600 font-medium border border-blue-100">
+        <div className="font-semibold text-blue-800 dark:text-blue-300 px-2 mb-3 text-lg transition-colors duration-300">{list.title}</div>
+        <div className="bg-blue-50/80 dark:bg-blue-900/50 rounded-xl p-3 text-center text-sm text-blue-600 dark:text-blue-300 font-medium border border-blue-100 dark:border-blue-800 transition-colors duration-300">
           {list.cards?.length || 0} карточек
         </div>
       </div>
@@ -66,25 +102,48 @@ function ListDragOverlay({ list }: ListDragOverlayProps) {
 function CardDragOverlay({ card }: CardDragOverlayProps) {
   // State to track window width for responsive sizing
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
 
-  // Update window width on resize
+  // Update window width and dark mode on changes
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
 
+    const handleThemeChange = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+
+    // Set up observers
     window.addEventListener('resize', handleResize);
+    const observer = new MutationObserver(handleThemeChange);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      observer.disconnect();
     };
   }, []);
 
+  // Responsive width calculation with better mobile support
+  const getResponsiveWidth = () => {
+    if (windowWidth < 480) return '85%'; // Small mobile
+    if (windowWidth < 640) return '90%'; // Mobile
+    if (windowWidth < 768) return '260px'; // Small tablet
+    return '272px'; // Desktop
+  };
+
   // Style for the dragged card
   const style: CSSProperties = {
-    width: windowWidth < 640 ? '90%' : '272px', // Responsive width
+    width: getResponsiveWidth(),
+    maxWidth: windowWidth < 640 ? '300px' : '272px', // Prevent cards from being too wide on mobile
     transform: 'rotate(3deg) scale(1.02)', // Enhanced rotation and slight scale
-    boxShadow: '0 12px 20px -5px rgba(0, 0, 0, 0.15), 0 8px 12px -6px rgba(0, 0, 0, 0.1)', // Enhanced shadow
-    background: 'linear-gradient(to bottom right, #ffffff, #f8fafc)', // Subtle gradient
+    boxShadow: isDarkMode
+      ? '0 12px 20px -5px rgba(0, 0, 0, 0.3), 0 8px 12px -6px rgba(0, 0, 0, 0.2)'
+      : '0 12px 20px -5px rgba(0, 0, 0, 0.15), 0 8px 12px -6px rgba(0, 0, 0, 0.1)',
+    background: isDarkMode
+      ? 'linear-gradient(to bottom right, #1e293b, #1e1e3a)' // dark-blue-50 to dark-blue-100
+      : 'linear-gradient(to bottom right, #ffffff, #f8fafc)', // white to slate-50
   };
 
   return (
@@ -97,14 +156,14 @@ function CardDragOverlay({ card }: CardDragOverlayProps) {
     >
       <div
         style={style}
-        className="rounded-2xl p-4 cursor-grabbing z-50 dnd-dragging-animation w-auto border border-blue-100"
+        className="rounded-2xl p-4 cursor-grabbing z-50 dnd-dragging-animation w-auto border border-blue-100 dark:border-dark-blue-100 transition-colors duration-300"
       >
-        <div className="w-full max-w-[272px]">
-          <p className="text-sm font-medium text-blue-800 break-words pr-6 leading-snug">{card.title}</p>
+        <div className="w-full" style={{ maxWidth: windowWidth < 640 ? '100%' : '272px' }}>
+          <p className="text-sm font-medium text-blue-800 dark:text-blue-300 break-words pr-6 leading-snug transition-colors duration-300">{card.title}</p>
           {card.description && (
-            <div className="mt-3 text-xs text-blue-600 flex items-center">
-              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-100 rounded-full mr-2">
-                <span className="text-blue-600">📝</span>
+            <div className="mt-3 text-xs text-blue-600 dark:text-blue-400 flex items-center transition-colors duration-300">
+              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-100 dark:bg-blue-900/50 rounded-full mr-2 transition-colors duration-300">
+                <span className="text-blue-600 dark:text-blue-400">📝</span>
               </span>
               <span>Есть описание</span>
             </div>

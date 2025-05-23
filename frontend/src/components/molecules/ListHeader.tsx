@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { List } from '@/services/boardService';
 import Button from '@/components/atoms/Button';
-import EditableText from '@/components/atoms/EditableText';
+import EditableText from '@/components/molecules/EditableText';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import { useListsStore } from '@/store/board';
 

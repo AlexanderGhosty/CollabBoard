@@ -113,8 +113,8 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
   return (
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-[1000] rounded-2xl bg-white p-6 shadow-xl
-        w-full max-w-md modal-enter animate-modal-in border border-blue-100 m-auto"
+      className="fixed inset-0 z-[1000] rounded-2xl bg-white dark:bg-dark-blue-50 p-6 shadow-xl dark:shadow-dark-modal
+        w-full max-w-md modal-enter animate-modal-in border border-blue-100 dark:border-dark-blue-100 m-auto transition-colors duration-300"
       onClose={handleCancel}
       onClick={handleDialogClick}
       style={{ pointerEvents: 'auto' }}
@@ -125,18 +125,18 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
         style={{ pointerEvents: 'auto' }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold text-blue-800">Редактирование карточки</h3>
+          <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 transition-colors duration-300">Редактирование карточки</h3>
           <button
             onClick={handleCancel}
-            className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600
-              hover:bg-blue-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-300
+              hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-600"
           >
             ✕
           </button>
         </div>
 
         <div className="flex flex-col gap-3">
-          <label htmlFor="card-title" className="text-sm font-medium text-blue-700">
+          <label htmlFor="card-title" className="text-sm font-medium text-blue-700 dark:text-blue-400 transition-colors duration-300">
             Заголовок
           </label>
           <Input
@@ -144,12 +144,13 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Введите заголовок"
-            className="focus:border-blue-300 transition-all duration-200 hover:border-blue-200"
+            className="focus:border-blue-300 dark:focus:border-blue-600 transition-all duration-200 hover:border-blue-200 dark:hover:border-blue-500
+              bg-white dark:bg-dark-blue-100 border-blue-100 dark:border-dark-blue-200 text-blue-800 dark:text-blue-200"
           />
         </div>
 
         <div className="flex flex-col gap-3">
-          <label htmlFor="card-description" className="text-sm font-medium text-blue-700">
+          <label htmlFor="card-description" className="text-sm font-medium text-blue-700 dark:text-blue-400 transition-colors duration-300">
             Описание
           </label>
           <textarea
@@ -157,12 +158,13 @@ export default function CardDetailModal({ card, isOpen, onClose }: CardDetailMod
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Введите описание"
-            className="w-full rounded-2xl border border-blue-100 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-300
-              min-h-[120px] text-blue-800 resize-none transition-all duration-200 hover:border-blue-200"
+            className="w-full rounded-2xl border border-blue-100 dark:border-dark-blue-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-600
+              min-h-[120px] text-blue-800 dark:text-blue-200 resize-none transition-all duration-200 hover:border-blue-200 dark:hover:border-blue-500
+              bg-white dark:bg-dark-blue-100 placeholder:text-blue-400 dark:placeholder:text-blue-500"
           />
         </div>
 
-        <div className="flex justify-end gap-3 mt-2 pt-2 border-t border-blue-50">
+        <div className="flex justify-end gap-3 mt-2 pt-2 border-t border-blue-50 dark:border-dark-blue-200 transition-colors duration-300">
           <Button variant="secondary" onClick={handleCancel} className="hover:!bg-white">
             Отмена
           </Button>

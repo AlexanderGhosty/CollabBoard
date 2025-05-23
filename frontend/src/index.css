@@ -11,6 +11,11 @@
   transform-origin: center center;
   position: fixed; /* Ensures the overlay is positioned relative to the viewport */
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+  /* Improve performance on mobile devices */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* Ensure draggable items are visible outside their containers */
@@ -26,6 +31,33 @@
   pointer-events: none !important;
   opacity: 0.8;
   transition: opacity 0.3s ease;
+}
+
+/* Mobile-specific drag and drop improvements */
+@media (max-width: 768px) {
+  .dnd-draggable-overlay {
+    /* Reduce filter effects on mobile for better performance */
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  /* Improve touch targets for mobile */
+  [data-dnd-draggable] {
+    min-height: 44px; /* Minimum touch target size */
+    touch-action: manipulation;
+  }
+
+  /* Reduce animations on mobile for better performance */
+  .board-scroll-container {
+    scroll-behavior: auto;
+  }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .dnd-draggable-overlay {
+    /* Sharper shadows on high DPI displays */
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+  }
 }
 
 /* Ensure modal content is always interactive */

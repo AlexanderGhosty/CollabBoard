@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import Button from '@/components/atoms/Button';
-import EditableText from '@/components/atoms/EditableText';
+import EditableText from '@/components/molecules/EditableText';
 import { useBoardStore, useListsStore } from '@/store/board';
 import { useNavigate } from 'react-router-dom';
 import { boardNameSchema } from '@/utils/validate';

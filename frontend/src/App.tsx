@@ -10,7 +10,7 @@ import AccountSettingsPage from '@/components/pages/AccountSettingsPage';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import { initializeTheme } from '@/store/useThemeStore';
-import Toast, { ToastContainer } from '@/components/atoms/Toast';
+import Toast, { ToastContainer } from '@/components/molecules/Toast';
 import useNavigateAndReload, { setNavigateFunction } from '@/hooks/useNavigateAndReload';
 import './App.css';
 
