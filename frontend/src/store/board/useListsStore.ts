@@ -113,7 +113,7 @@ export const useListsStore = create<ListsState>()(
 
         console.log(`List ${list.id} added to store for board ${boardId}`);
 
-        // Показать уведомление об успешном создании списка
+        // Show success toast notification
         useToastStore.getState().success("Список создан");
 
         return list;

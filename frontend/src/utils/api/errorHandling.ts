@@ -34,7 +34,7 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
   // Default error
   const defaultError: ApiError = {
     type: ApiErrorType.UNKNOWN,
-    message: 'An unknown error occurred',
+    message: 'Произошла неизвестная ошибка',
     originalError: error,
   };
 
@@ -63,7 +63,7 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
   if (axiosError.message.includes('Network Error')) {
     return {
       type: ApiErrorType.NETWORK,
-      message: 'Failed to connect to the server. Please check your internet connection.',
+      message: 'Не удалось подключиться к серверу. Проверьте подключение к интернету.',
       originalError: error,
     };
   }
@@ -72,7 +72,7 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
   if (axiosError.message.includes('timeout')) {
     return {
       type: ApiErrorType.TIMEOUT,
-      message: 'Request timed out. The server might be busy, please try again.',
+      message: 'Время ожидания истекло. Сервер может быть занят, попробуйте снова.',
       originalError: error,
     };
   }
@@ -82,35 +82,35 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
     case 401:
       return {
         type: ApiErrorType.UNAUTHORIZED,
-        message: 'You are not authorized to perform this action. Please log in again.',
+        message: 'Вы не авторизованы для выполнения этого действия. Пожалуйста, войдите снова.',
         originalError: error,
         statusCode,
       };
     case 403:
       return {
         type: ApiErrorType.FORBIDDEN,
-        message: 'You do not have permission to perform this action.',
+        message: 'У вас нет прав для выполнения этого действия.',
         originalError: error,
         statusCode,
       };
     case 404:
       return {
         type: ApiErrorType.NOT_FOUND,
-        message: 'The requested resource was not found.',
+        message: 'Запрашиваемый ресурс не найден.',
         originalError: error,
         statusCode,
       };
     case 409:
       return {
         type: ApiErrorType.CONFLICT,
-        message: 'This operation caused a conflict with the current state of the resource.',
+        message: 'Эта операция вызвала конфликт с текущим состоянием ресурса.',
         originalError: error,
         statusCode,
       };
     case 422:
       return {
         type: ApiErrorType.VALIDATION,
-        message: 'The data provided is invalid.',
+        message: 'Предоставленные данные недействительны.',
         originalError: error,
         statusCode,
       };
@@ -120,7 +120,7 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
     case 504:
       return {
         type: ApiErrorType.SERVER,
-        message: 'A server error occurred. Please try again later.',
+        message: 'Произошла ошибка сервера. Пожалуйста, попробуйте позже.',
         originalError: error,
         statusCode,
       };
@@ -129,7 +129,7 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
       const errorMessage = axiosError.response?.data?.error || axiosError.message;
       return {
         type: ApiErrorType.UNKNOWN,
-        message: errorMessage || 'An unknown error occurred',
+        message: errorMessage || 'Произошла неизвестная ошибка',
         originalError: error,
         statusCode,
       };

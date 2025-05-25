@@ -16,11 +16,11 @@ export default function EditableText({
   value,
   onSave,
   className = '',
-  placeholder = 'Click to edit',
+  placeholder = 'Нажмите для редактирования',
   textClassName = '',
   inputClassName = '',
   validateEmpty = true,
-  emptyErrorMessage = 'Value cannot be empty'
+  emptyErrorMessage = 'Значение не может быть пустым'
 }: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);

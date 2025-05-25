@@ -110,12 +110,12 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
   const handleInvite = async () => {
     // Validate email
     if (!email.trim()) {
-      setEmailError('Email is required');
+      setEmailError('Email обязателен');
       return;
     }
 
     if (!isValidEmail(email)) {
-      setEmailError('Please enter a valid email address');
+      setEmailError('Пожалуйста, введите корректный email адрес');
       return;
     }
 
@@ -128,7 +128,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
       success(`Пользователь ${email} успешно приглашен на доску`);
     } catch (err) {
       console.error('Error inviting member:', err);
-      showError(err instanceof Error ? err.message : 'Failed to invite user');
+      showError(err instanceof Error ? err.message : 'Не удалось пригласить пользователя');
     } finally {
       setIsSubmitting(false);
     }
@@ -145,7 +145,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
       success('Пользователь удален с доски');
     } catch (err) {
       console.error('Error removing member:', err);
-      showError(err instanceof Error ? err.message : 'Failed to remove member');
+      showError(err instanceof Error ? err.message : 'Не удалось удалить участника');
     } finally {
       setIsRemoving(null);
     }
@@ -178,7 +178,7 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
       }
     } catch (err) {
       console.error('Error leaving board:', err);
-      showError(err instanceof Error ? err.message : 'Failed to leave board');
+      showError(err instanceof Error ? err.message : 'Не удалось покинуть доску');
       setIsLeaving(false);
     } finally {
       setShowLeaveConfirm(false);

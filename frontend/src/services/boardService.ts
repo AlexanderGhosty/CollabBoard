@@ -16,7 +16,7 @@ import {
 } from '@/utils/websocket/events';
 import { useAuthStore } from '@/store/useAuthStore';
 
-/** Типы сущностей (минимально‑необходимые) */
+/** Entity types (minimal required) */
 export type Card = {
   id: string;
   listId: string;
