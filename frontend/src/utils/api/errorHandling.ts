@@ -21,14 +21,14 @@ export enum ApiErrorType {
 export interface ApiError {
   type: ApiErrorType;
   message: string;
-  originalError?: any;
+  originalError?: Error | AxiosError | unknown;
   statusCode?: number;
 }
 
 /**
  * Process an error from an API call and return a standardized error object
  */
-export function handleApiError(error: any): ApiError {
+export function handleApiError(error: Error | AxiosError | unknown): ApiError {
   console.error('API Error:', error);
 
   // Default error
@@ -38,11 +38,21 @@ export function handleApiError(error: any): ApiError {
     originalError: error,
   };
 
+  // Type guard for AxiosError
+  const isAxiosError = (err: unknown): err is AxiosError => {
+    return typeof err === 'object' && err !== null && 'isAxiosError' in err;
+  };
+
+  // Type guard for Error
+  const isError = (err: unknown): err is Error => {
+    return err instanceof Error;
+  };
+
   // If not an Axios error, return default
-  if (!error.isAxiosError) {
+  if (!isAxiosError(error)) {
     return {
       ...defaultError,
-      message: error.message || defaultError.message,
+      message: isError(error) ? error.message : defaultError.message,
     };
   }
 
@@ -165,7 +175,7 @@ export function getEntityErrorMessage(
 
   // Get the default message for this entity and operation
   const defaultMessage = defaultMessages[entity][operation as keyof typeof defaultMessages[typeof entity]];
-  
+
   // For specific error types, provide more detailed messages
   switch (error.type) {
     case ApiErrorType.FORBIDDEN:

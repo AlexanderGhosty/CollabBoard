@@ -5,6 +5,7 @@ import {
   normalizeBoard,
   normalizeBoardMember,
   ApiBoardMember,
+  BoardMember,
   ApiList,
   normalizeList
 } from '@/utils/api/normalizeEntities';
@@ -228,7 +229,7 @@ export const boardService = {
   },
 
   /** Получить список участников доски */
-  async getBoardMembers(boardId: string): Promise<any[]> {
+  async getBoardMembers(boardId: string): Promise<BoardMember[]> {
     try {
       console.log(`Fetching members for board ${boardId}`);
       const { data } = await api.get<ApiBoardMember[]>(BOARD_ENDPOINTS.boardMembers(boardId));
@@ -252,7 +253,7 @@ export const boardService = {
   },
 
   /** Пригласить пользователя на доску по email */
-  async inviteMemberByEmail(boardId: string, email: string, role: 'owner' | 'member' = 'member'): Promise<any> {
+  async inviteMemberByEmail(boardId: string, email: string, role: 'owner' | 'member' = 'member'): Promise<BoardMember> {
     try {
       console.log(`Inviting user ${email} to board ${boardId} with role ${role}`);
 

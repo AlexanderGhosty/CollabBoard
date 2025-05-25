@@ -20,7 +20,7 @@ class WebSocketClient {
   private boardId: string | null = null;
 
   /** Список подписок: { event: Set<handlers> } */
-  private subscriptions = new Map<string, Set<WSEventHandler>>();
+  private subscriptions = new Map<string, Set<WSEventHandler<any>>>();
 
   /** id таймера ping‑pong */
   private heartbeatId: number | null = null;
@@ -38,14 +38,29 @@ class WebSocketClient {
 
   /** Подключиться к серверу для указанной доски */
   connect(boardId: string) {
+    // Validate board ID
+    if (!boardId || boardId.trim() === '') {
+      console.error('Cannot connect to WebSocket: invalid board ID provided');
+      return;
+    }
+
+    // Normalize board ID to string
+    const normalizedBoardId = String(boardId).trim();
+
     // если уже подключены к этой же доске — выходим
-    if (this.socket && this.boardId === boardId) return;
+    if (this.socket && this.boardId === normalizedBoardId) {
+      console.log(`Already connected to WebSocket for board ${normalizedBoardId}`);
+      return;
+    }
 
     // если было старое соединение — закрываем
-    if (this.socket) this.socket.close();
+    if (this.socket) {
+      console.log(`Closing existing WebSocket connection for board ${this.boardId}`);
+      this.socket.close();
+    }
 
-    // Убедимся, что boardId - строка
-    this.boardId = String(boardId);
+    // Set the board ID
+    this.boardId = normalizedBoardId;
     console.log(`Connecting to WebSocket for board ${this.boardId}`);
     this.openSocket();
   }
@@ -105,10 +120,9 @@ class WebSocketClient {
         console.log(`WebSocket message received: ${msg.event}`, msg.data);
 
         // Mark the data as coming from WebSocket to help prevent duplicate notifications
-        const dataWithSource = {
-          ...msg.data,
-          _source: 'ws'
-        };
+        const dataWithSource = typeof msg.data === 'object' && msg.data !== null
+          ? { ...msg.data, _source: 'ws' }
+          : { data: msg.data, _source: 'ws' };
 
         const handlers = this.subscriptions.get(msg.event);
         if (handlers) handlers.forEach((cb) => cb(dataWithSource));

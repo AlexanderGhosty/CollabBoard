@@ -122,20 +122,30 @@ export const useBoardStore = create<BoardState>()(
 
     async loadBoard(id) {
       // Validate the board ID
-      if (!id) {
-        console.error("Attempted to load board with undefined ID");
+      if (!id || typeof id !== 'string' || id.trim() === '') {
+        console.error("Attempted to load board with invalid ID:", id);
         return;
       }
+
+      // Normalize the board ID
+      const normalizedId = id.trim();
+      console.log(`Loading board with ID: ${normalizedId}`);
 
       set((s) => { s.loading = true; s.error = null; });
 
       try {
         // Always fetch the board from the API to ensure we have the latest data
-        const board = await boardService.getBoardById(id);
+        const board = await boardService.getBoardById(normalizedId);
 
-        // Ensure the board has a valid ID
+        // Ensure the board has a valid ID and matches the requested ID
         if (!board || !board.id) {
           console.error("Board loaded without a valid ID:", board);
+          return;
+        }
+
+        // Verify the loaded board ID matches the requested ID
+        if (board.id !== normalizedId) {
+          console.error(`Board ID mismatch: requested ${normalizedId}, got ${board.id}`);
           return;
         }
 
@@ -144,8 +154,8 @@ export const useBoardStore = create<BoardState>()(
 
         // Use the setLists method to safely update the lists for this board
         if (board.lists && Array.isArray(board.lists)) {
-          console.log(`Setting ${board.lists.length} lists for board ${id} using setLists`);
-          listsStore.setLists(board.lists, id);
+          console.log(`Setting ${board.lists.length} lists for board ${normalizedId} using setLists`);
+          listsStore.setLists(board.lists, normalizedId);
 
           // Fetch cards for each list
           console.log(`Fetching cards for ${board.lists.length} lists`);
@@ -190,9 +200,9 @@ export const useBoardStore = create<BoardState>()(
           // Execute the tasks in batches of 3 (or adjust as needed)
           await batchPromises(cardFetchingTasks, 3);
         } else {
-          console.log(`No lists found for board ${id}`);
+          console.log(`No lists found for board ${normalizedId}`);
           // Still clear any existing lists for this board
-          listsStore.setLists([], id);
+          listsStore.setLists([], normalizedId);
         }
 
         set((s) => {
@@ -204,13 +214,14 @@ export const useBoardStore = create<BoardState>()(
         });
 
         // Fetch board members
-        await useMembersStore.getState().fetchBoardMembers(id);
+        await useMembersStore.getState().fetchBoardMembers(normalizedId);
 
-        // Connect to WebSocket for real-time updates
-        wsClient.connect(id);
+        // Connect to WebSocket for real-time updates with the normalized ID
+        console.log(`Connecting to WebSocket for board ${normalizedId}`);
+        wsClient.connect(normalizedId);
 
         // Setup WebSocket subscriptions
-        setupWebSocketSubscriptions(id);
+        setupWebSocketSubscriptions(normalizedId);
 
       } catch (error) {
         console.error("Failed to load board:", error);

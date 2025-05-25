@@ -102,29 +102,59 @@ export interface MembersState extends BaseState {
   inviteMember: (email: string, role?: 'owner' | 'member') => Promise<void>;
   removeMember: (userId: string, boardId?: string) => Promise<void>;
   leaveBoard: () => Promise<void>;
-  updateUserRoleInBoard: (boardId: string, members: any[]) => void;
+  updateUserRoleInBoard: (boardId: string, members: BoardMember[]) => void;
 
   // Selectors
   getMembersByBoardId: (boardId: string) => BoardMember[];
   isUserBoardOwner: (boardId: string, userId: string) => boolean;
 }
 
+// WebSocket event data types
+export interface WSCardData {
+  id: string;
+  listId: string;
+  title: string;
+  description?: string;
+  position: number;
+}
+
+export interface WSListData {
+  id: string;
+  boardId: string;
+  title: string;
+  position: number;
+}
+
+export interface WSBoardData {
+  id: string;
+  name: string;
+  ownerId?: string;
+}
+
+export interface WSMemberData {
+  userId: string;
+  boardId: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'member';
+}
+
 // WebSocket state
 export interface WebSocketState {
   setupBoardSubscriptions: (boardId: string) => () => void;
-  handleCardCreated: (data: any) => void;
-  handleCardUpdated: (data: any) => void;
-  handleCardMoved: (data: any) => void;
-  handleCardDeleted: (data: any) => void;
-  handleListCreated: (data: any) => void;
-  handleListUpdated: (data: any) => void;
-  handleListMoved: (data: any) => void;
-  handleListDeleted: (data: any) => void;
-  handleBoardCreated: (data: any) => void;
-  handleBoardUpdated: (data: any) => void;
-  handleBoardDeleted: (data: any) => void;
-  handleMemberAdded: (data: any) => void;
-  handleMemberRemoved: (data: any) => void;
+  handleCardCreated: (data: WSCardData) => void;
+  handleCardUpdated: (data: WSCardData) => void;
+  handleCardMoved: (data: WSCardData) => void;
+  handleCardDeleted: (data: { id: string; listId: string }) => void;
+  handleListCreated: (data: WSListData) => void;
+  handleListUpdated: (data: WSListData) => void;
+  handleListMoved: (data: WSListData) => void;
+  handleListDeleted: (data: { id: string; boardId: string }) => void;
+  handleBoardCreated: (data: WSBoardData) => void;
+  handleBoardUpdated: (data: WSBoardData) => void;
+  handleBoardDeleted: (data: { id: string }) => void;
+  handleMemberAdded: (data: WSMemberData) => void;
+  handleMemberRemoved: (data: { userId: string; boardId: string }) => void;
 }
 
 // Combined store type

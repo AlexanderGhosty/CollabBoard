@@ -2,9 +2,22 @@ import { DragOverlay as DndKitDragOverlay } from '@dnd-kit/core';
 import { Card, List } from '@/services/boardService';
 import { CSSProperties, useEffect, useState } from 'react';
 
+// Type for drag data
+interface CardDragData {
+  type: 'card';
+  card: Card;
+}
+
+interface ListDragData {
+  type: 'list';
+  list: List;
+}
+
+type DragData = CardDragData | ListDragData;
+
 interface DragOverlayProps {
   activeId: string | null;
-  activeData: any;
+  activeData: DragData | null;
 }
 
 export default function DragOverlay({ activeId, activeData }: DragOverlayProps) {

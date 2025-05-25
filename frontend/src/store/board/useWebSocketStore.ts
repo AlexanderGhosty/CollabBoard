@@ -8,7 +8,7 @@ import { useBoardStore } from './useBoardStore';
 import { useListsStore } from './useListsStore';
 import { useCardsStore } from './useCardsStore';
 import { useMembersStore } from './useMembersStore';
-import * as boardService from '@/services/boardService';
+import { listService } from '@/services/listService';
 import {
   normalizeId,
   extractBoardId,
@@ -377,7 +377,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         if (boardId) {
           console.log(`Refreshing lists for board ${boardId} after list deletion`);
           // Force a refresh of the lists for this board
-          boardService.fetchBoardLists(boardId).then(lists => {
+          listService.fetchBoardLists(boardId).then(lists => {
             if (Array.isArray(lists)) {
               useListsStore.getState().setLists(lists, boardId);
             } else {

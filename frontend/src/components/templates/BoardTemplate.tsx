@@ -10,7 +10,7 @@ import {
   rectIntersection
 } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { useBoardStore, useListsStore, useCardsStore } from '@/store/board';
 import { List, Card } from '@/services/boardService';
 import { subscribeWS } from '@/services/websocket';
@@ -42,7 +42,7 @@ export default function BoardTemplate() {
   const cardsState = useCardsStore(state => state.cards);
   const listCardsState = useCardsStore(state => state.listCards);
 
-  // Function to load data from stores
+  // Memoized function to load data from stores - only depends on activeBoard
   const loadBoardData = useCallback(() => {
     if (!activeBoard) {
       console.log("No active board, skipping loadBoardData");
@@ -51,8 +51,9 @@ export default function BoardTemplate() {
 
     console.log(`Loading data for board ${activeBoard}`);
 
-    // Get board data
-    const boardData = boards[activeBoard];
+    // Get board data from current state
+    const currentBoards = useBoardStore.getState().boards;
+    const boardData = currentBoards[activeBoard];
     if (!boardData) {
       console.log(`Board data not found for ID ${activeBoard}`);
       return;
@@ -99,20 +100,28 @@ export default function BoardTemplate() {
     setListCards(cardsData);
     setIsLoading(false);
     console.log("Board data loaded successfully");
-  }, [activeBoard, boards]);
+  }, [activeBoard]); // Only depend on activeBoard to reduce re-renders
 
   // Load data from stores initially
   useEffect(() => {
     loadBoardData();
   }, [loadBoardData]);
 
-  // Reload data when lists or cards store changes
+  // Optimized effect to reload data only when necessary
+  // Use a ref to track the last update time to prevent excessive re-renders
+  const lastUpdateRef = React.useRef(0);
+
   useEffect(() => {
-    if (activeBoard) {
-      console.log('Lists or cards store changed, reloading board data');
-      loadBoardData();
-    }
-  }, [listsState, boardListsState, cardsState, listCardsState, activeBoard, loadBoardData]);
+    if (!activeBoard) return;
+
+    const now = Date.now();
+    // Debounce updates to prevent excessive re-renders (max once per 100ms)
+    if (now - lastUpdateRef.current < 100) return;
+
+    console.log('Store state changed, reloading board data');
+    lastUpdateRef.current = now;
+    loadBoardData();
+  }, [listsState, cardsState, activeBoard, loadBoardData]);
 
   // Subscribe to WebSocket events to update our local state
   useEffect(() => {
@@ -200,19 +209,21 @@ export default function BoardTemplate() {
     })
   );
 
-  // Custom collision detection for better performance with many items
-  const collisionDetection = useCallback((args: any) => {
-    // Use rect intersection for better performance with many items
-    const rectIntersectionCollisions = rectIntersection(args);
+  // Memoized collision detection for better performance with many items
+  const collisionDetection = useMemo(() => {
+    return (args: any) => {
+      // Use rect intersection for better performance with many items
+      const rectIntersectionCollisions = rectIntersection(args);
 
-    // If we have rect intersections, use them
-    if (rectIntersectionCollisions.length > 0) {
-      return rectIntersectionCollisions;
-    }
+      // If we have rect intersections, use them
+      if (rectIntersectionCollisions.length > 0) {
+        return rectIntersectionCollisions;
+      }
 
-    // Fallback to closest center for edge cases
-    return closestCenter(args);
-  }, []);
+      // Fallback to closest center for edge cases
+      return closestCenter(args);
+    };
+  }, []); // No dependencies needed as this is a pure function
 
   // Handle drag start event
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -356,20 +367,29 @@ export default function BoardTemplate() {
     }
   }, [lists, listCards, moveCard, moveList]);
 
+  // Memoized calculations to prevent unnecessary recalculations
+  const { listsWithValidIds, listIds, listsWithCards } = useMemo(() => {
+    // Filter lists to ensure all have valid IDs
+    const validLists = lists.filter(list => list && list.id);
+
+    // Extract IDs for SortableContext
+    const ids = validLists.map(list => list.id);
+
+    // Create a complete list object with cards for each list
+    const withCards = validLists.map(list => ({
+      ...list,
+      cards: listCards[list.id] || []
+    }));
+
+    return {
+      listsWithValidIds: validLists,
+      listIds: ids,
+      listsWithCards: withCards
+    };
+  }, [lists, listCards]);
+
   // Add the conditional return after all hooks are defined
   if (isLoading || !board) return null;
-
-  // Filter lists to ensure all have valid IDs
-  const listsWithValidIds = lists.filter(list => list && list.id);
-
-  // Extract IDs for SortableContext
-  const listIds = listsWithValidIds.map(list => list.id);
-
-  // Create a complete list object with cards for each list
-  const listsWithCards = listsWithValidIds.map(list => ({
-    ...list,
-    cards: listCards[list.id] || []
-  }));
 
   return (
     <DndContext

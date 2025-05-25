@@ -2,6 +2,41 @@
  * Utility functions for normalizing IDs between frontend and backend
  */
 
+// Type definitions for API objects with various property name formats
+interface ApiObjectWithId {
+  ID?: string | number;
+  id?: string | number;
+}
+
+interface ApiObjectWithBoardId extends ApiObjectWithId {
+  BoardID?: string | number;
+  boardId?: string | number;
+  board_id?: string | number;
+}
+
+interface ApiObjectWithListId extends ApiObjectWithId {
+  ListID?: string | number;
+  listId?: string | number;
+  list_id?: string | number;
+}
+
+interface ApiObjectWithCardId extends ApiObjectWithId {
+  CardID?: string | number;
+  cardId?: string | number;
+  card_id?: string | number;
+}
+
+interface ApiObjectWithUserId {
+  UserID?: string | number;
+  userId?: string | number;
+  user_id?: string | number;
+}
+
+interface ApiObjectWithDescription {
+  Description?: string | { String: string; Valid: boolean };
+  description?: string;
+}
+
 /**
  * Normalizes an ID to a string format
  * @param id - The ID to normalize (can be string, number, or undefined)
@@ -17,7 +52,7 @@ export function normalizeId(id: string | number | undefined): string | undefined
  * @param obj - The object containing the board ID
  * @returns The normalized board ID as a string or undefined
  */
-export function extractBoardId(obj: any): string | undefined {
+export function extractBoardId(obj: ApiObjectWithBoardId): string | undefined {
   // Handle both string and number formats
   const boardId = obj.ID || obj.BoardID || obj.boardId || obj.board_id || obj.id;
 
@@ -30,7 +65,7 @@ export function extractBoardId(obj: any): string | undefined {
  * @param obj - The object containing the list ID
  * @returns The normalized list ID as a string or undefined
  */
-export function extractListId(obj: any): string | undefined {
+export function extractListId(obj: ApiObjectWithListId): string | undefined {
   // Handle both string and number formats
   const listId = obj.ID || obj.id || obj.ListID || obj.listId;
 
@@ -43,7 +78,7 @@ export function extractListId(obj: any): string | undefined {
  * @param obj - The object containing the card ID
  * @returns The normalized card ID as a string or undefined
  */
-export function extractCardId(obj: any): string | undefined {
+export function extractCardId(obj: ApiObjectWithCardId): string | undefined {
   // Handle both string and number formats
   const cardId = obj.ID || obj.id || obj.CardID || obj.cardId;
 
@@ -56,7 +91,7 @@ export function extractCardId(obj: any): string | undefined {
  * @param obj - The object containing the user ID
  * @returns The normalized user ID as a string or undefined
  */
-export function extractUserId(obj: any): string | undefined {
+export function extractUserId(obj: ApiObjectWithUserId): string | undefined {
   // Handle both string and number formats
   const userId = obj.UserID || obj.userId || obj.user_id;
 
@@ -69,7 +104,7 @@ export function extractUserId(obj: any): string | undefined {
  * @param obj - The object containing the description
  * @returns The normalized description as a string
  */
-export function extractDescription(obj: any): string {
+export function extractDescription(obj: ApiObjectWithDescription): string {
   // Handle the description field which could be a string or a pgtype.Text structure
   if (typeof obj.Description === 'string') {
     return obj.Description;
