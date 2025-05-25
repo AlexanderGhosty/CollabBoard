@@ -6,6 +6,13 @@ type Config struct {
 	DBUrl     string
 	JWTSecret string
 	Port      string
+	Log       LogConfig
+}
+
+type LogConfig struct {
+	Level  string // DEBUG, INFO, WARN, ERROR, FATAL
+	Format string // json, text
+	Output string // stdout, file
 }
 
 func Load() *Config {
@@ -17,7 +24,19 @@ func Load() *Config {
 	secret := getenv("JWT_SECRET", "secret")
 
 	dbURL := "postgres://" + user + ":" + pwd + "@" + host + "/" + dbName + "?sslmode=disable"
-	return &Config{DBUrl: dbURL, JWTSecret: secret, Port: port}
+
+	logConfig := LogConfig{
+		Level:  getenv("LOG_LEVEL", "INFO"),
+		Format: getenv("LOG_FORMAT", "json"),
+		Output: getenv("LOG_OUTPUT", "stdout"),
+	}
+
+	return &Config{
+		DBUrl:     dbURL,
+		JWTSecret: secret,
+		Port:      port,
+		Log:       logConfig,
+	}
 }
 
 func getenv(k, fallback string) string {

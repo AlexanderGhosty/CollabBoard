@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	db "backend/internal/db/sqlc"
+	"backend/internal/logger"
 	"backend/internal/websocket"
 )
 
@@ -23,12 +24,36 @@ func NewService(repo *Repository, q *db.Queries, hub *websocket.Hub) *Service {
 func (s *Service) Create(ctx context.Context, userID, boardID int32, title string, position int32) (db.List, error) {
 	// check membership
 	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
+		logger.WithContext(ctx).Warn("List creation failed: user not a member",
+			"user_id", userID,
+			"board_id", boardID,
+			"error", err,
+		)
 		return db.List{}, errors.New("not a member")
 	}
+
+	logger.WithContext(ctx).Info("Creating list",
+		"user_id", userID,
+		"board_id", boardID,
+		"title", title,
+		"position", position,
+	)
+
 	_ = s.repo.ShiftRight(ctx, boardID, position)
 	lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: position})
 	if err == nil {
+		logger.WithContext(ctx).Info("List created successfully",
+			"list_id", lst.ID,
+			"board_id", boardID,
+			"title", title,
+		)
 		s.hub.Broadcast(boardID, websocket.EventMessage{Event: "list_created", Data: lst})
+	} else {
+		logger.WithContext(ctx).Error("Failed to create list",
+			"user_id", userID,
+			"board_id", boardID,
+			"error", err,
+		)
 	}
 	return lst, err
 }
@@ -86,12 +111,15 @@ func (s *Service) Delete(ctx context.Context, userID, listID int32) error {
 // NormalizeListPositions ensures all lists have sequential positions starting from 1
 // This is exported so it can be called by background jobs and API endpoints
 func (s *Service) NormalizeListPositions(ctx context.Context, boardID int32) error {
-	log.Printf("Normalizing list positions for board %d", boardID)
+	logger.WithContext(ctx).Debug("Normalizing list positions for board", "board_id", boardID)
 
 	// Get all lists for this board
 	lists, err := s.repo.ListByBoard(ctx, boardID)
 	if err != nil {
-		log.Printf("Error getting lists for board %d: %v", boardID, err)
+		logger.WithContext(ctx).Error("Error getting lists for board",
+			"board_id", boardID,
+			"error", err,
+		)
 		return err
 	}
 
@@ -113,45 +141,70 @@ func (s *Service) NormalizeListPositions(ctx context.Context, boardID int32) err
 				Position: newPosition,
 			})
 			if err != nil {
-				log.Printf("Error updating list %d position: %v", list.ID, err)
+				logger.WithContext(ctx).Error("Error updating list position during normalization",
+					"list_id", list.ID,
+					"new_position", newPosition,
+					"error", err,
+				)
 				return err
 			}
 		}
 	}
 
-	log.Printf("List positions normalized for board %d", boardID)
+	logger.WithContext(ctx).Debug("List positions normalized for board", "board_id", boardID)
 	return nil
 }
 
 func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.List, error) {
 	// Log the input parameters
-	log.Printf("Move service called: userID=%d, listID=%d, newPos=%d", userID, listID, newPos)
+	logger.WithContext(ctx).Info("List move operation started",
+		"user_id", userID,
+		"list_id", listID,
+		"new_position", newPos,
+	)
 
 	// Get the list to move
 	lst, err := s.q.GetListByID(ctx, listID)
 	if err != nil {
-		log.Printf("Error getting list %d: %v", listID, err)
+		logger.WithContext(ctx).Error("Error getting list to move",
+			"list_id", listID,
+			"error", err,
+		)
 		return db.List{}, err
 	}
 
-	log.Printf("Found list to move: %+v", lst)
+	logger.WithContext(ctx).Debug("Found list to move",
+		"list_id", lst.ID,
+		"board_id", lst.BoardID,
+		"current_position", lst.Position,
+	)
 
 	// Check if user is a member of the board
 	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
-		log.Printf("User %d is not a member of board %d", userID, lst.BoardID)
+		logger.WithContext(ctx).Warn("List move failed: user not a member",
+			"user_id", userID,
+			"board_id", lst.BoardID,
+			"error", err,
+		)
 		return db.List{}, errors.New("not a member")
 	}
 
 	// Validate the new position
 	if newPos <= 0 {
-		log.Printf("Invalid position %d, setting to 1", newPos)
+		logger.WithContext(ctx).Warn("Invalid position provided, setting to 1",
+			"requested_position", newPos,
+			"list_id", listID,
+		)
 		newPos = 1
 	}
 
 	// Get all lists for this board to check position constraints
 	lists, err := s.repo.ListByBoard(ctx, lst.BoardID)
 	if err != nil {
-		log.Printf("Error getting lists for board %d: %v", lst.BoardID, err)
+		logger.WithContext(ctx).Error("Error getting lists for board",
+			"board_id", lst.BoardID,
+			"error", err,
+		)
 		return db.List{}, err
 	}
 
@@ -164,7 +217,11 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	hasConflicts := false
 	for pos, count := range positionCounts {
 		if count > 1 {
-			log.Printf("Position conflict detected: %d lists have position %d", count, pos)
+			logger.WithContext(ctx).Warn("Position conflict detected",
+				"position", pos,
+				"list_count", count,
+				"board_id", lst.BoardID,
+			)
 			hasConflicts = true
 			break
 		}
@@ -172,28 +229,42 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 
 	// If there are position conflicts, normalize all positions first
 	if hasConflicts {
-		log.Printf("Position conflicts detected, normalizing positions")
+		logger.WithContext(ctx).Info("Position conflicts detected, normalizing positions",
+			"board_id", lst.BoardID,
+		)
 		if err := s.NormalizeListPositions(ctx, lst.BoardID); err != nil {
-			log.Printf("Error normalizing list positions: %v", err)
+			logger.WithContext(ctx).Error("Error normalizing list positions",
+				"board_id", lst.BoardID,
+				"error", err,
+			)
 			return db.List{}, err
 		}
 
 		// Refresh the list after normalization
 		lst, err = s.q.GetListByID(ctx, listID)
 		if err != nil {
-			log.Printf("Error getting list %d after normalization: %v", listID, err)
+			logger.WithContext(ctx).Error("Error getting list after normalization",
+				"list_id", listID,
+				"error", err,
+			)
 			return db.List{}, err
 		}
 
 		// Refresh the lists after normalization
 		lists, err = s.repo.ListByBoard(ctx, lst.BoardID)
 		if err != nil {
-			log.Printf("Error getting lists after normalization: %v", err)
+			logger.WithContext(ctx).Error("Error getting lists after normalization",
+				"board_id", lst.BoardID,
+				"error", err,
+			)
 			return db.List{}, err
 		}
 	}
 
-	log.Printf("Current lists on board %d: %+v", lst.BoardID, lists)
+	logger.WithContext(ctx).Debug("Current lists on board",
+		"board_id", lst.BoardID,
+		"list_count", len(lists),
+	)
 
 	// Calculate the maximum position
 	maxPosition := int32(0)
@@ -205,28 +276,47 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 
 	// Ensure newPos is within valid range
 	if newPos > maxPosition+1 {
-		log.Printf("Adjusting position %d to max+1: %d", newPos, maxPosition+1)
+		logger.WithContext(ctx).Info("Adjusting position to maximum allowed",
+			"requested_position", newPos,
+			"adjusted_position", maxPosition+1,
+			"list_id", listID,
+		)
 		newPos = maxPosition + 1
 	}
 
 	// If we're not changing the position, just return the list
 	if lst.Position == newPos {
-		log.Printf("List %d position unchanged (%d)", listID, newPos)
+		logger.WithContext(ctx).Debug("List position unchanged",
+			"list_id", listID,
+			"position", newPos,
+		)
 		return lst, nil
 	}
 
 	// Shift positions to make room
-	log.Printf("Shifting lists: current position=%d, new position=%d", lst.Position, newPos)
+	logger.WithContext(ctx).Debug("Shifting lists to make room",
+		"list_id", listID,
+		"current_position", lst.Position,
+		"new_position", newPos,
+	)
 
 	// First remove the list from its current position
 	if err := s.repo.ShiftLeft(ctx, lst.BoardID, lst.Position); err != nil {
-		log.Printf("Error shifting lists left: %v", err)
+		logger.WithContext(ctx).Error("Error shifting lists left",
+			"board_id", lst.BoardID,
+			"position", lst.Position,
+			"error", err,
+		)
 		return db.List{}, err
 	}
 
 	// Then make room at the new position
 	if err := s.repo.ShiftRight(ctx, lst.BoardID, newPos); err != nil {
-		log.Printf("Error shifting lists right: %v", err)
+		logger.WithContext(ctx).Error("Error shifting lists right",
+			"board_id", lst.BoardID,
+			"position", newPos,
+			"error", err,
+		)
 		return db.List{}, err
 	}
 
@@ -238,19 +328,28 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	})
 
 	if err != nil {
-		log.Printf("Error updating list %d: %v", listID, err)
+		logger.WithContext(ctx).Error("Error updating list position",
+			"list_id", listID,
+			"error", err,
+		)
 		return db.List{}, err
 	}
 
-	log.Printf("List %d moved successfully to position %d", listID, newPos)
-	log.Printf("List %d moved successfully: %+v", listID, updated)
+	logger.WithContext(ctx).Info("List moved successfully",
+		"list_id", listID,
+		"new_position", newPos,
+		"board_id", lst.BoardID,
+	)
 
 	// Broadcast the change to all connected clients
 	s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "list_moved", Data: updated})
 
 	// Normalize list positions after every move operation to ensure consistency
 	if err := s.NormalizeListPositions(ctx, lst.BoardID); err != nil {
-		log.Printf("Warning: Failed to normalize list positions after move: %v", err)
+		logger.WithContext(ctx).Warn("Failed to normalize list positions after move",
+			"board_id", lst.BoardID,
+			"error", err,
+		)
 		// We don't return the error here as the move operation itself was successful
 	}
 

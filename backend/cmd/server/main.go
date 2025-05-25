@@ -8,6 +8,7 @@ import (
 	db "backend/internal/db/sqlc"
 	"backend/internal/jobs"
 	"backend/internal/lists"
+	"backend/internal/logger"
 	"backend/internal/middleware"
 	"backend/internal/websocket"
 	"context"
@@ -21,20 +22,29 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Initialize structured logging
+	if err := logger.Initialize(cfg.Log); err != nil {
+		log.Fatalf("failed to initialize logger: %v", err)
+	}
+	logger.Info("Starting CollabBoard server", "version", "1.0.0", "log_level", cfg.Log.Level)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	pool, err := pgxpool.New(ctx, cfg.DBUrl)
 	if err != nil {
-		log.Fatalf("cannot connect to DB: %v", err)
+		logger.Fatal("cannot connect to DB", "error", err)
 	}
 	defer pool.Close()
+	logger.Info("Database connection established")
 
 	queries := db.New(pool)
 
 	r := gin.Default()
 
 	// Global middleware
+	r.Use(logger.RequestLogging())
+	r.Use(logger.Recovery())
 	r.Use(middleware.CORS())
 
 	// Health‑check
@@ -85,8 +95,10 @@ func main() {
 	positionNormalizer := jobs.NewPositionNormalizer(listsSvc, queries, 30*time.Minute)
 	positionNormalizer.Start()
 	defer positionNormalizer.Stop()
+	logger.Info("Position normalizer background job started", "interval", "30m")
 
+	logger.Info("Starting HTTP server", "port", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatalf("server failed: %v", err)
+		logger.Fatal("server failed", "error", err)
 	}
 }

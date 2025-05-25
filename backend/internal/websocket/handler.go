@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"backend/internal/logger"
 	"net/http"
 	"strconv"
 
@@ -20,6 +21,11 @@ var upgrader = websocket.Upgrader{
 func ServeBoardWS(c *gin.Context, hub *Hub, q *db.Queries, jwtSecret string) {
 	boardID64, err := strconv.ParseInt(c.Param("id"), 10, 32)
 	if err != nil {
+		logger.Warn("WebSocket connection failed: invalid board ID",
+			"board_id_param", c.Param("id"),
+			"remote_addr", c.ClientIP(),
+			"error", err,
+		)
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -34,6 +40,10 @@ func ServeBoardWS(c *gin.Context, hub *Hub, q *db.Queries, jwtSecret string) {
 		}
 	}
 	if tokenStr == "" {
+		logger.Warn("WebSocket connection failed: missing token",
+			"board_id", boardID,
+			"remote_addr", c.ClientIP(),
+		)
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -44,21 +54,39 @@ func ServeBoardWS(c *gin.Context, hub *Hub, q *db.Queries, jwtSecret string) {
 		return []byte(jwtSecret), nil
 	})
 	if err != nil || !token.Valid {
+		logger.Warn("WebSocket connection failed: invalid token",
+			"board_id", boardID,
+			"remote_addr", c.ClientIP(),
+			"error", err,
+		)
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
+		logger.Warn("WebSocket connection failed: invalid claims",
+			"board_id", boardID,
+			"remote_addr", c.ClientIP(),
+		)
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	sub, ok := claims["sub"].(string)
 	if !ok {
+		logger.Warn("WebSocket connection failed: invalid subject",
+			"board_id", boardID,
+			"remote_addr", c.ClientIP(),
+		)
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	uid64, err := strconv.ParseInt(sub, 10, 32)
 	if err != nil {
+		logger.Warn("WebSocket connection failed: invalid subject format",
+			"board_id", boardID,
+			"remote_addr", c.ClientIP(),
+			"error", err,
+		)
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -66,15 +94,34 @@ func ServeBoardWS(c *gin.Context, hub *Hub, q *db.Queries, jwtSecret string) {
 
 	// ensure user is member of board
 	if _, err := q.GetBoardMember(c.Request.Context(), db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
+		logger.Warn("WebSocket connection failed: user not member of board",
+			"board_id", boardID,
+			"user_id", userID,
+			"remote_addr", c.ClientIP(),
+			"error", err,
+		)
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
 
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		logger.Error("WebSocket upgrade failed",
+			"board_id", boardID,
+			"user_id", userID,
+			"remote_addr", c.ClientIP(),
+			"error", err,
+		)
 		return
 	}
-	client := &Client{hub: hub, conn: ws, send: make(chan []byte, 256), boardID: boardID}
+
+	logger.Info("WebSocket connection established",
+		"board_id", boardID,
+		"user_id", userID,
+		"remote_addr", c.ClientIP(),
+	)
+
+	client := &Client{hub: hub, conn: ws, send: make(chan []byte, 256), boardID: boardID, userID: userID}
 	hub.register <- client
 
 	go client.writePump()

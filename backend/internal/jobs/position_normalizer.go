@@ -2,12 +2,12 @@ package jobs
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
 	db "backend/internal/db/sqlc"
 	"backend/internal/lists"
+	"backend/internal/logger"
 )
 
 // PositionNormalizer is a background job that periodically checks for and fixes position conflicts
@@ -41,14 +41,14 @@ func (p *PositionNormalizer) Start() {
 	defer p.runningLock.Unlock()
 
 	if p.isRunning {
-		log.Println("Position normalizer is already running")
+		logger.Warn("Position normalizer is already running")
 		return
 	}
 
 	p.isRunning = true
 	p.wg.Add(1)
 	go p.run()
-	log.Printf("Position normalizer started with interval: %v", p.interval)
+	logger.Info("Position normalizer started", "interval", p.interval)
 }
 
 // Stop halts the background job
@@ -57,14 +57,14 @@ func (p *PositionNormalizer) Stop() {
 	defer p.runningLock.Unlock()
 
 	if !p.isRunning {
-		log.Println("Position normalizer is not running")
+		logger.Warn("Position normalizer is not running")
 		return
 	}
 
 	close(p.stopChan)
 	p.wg.Wait()
 	p.isRunning = false
-	log.Println("Position normalizer stopped")
+	logger.Info("Position normalizer stopped")
 }
 
 // run is the main loop of the background job
@@ -82,7 +82,7 @@ func (p *PositionNormalizer) run() {
 		case <-ticker.C:
 			p.normalizeAllBoards()
 		case <-p.stopChan:
-			log.Println("Position normalizer received stop signal")
+			logger.Info("Position normalizer received stop signal")
 			return
 		}
 	}
@@ -90,7 +90,7 @@ func (p *PositionNormalizer) run() {
 
 // normalizeAllBoards checks and fixes position conflicts for all boards
 func (p *PositionNormalizer) normalizeAllBoards() {
-	log.Println("Starting position normalization for all boards")
+	logger.Info("Starting position normalization for all boards")
 
 	// Get all boards
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -98,11 +98,11 @@ func (p *PositionNormalizer) normalizeAllBoards() {
 
 	boards, err := p.queries.ListBoards(ctx)
 	if err != nil {
-		log.Printf("Error fetching boards for position normalization: %v", err)
+		logger.Error("Error fetching boards for position normalization", "error", err)
 		return
 	}
 
-	log.Printf("Found %d boards to check for position conflicts", len(boards))
+	logger.Info("Found boards to check for position conflicts", "board_count", len(boards))
 
 	// Process each board
 	for _, board := range boards {
@@ -111,11 +111,16 @@ func (p *PositionNormalizer) normalizeAllBoards() {
 
 		// Use the public NormalizeListPositions method to normalize this board
 		if err := p.listsSvc.NormalizeListPositions(boardCtx, board.ID); err != nil {
-			log.Printf("Error normalizing positions for board %d: %v", board.ID, err)
+			logger.Error("Error normalizing positions for board",
+				"board_id", board.ID,
+				"error", err,
+			)
+		} else {
+			logger.Debug("Successfully normalized positions for board", "board_id", board.ID)
 		}
 
 		boardCancel()
 	}
 
-	log.Println("Completed position normalization for all boards")
+	logger.Info("Completed position normalization for all boards")
 }
