@@ -1,432 +1,349 @@
 # CollabBoard
 
-<div align="center">
-  <h3>🚀 Instant collaboration in a single space</h3>
-  <p>A real-time collaborative Kanban board application for teams to organize tasks and projects efficiently</p>
-  
-  ![TypeScript](https://img.shields.io/badge/TypeScript-74.8%25-blue)
-  ![Go](https://img.shields.io/badge/Go-21.4%25-00ADD8)
-  ![CSS](https://img.shields.io/badge/CSS-2.3%25-1572B6)
-  ![License](https://img.shields.io/badge/License-MIT-green)
-</div>
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.23-00ADD8?style=flat&logo=go&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat&logo=postgresql&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat&logo=typescript&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)
 
----
+Современная система для совместной работы с Kanban-досками в реальном времени. Полнофункциональное веб-приложение с интуитивным интерфейсом, поддержкой множественных пользователей и мгновенной синхронизацией изменений.
 
-## 🌟 Overview
+## 🌟 Обзор проекта
 
-CollabBoard is a modern, real-time collaborative Kanban board application that enables teams to organize tasks and projects in a shared digital workspace. Built with a focus on instant collaboration, intuitive design, and seamless real-time updates, CollabBoard provides everything teams need to stay organized and productive.
+CollabBoard — это полнофункциональная платформа для управления проектами в стиле Kanban, созданная для команд, которым необходима эффективная совместная работа в реальном времени. Приложение объединяет современные веб-технологии для создания быстрого, надежного и интуитивно понятного инструмента управления задачами.
 
-## ✨ Key Features
+### Ключевые преимущества
+- **🚀 Real-time синхронизация** — все изменения мгновенно отображаются у всех участников
+- **🎯 Интуитивный интерфейс** — drag-and-drop управление карточками и списками
+- **👥 Командная работа** — система ролей и приглашений участников
+- **🌙 Современный дизайн** — поддержка темной/светлой темы и адаптивный интерфейс
+- **🔒 Безопасность** — JWT аутентификация и контроль доступа
 
-### 🔄 Real-time Collaboration
-- **Instant updates** - See changes as they happen across all connected clients
-- **WebSocket integration** - Live synchronization without page refreshes
-- **Multi-user support** - Multiple team members can work simultaneously
+## 🏗️ Архитектура системы
 
-### 🎯 Intuitive Interface
-- **Drag-and-drop functionality** - Smooth card and list management with animations
-- **Responsive design** - Optimized for desktop and mobile devices
-- **Clean UI/UX** - Built following Atomic Design principles
-
-### 🔐 Secure & Scalable
-- **JWT authentication** - Secure user login and registration
-- **Role-based permissions** - Board owners and members with different access levels
-- **PostgreSQL backend** - Reliable and scalable data storage
-
-### 🎨 Advanced Features
-- **Position normalization** - Background jobs ensure consistent card ordering
-- **Board sharing** - Invite team members via email
-- **Member management** - Add/remove board participants
-- **Real-time notifications** - Stay updated on board changes
-
-## 🛠️ Technology Stack
-
-### Frontend (React/TypeScript)
-- **React 19** - Latest React with concurrent features
-- **TypeScript** - Type-safe development
-- **Zustand** - Lightweight state management
-- **React Router v7** - Modern routing solution
-- **Tailwind CSS** - Utility-first CSS framework
-- **DND Kit** - Accessible drag-and-drop library
-- **Zod** - Runtime type validation
-- **Vite** - Fast development and build tool
-- **Axios** - HTTP client for API calls
-
-### Backend (Go)
-- **Go 1.23** - Modern Go with latest features
-- **Gin** - High-performance HTTP web framework
-- **PostgreSQL 16** - Advanced relational database
-- **WebSockets** - Real-time bidirectional communication
-- **JWT** - Secure authentication tokens
-- **sqlc** - Generate type-safe Go from SQL
-- **golang-migrate** - Database migration tool
-
-### Infrastructure
-- **Docker** - Containerized deployment
-- **Docker Compose** - Multi-container orchestration
-- **Distroless images** - Secure, minimal production containers
-
-## 📁 Project Architecture
-
-The project follows clean architecture principles and Atomic Design methodology:
+### Высокоуровневая схема
 
 ```
-CollabBoard/
-├── frontend/                    # React TypeScript application
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── atoms/          # Basic UI components (Button, Input, etc.)
-│   │   │   ├── molecules/      # Component groups (AuthForm, CardItem, etc.)
-│   │   │   ├── organisms/      # Complex components (BoardHeader, CardList, etc.)
-│   │   │   ├── templates/      # Page layouts (BoardTemplate, etc.)
-│   │   │   └── pages/          # Complete pages (BoardPage, LoginPage, etc.)
-│   │   ├── services/           # API and WebSocket services
-│   │   ├── store/              # Zustand state management
-│   │   ├── utils/              # Helper functions and utilities
-│   │   └── types/              # TypeScript type definitions
-│   ├── public/                 # Static assets
-│   └── Dockerfile              # Frontend container configuration
-│
-├── backend/                     # Go REST API server
-│   ├── cmd/
-│   │   └── server/             # Application entry point
-│   ├── internal/
-│   │   ├── auth/               # Authentication & authorization
-│   │   ├── boards/             # Board management logic
-│   │   ├── cards/              # Card CRUD operations
-│   │   ├── lists/              # List management
-│   │   ├── config/             # Application configuration
-│   │   ├── db/                 # Database layer
-│   │   │   ├── migrations/     # SQL schema migrations
-│   │   │   └── sqlc/           # Generated Go code from SQL
-│   │   ├── jobs/               # Background job processing
-│   │   ├── middleware/         # HTTP middleware functions
-│   │   └── websocket/          # Real-time WebSocket handlers
-│   ├── bin/                    # Compiled binaries
-│   └── Dockerfile              # Backend container configuration
-│
-├── Makefile                    # Build and development commands
-├── docker-compose.yml          # Development environment
-├── docker-compose.prod.yml     # Production configuration
-└── README.md                   # This file
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│     Frontend        │    │      Backend        │    │     Database        │
+│   (React 19 + TS)   │◄──►│   (Go 1.23 + Gin)  │◄──►│  (PostgreSQL 16)    │
+│                     │    │                     │    │                     │
+│ • Zustand Store     │    │ • WebSocket Hub     │    │ • Users & Boards    │
+│ • React Router      │    │ • JWT Middleware    │    │ • Lists & Cards     │
+│ • Tailwind CSS      │    │ • sqlc Queries      │    │ • Real-time Sync    │
+│ • DND Kit           │    │ • Structured Logs   │    │ • ACID Transactions │
+│ • WebSocket Client  │    │ • Clean Architecture│    │ • Migrations        │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+            │                         │                         │
+            └─────────────────────────┼─────────────────────────┘
+                                      │
+                              ┌───────▼───────┐
+                              │   Docker      │
+                              │  Compose      │
+                              │ Orchestration │
+                              └───────────────┘
 ```
 
-## 🔄 Real-time Architecture
+### Технологический стек
 
-CollabBoard implements a sophisticated real-time update system:
+| Компонент | Технология | Версия | Назначение |
+|-----------|------------|--------|------------|
+| **Frontend** | React | 19 | Пользовательский интерфейс |
+| | TypeScript | 5.0+ | Типизация и безопасность кода |
+| | Zustand | 4.x | Управление состоянием |
+| | Tailwind CSS | 3.x | Стилизация и дизайн-система |
+| | Vite | 5.x | Сборка и разработка |
+| **Backend** | Go | 1.23 | Серверная логика |
+| | Gin | 1.x | HTTP веб-фреймворк |
+| | sqlc | 1.x | Генерация типобезопасного SQL |
+| | JWT-Go | 5.x | Аутентификация |
+| **Database** | PostgreSQL | 16 | Хранение данных |
+| | golang-migrate | 4.x | Миграции схемы |
+| **Infrastructure** | Docker | 24.x | Контейнеризация |
+| | Docker Compose | 2.x | Оркестрация сервисов |
 
-1. **Client Action** - User performs an action (move card, create list, etc.)
-2. **API Call** - Frontend sends HTTP request to backend
-3. **Database Update** - Backend validates and persists changes
-4. **WebSocket Broadcast** - Backend broadcasts event to all connected clients
-5. **State Synchronization** - All clients update their local state
-6. **UI Update** - Changes reflect instantly across all connected sessions
+## ✨ Ключевые функции
 
-### WebSocket Events
-- `card_created`, `card_updated`, `card_moved`, `card_deleted`
-- `list_created`, `list_updated`, `list_moved`, `list_deleted`
-- `board_created`, `board_updated`, `board_deleted`
-- `member_added`, `member_removed`
+### 📋 Управление досками
+- **Создание и настройка** — быстрое создание новых Kanban досок
+- **Система ролей** — владельцы (owner) и участники (member) с разными правами
+- **Приглашения по email** — добавление новых участников в команду
+- **Переименование в реальном времени** — мгновенное обновление названий
 
-## 🔐 Authentication & Security
+### 🎯 Kanban интерфейс
+- **Списки задач** — создание, редактирование и удаление колонок
+- **Карточки** — полный CRUD функционал с описаниями и метаданными
+- **Drag & Drop** — интуитивное перемещение между списками
+- **Автоматическое позиционирование** — умное управление порядком элементов
 
-### JWT-based Authentication
-- **Registration/Login** - Secure user account management
-- **Token-based Auth** - Stateless authentication using JWT
-- **Password Security** - Bcrypt hashing for password storage
-- **Session Management** - Automatic token refresh and validation
+### ⚡ Real-time синхронизация
+- **WebSocket соединения** — мгновенные обновления для всех участников
+- **Автоматическое переподключение** — восстановление связи при сбоях
+- **Конфликт-резолюция** — корректная обработка одновременных изменений
+- **Оптимистичные обновления** — отзывчивый интерфейс без задержек
 
-### Security Features
-- **CORS Protection** - Configurable cross-origin requests
-- **Input Validation** - Comprehensive request validation
-- **SQL Injection Prevention** - Parameterized queries with sqlc
-- **Rate Limiting** - API endpoint protection (configurable)
+### 🎨 Пользовательский опыт
+- **Адаптивный дизайн** — оптимизация для всех размеров экранов
+- **Темная/светлая тема** — автоматическое определение и ручное переключение
+- **Плавные анимации** — современные переходы и эффекты
+- **Toast уведомления** — информативная обратная связь
 
-## 🚀 Getting Started
+## 📁 Структура проекта
 
-### Prerequisites
+```
+collabboard/
+├── 📁 backend/                    # Go backend приложение
+│   ├── 📁 cmd/server/            # Точка входа приложения
+│   ├── 📁 internal/              # Внутренняя логика
+│   │   ├── 📁 auth/             # Аутентификация и авторизация
+│   │   ├── 📁 boards/           # Управление досками
+│   │   ├── 📁 cards/            # Операции с карточками
+│   │   ├── 📁 lists/            # Управление списками
+│   │   ├── 📁 websocket/        # Real-time коммуникация
+│   │   ├── 📁 db/               # Слой базы данных
+│   │   ├── 📁 middleware/       # HTTP middleware
+│   │   └── 📁 logger/           # Структурированное логирование
+│   ├── 🐳 Dockerfile            # Контейнер backend
+│   └── 📖 README.md             # Документация backend
+├── 📁 frontend/                   # React frontend приложение
+│   ├── 📁 src/
+│   │   ├── 📁 components/       # React компоненты (Atomic Design)
+│   │   │   ├── 📁 atoms/        # Базовые элементы
+│   │   │   ├── 📁 molecules/    # Составные компоненты
+│   │   │   ├── 📁 organisms/    # Сложные блоки
+│   │   │   └── 📁 pages/        # Страницы приложения
+│   │   ├── 📁 store/            # Zustand состояние
+│   │   ├── 📁 services/         # API и WebSocket сервисы
+│   │   ├── 📁 utils/            # Вспомогательные функции
+│   │   └── 📁 types/            # TypeScript типы
+│   ├── 🐳 Dockerfile            # Контейнер frontend
+│   └── 📖 README.md             # Документация frontend
+├── 🐳 docker-compose.yml         # Оркестрация сервисов
+├── ⚙️ .env.example              # Шаблон переменных окружения
+├── 📄 Makefile                   # Команды для разработки
+└── 📖 README.md                  # Этот файл
+```
 
-Ensure you have the following installed:
-- **Node.js** 20.x or higher
-- **Go** 1.23 or higher
-- **PostgreSQL** 16 or higher
-- **Docker & Docker Compose** (recommended for easy setup)
-- **golang-migrate** (for database migrations)
+## 🔧 Требования к системе
 
-### Quick Start with Docker
+### Для разработки
 
-The fastest way to get CollabBoard running:
+| Компонент | Минимум | Рекомендуется |
+|-----------|---------|---------------|
+| **RAM** | 4GB | 8GB+ |
+| **CPU** | 2 ядра | 4+ ядра |
+| **Диск** | 10GB | 20GB+ SSD |
+| **ОС** | Windows 10, macOS 10.15, Ubuntu 18.04 | Последние версии |
+
+### Программное обеспечение
+
+#### Обязательно
+- **Docker** 20.10+ с Docker Compose 2.0+
+- **Git** 2.30+
+
+#### Для ручной разработки (опционально)
+- **Go** 1.23+
+- **Node.js** 18+ с npm/yarn
+- **PostgreSQL** 16+
+
+## 🚀 Быстрый старт
+
+### Предварительные требования
+
+- **Docker** 20.10+ и **Docker Compose** 2.0+
+- **Git** для клонирования репозитория
+- **4GB RAM** минимум для комфортной работы
+
+### Запуск одной командой
 
 ```bash
-# Clone the repository
-git clone https://github.com/AlexanderGhosty/CollabBoard.git
-cd CollabBoard
+# Клонирование проекта
+git clone <repository-url>
+cd collabboard
 
-# Start all services
+# Настройка окружения
+cp .env.example .env
+
+# Запуск всех сервисов
 docker-compose up -d
 
-# View logs
+# Просмотр логов (опционально)
 docker-compose logs -f
-
-# Access the application
-# Frontend: http://localhost:5173
-# Backend API: http://localhost:8080
 ```
 
-### Environment Configuration
+### Доступ к приложению
 
-Create a `.env` file in the root directory:
+После запуска сервисы будут доступны по адресам:
 
-```env
-# Database Configuration
-POSTGRES_USER=collabboard_user
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=collabboard
-POSTGRES_HOST=localhost  # Use 'db' for Docker
-POSTGRES_PORT=5432
+- **🌐 Веб-приложение**: http://localhost:5173
+- **🔌 API Backend**: http://localhost:8080
+- **📊 База данных**: localhost:5432
 
-# Application Configuration
-API_PORT=8080
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+### Проверка работоспособности
 
-# Frontend Configuration (optional)
-VITE_API_URL=http://localhost:8080
-```
-
-### Manual Development Setup
-
-If you prefer to run services individually:
-
-#### 1. Database Setup
 ```bash
-# Start PostgreSQL (if not using Docker)
+# Статус всех сервисов
+docker-compose ps
+
+# Проверка API
+curl http://localhost:8080/health
+
+# Остановка сервисов
+docker-compose down
+```
+
+## 🚀 Инструкции по развертыванию
+
+### Локальная разработка
+
+#### Docker Compose (рекомендуется)
+```bash
+# Полная настройка окружения
+git clone <repository-url>
+cd collabboard
+cp .env.example .env
+
+# Запуск в режиме разработки
+docker-compose up -d
+
+# Просмотр логов в реальном времени
+docker-compose logs -f api web
+```
+
+#### Ручная настройка
+```bash
+# 1. База данных
 createdb collabboard
+cd backend && migrate -source file://internal/db/migrations -database "$DB_URL" up
 
-# Run migrations
-cd backend
-migrate -source file://internal/db/migrations \
-        -database "postgres://user:password@localhost/collabboard?sslmode=disable" \
-        up
+# 2. Backend
+cd backend && go run cmd/server/main.go
+
+# 3. Frontend
+cd frontend && npm install && npm run dev
 ```
 
-#### 2. Backend Setup
-```bash
-cd backend
+### Продакшн развертывание
 
-# Install dependencies
-go mod download
+#### Переменные окружения
+```env
+# Безопасность
+JWT_SECRET=very_long_random_string_for_production_min_32_chars
 
-# Build the application
-make backend
+# База данных
+POSTGRES_HOST=your_production_db_host
+POSTGRES_USER=your_db_user
+POSTGRES_PASSWORD=strong_production_password
+POSTGRES_DB=collabboard
 
-# Run the server
-./bin/collabboard
-# OR for development with hot reload
-go run cmd/server/main.go
+# Приложение
+API_PORT=8080
+LOG_LEVEL=INFO
+LOG_FORMAT=json
 ```
 
-#### 3. Frontend Setup
+#### Docker Compose продакшн
 ```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
-### Production Deployment
-
-For production deployment with optimized containers:
-
-```bash
-# Build and start production services
+# Сборка и запуск продакшн контейнеров
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-# Monitor services
-docker-compose ps
+# Мониторинг
 docker-compose logs -f
+docker-compose ps
 ```
 
-## 📚 API Documentation
+## 📚 Ссылки на документацию
 
-### Authentication Endpoints
-```
-POST /auth/register          # Create new user account
-POST /auth/login             # Authenticate user
-GET  /auth/me                # Get current user profile
-```
+### Детальная документация
 
-### Board Management
-```
-GET    /api/boards           # List user's boards
-POST   /api/boards           # Create new board
-GET    /api/boards/:id       # Get board details with lists/cards
-PUT    /api/boards/:id       # Update board information
-DELETE /api/boards/:id       # Delete board
-GET    /api/boards/:id/members    # Get board members
-POST   /api/boards/:id/members    # Invite member via email
-DELETE /api/boards/:id/members/:userId  # Remove member
-```
+- **[📖 Backend Documentation](./backend/README.md)**
+  - API эндпоинты и примеры запросов
+  - Схема базы данных и миграции
+  - WebSocket события и протокол
+  - Структурированное логирование
+  - Аутентификация и авторизация
 
-### List Operations
-```
-POST   /api/boards/:boardId/lists    # Create new list
-PUT    /api/lists/:id                # Update list
-DELETE /api/lists/:id                # Delete list
-PUT    /api/lists/:id/position       # Reorder list
-```
+- **[📖 Frontend Documentation](./frontend/README.md)**
+  - Архитектура компонентов (Atomic Design)
+  - Управление состоянием (Zustand)
+  - Система тем и дизайн-система
+  - WebSocket интеграция
+  - Соглашения по коду
 
-### Card Operations
-```
-POST   /api/lists/:listId/cards      # Create new card
-GET    /api/cards/:id                # Get card details
-PUT    /api/cards/:id                # Update card
-DELETE /api/cards/:id                # Delete card
-PUT    /api/cards/:id/position       # Move card between lists
-```
+### API документация
 
-### WebSocket Connection
-```
-GET /ws/board/:id?token=<jwt_token>  # Real-time board updates
-```
-
-## 🧪 Testing
-
-### Backend Tests
+#### Основные эндпоинты
 ```bash
+# Аутентификация
+POST /auth/register    # Регистрация
+POST /auth/login       # Вход в систему
+GET  /auth/me          # Информация о пользователе
+
+# Доски
+GET    /api/boards     # Список досок
+POST   /api/boards     # Создание доски
+PUT    /api/boards/:id # Обновление доски
+DELETE /api/boards/:id # Удаление доски
+
+# WebSocket
+ws://localhost:8080/ws/board/:boardId?token=JWT_TOKEN
+```
+
+#### События WebSocket
+- **Доски**: `board_updated`, `board_deleted`
+- **Списки**: `list_created`, `list_updated`, `list_moved`, `list_deleted`
+- **Карточки**: `card_created`, `card_updated`, `card_moved`, `card_deleted`
+- **Участники**: `member_added`, `member_removed`
+
+## 🧪 Тестирование
+
+```bash
+# Backend тесты
 cd backend
-make test
+go test ./...
+go test -cover ./...
 
-# With coverage
-go test ./... -cover -v
-```
-
-### Frontend Tests
-```bash
+# Frontend тесты (при наличии)
 cd frontend
-npm run test
-
-# With coverage
+npm test
 npm run test:coverage
+
+# Интеграционные тесты
+docker-compose -f docker-compose.test.yml up --abort-on-container-exit
 ```
 
-### Integration Tests
-```bash
-# Run full test suite
-make test-all
-```
+## 🤝 Участие в разработке
 
-## 🔧 Development Tools
+### Процесс разработки
 
-### Available Make Commands
-```bash
-make backend         # Build backend binary
-make docker-up       # Start development environment
-make docker-down     # Stop all services
-make test           # Run backend tests
-make lint           # Run linting
-make format         # Format code
-make migrate-up     # Apply database migrations
-make migrate-down   # Rollback migrations
-```
+1. **Fork** репозитория
+2. Создайте ветку функции (`git checkout -b feature/amazing-feature`)
+3. Зафиксируйте изменения (`git commit -m 'Add amazing feature'`)
+4. Отправьте в ветку (`git push origin feature/amazing-feature`)
+5. Откройте **Pull Request**
 
-### Code Quality
-- **ESLint** - JavaScript/TypeScript linting
-- **Prettier** - Code formatting
-- **golangci-lint** - Go code analysis
-- **TypeScript** - Static type checking
+### Соглашения
 
-## 🤝 Contributing
+- **Коммиты**: используйте [Conventional Commits](https://www.conventionalcommits.org/)
+- **Код**: следуйте существующему стилю и линтерам
+- **Тесты**: добавляйте тесты для новой функциональности
+- **Документация**: обновляйте README при необходимости
 
-We welcome contributions! Please follow these steps:
+## 📄 Лицензия
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
+Этот проект распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
 
-### Development Guidelines
-- Follow existing code style and conventions
-- Add tests for new features
-- Update documentation as needed
-- Ensure all tests pass before submitting PR
-- Use semantic commit messages
+## 🆘 Поддержка
 
-### Code Style
-- **Frontend**: Follow React best practices and TypeScript conventions
-- **Backend**: Adhere to Go idioms and patterns
-- **Database**: Use descriptive migration names and comments
+При возникновении вопросов или проблем:
 
-## 📋 Roadmap
-
-### Current Features ✅
-- [x] Real-time collaborative Kanban boards
-- [x] User authentication and authorization
-- [x] Drag-and-drop interface
-- [x] Board sharing and member management
-- [x] Responsive design
-- [x] Docker containerization
-
-### Planned Features 🚧
-- [ ] Email notifications for board activities
-- [ ] Card comments and attachments
-- [ ] Time tracking and due dates
-- [ ] Integration with external tools (Slack, GitHub, etc.)
-- [ ] Advanced analytics and reporting
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Database Connection Issues**
-```bash
-# Check PostgreSQL status
-docker-compose ps db
-
-# View database logs
-docker-compose logs db
-```
-
-**WebSocket Connection Problems**
-```bash
-# Check backend logs
-docker-compose logs backend
-
-# Verify JWT token in browser console
-```
-
-**Frontend Build Issues**
-```bash
-# Clear npm cache
-npm cache clean --force
-
-# Reinstall dependencies
-rm -rf node_modules package-lock.json
-npm install
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [React](https://reactjs.org/) - Frontend framework
-- [Go](https://golang.org/) - Backend language
-- [PostgreSQL](https://www.postgresql.org/) - Database
-- [Tailwind CSS](https://tailwindcss.com/) - CSS framework
-- [DND Kit](https://dndkit.com/) - Drag and drop library
-- [Zustand](https://github.com/pmndrs/zustand) - State management
+1. 📖 Изучите документацию в `backend/` и `frontend/` директориях
+2. 🔍 Проверьте [Issues](../../issues) на наличие похожих проблем
+3. 🆕 Создайте новый issue с детальным описанием проблемы
+4. 💬 Укажите версии ПО и шаги для воспроизведения
 
 ---
 
-<div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/AlexanderGhosty">AlexanderGhosty</a></p>
-  <p>⭐ Star this repository if you find it helpful!</p>
-</div>
+**Создано с ❤️ для эффективной командной работы**
+
+*CollabBoard — ваш инструмент для организации проектов в стиле Kanban с поддержкой real-time совместной работы*
