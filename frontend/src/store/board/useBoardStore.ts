@@ -243,9 +243,12 @@ export const useBoardStore = create<BoardState>()(
         const board = await boardService.createBoard(name);
 
         set((s) => {
-          // Add to boards record
+          // Add to boards record with explicit owner role
           if (board.id) {
-            s.boards[board.id] = board;
+            s.boards[board.id] = {
+              ...board,
+              role: 'owner' // Ensure the creator is marked as owner
+            };
             // Add to owned boards
             s.ownedBoardIds.push(board.id);
           }

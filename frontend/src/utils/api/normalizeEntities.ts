@@ -81,19 +81,22 @@ export function normalizeBoard(data: ApiBoard, providedBoardId?: string): Board 
   const name = data.Name || data.name || '';
 
   // Extract owner ID from various possible formats
-  const ownerId = data.OwnerID 
-    ? String(data.OwnerID) 
-    : (data.ownerId 
-      ? String(data.ownerId) 
-      : (data.owner_id 
-        ? String(data.owner_id) 
+  const ownerId = data.OwnerID
+    ? String(data.OwnerID)
+    : (data.ownerId
+      ? String(data.ownerId)
+      : (data.owner_id
+        ? String(data.owner_id)
         : undefined));
+
+  // Extract role from API response, defaulting to 'member' if not provided
+  const role = data.role || 'member';
 
   return {
     id: boardId,
     name,
     ownerId,
-    role: data.role || 'member',
+    role: role as 'owner' | 'member',
     lists: Array.isArray(data.lists) ? data.lists.map(list => normalizeList(list, boardId)) : []
   };
 }

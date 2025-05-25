@@ -32,7 +32,15 @@ func (s *Service) CreateBoard(ctx context.Context, ownerID int32, name string) (
 	// owner automatically added as board_member inside migration trigger or here
 	_, _ = s.repo.AddMember(ctx, db.AddBoardMemberParams{BoardID: b.ID, UserID: ownerID, Role: "owner"})
 
-	s.hub.Broadcast(b.ID, websocket.EventMessage{Event: "board_created", Data: b})
+	// Create board data with role information for WebSocket broadcast
+	boardData := gin.H{
+		"ID":        b.ID,
+		"Name":      b.Name,
+		"OwnerID":   b.OwnerID,
+		"CreatedAt": b.CreatedAt,
+		"role":      "owner", // Creator is always the owner
+	}
+	s.hub.Broadcast(b.ID, websocket.EventMessage{Event: "board_created", Data: boardData})
 	return b, nil
 }
 

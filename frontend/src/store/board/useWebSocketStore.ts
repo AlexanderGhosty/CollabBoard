@@ -433,7 +433,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         name: boardName,
         ownerId: normalizeId(data.OwnerID || data.ownerId),
         lists: data.lists || [],
-        role: data.role || 'member'
+        role: (data.role || 'member') as 'owner' | 'member'
       };
 
       // Update the board store

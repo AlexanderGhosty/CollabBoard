@@ -42,7 +42,16 @@ func createBoardHandler(svc *Service) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusCreated, board)
+
+		// Return board with role information for the creator
+		response := gin.H{
+			"ID":        board.ID,
+			"Name":      board.Name,
+			"OwnerID":   board.OwnerID,
+			"CreatedAt": board.CreatedAt,
+			"role":      "owner", // Creator is always the owner
+		}
+		c.JSON(http.StatusCreated, response)
 	}
 }
 
