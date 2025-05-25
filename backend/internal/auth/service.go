@@ -30,7 +30,10 @@ func (s *Service) Register(ctx context.Context, name, email, password string) (s
 	if _, err := s.queries.GetUserByEmail(ctx, email); err == nil {
 		return "", UserPublic{}, errors.New("email already registered")
 	}
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", UserPublic{}, errors.New("failed to hash password")
+	}
 	u, err := s.queries.CreateUser(ctx, db.CreateUserParams{
 		Name:         name,
 		Email:        email,
@@ -39,7 +42,10 @@ func (s *Service) Register(ctx context.Context, name, email, password string) (s
 	if err != nil {
 		return "", UserPublic{}, err
 	}
-	token, _ := s.generateToken(u.ID)
+	token, err := s.generateToken(u.ID)
+	if err != nil {
+		return "", UserPublic{}, errors.New("failed to generate token")
+	}
 	return token, UserPublic{ID: u.ID, Name: u.Name, Email: u.Email}, nil
 }
 
@@ -51,7 +57,10 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, Us
 	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) != nil {
 		return "", UserPublic{}, ErrInvalidCredentials
 	}
-	token, _ := s.generateToken(u.ID)
+	token, err := s.generateToken(u.ID)
+	if err != nil {
+		return "", UserPublic{}, errors.New("failed to generate token")
+	}
 	return token, UserPublic{ID: u.ID, Name: u.Name, Email: u.Email}, nil
 }
 

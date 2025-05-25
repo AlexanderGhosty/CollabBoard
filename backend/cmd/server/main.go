@@ -46,9 +46,8 @@ func main() {
 	authSvc := auth.NewService(queries, cfg.JWTSecret)
 	auth.RegisterRoutes(r, authSvc, cfg.JWTSecret)
 
-	// Example protected group – extend later for boards/lists/cards
+	// Protected API routes
 	api := r.Group("/api")
-
 	api.Use(middleware.Auth(cfg.JWTSecret))
 
 	hub := websocket.NewHub()
@@ -66,13 +65,15 @@ func main() {
 	cardsSvc := cards.NewService(cardsRepo, queries, hub)
 	cards.RegisterRoutes(api, cardsSvc)
 
-	api.Use(middleware.Auth(cfg.JWTSecret))
-	{
-		api.GET("/me", func(c *gin.Context) {
-			user, _ := authSvc.GetUserByID(c.Request.Context(), int32(c.GetInt("userID")))
-			c.JSON(200, user)
-		})
-	}
+	// User profile endpoint
+	api.GET("/me", func(c *gin.Context) {
+		user, err := authSvc.GetUserByID(c.Request.Context(), int32(c.GetInt("userID")))
+		if err != nil {
+			c.JSON(500, gin.H{"error": "failed to get user profile"})
+			return
+		}
+		c.JSON(200, user)
+	})
 
 	// WS route (no auth middleware – inside handler)
 	r.GET("/ws/board/:id", func(c *gin.Context) {

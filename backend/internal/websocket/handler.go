@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	db "backend/internal/db/sqlc"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
@@ -46,9 +47,21 @@ func ServeBoardWS(c *gin.Context, hub *Hub, q *db.Queries, jwtSecret string) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	claims, _ := token.Claims.(jwt.MapClaims)
-	sub, _ := claims["sub"].(string)
-	uid64, _ := strconv.ParseInt(sub, 10, 32)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	uid64, err := strconv.ParseInt(sub, 10, 32)
+	if err != nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 	userID := int32(uid64)
 
 	// ensure user is member of board

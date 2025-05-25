@@ -2,6 +2,28 @@
 
 Пакет `db` — это набор типобезопасных обёрток, сгенерированных **sqlc**, которые связывают Go‑код с SQL‑запросами PostgreSQL, позволяя вызывать базу данных как обычные функции и получать структурированные результаты.
 
+## Структура пакета
+
+```
+internal/db/
+├── migrations/          # SQL-миграции для создания схемы БД
+│   └── 0001_init.up.sql
+├── queries/            # SQL-запросы для генерации Go-кода
+│   ├── boards.sql
+│   ├── board_members.sql
+│   ├── lists.sql
+│   ├── cards.sql
+│   └── users.sql
+└── sqlc/              # Сгенерированный Go-код
+    ├── db.go          # Основные типы и интерфейсы
+    ├── models.go      # Структуры данных
+    ├── boards.sql.go
+    ├── board_members.sql.go
+    ├── lists.sql.go
+    ├── cards.sql.go
+    └── users.sql.go
+```
+
 ---
 
 ## Базовые функции
@@ -159,7 +181,8 @@ bm, _ := q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: 1, UserID: 2})
 #### Пример
 
 ```go
-members, _ := q.ListBoardMembers(ctx, 1)
+members, err := q.ListBoardMembers(ctx, 1)
+// Каждый элемент содержит: UserID, Name, Email, Role
 ```
 
 ### ListBoardsByUser
@@ -171,7 +194,23 @@ members, _ := q.ListBoardMembers(ctx, 1)
 #### Пример
 
 ```go
-boards, _ := q.ListBoardsByUser(ctx, userID)
+boards, err := q.ListBoardsByUser(ctx, userID)
+// Каждый элемент содержит: BoardID, Name, OwnerID, CreatedAt
+```
+
+### ListBoardsByUserAndRole
+
+| Имя                       | Параметры                                                | Описание                                                          | Возвращает                              |
+| ------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------- |
+| `ListBoardsByUserAndRole` | `ctx`, `arg ListBoardsByUserAndRoleParams {UserID int32; Role string}` | Доски пользователя, отфильтрованные по роли (owner/member). | `([]ListBoardsByUserAndRoleRow, error)` |
+
+#### Пример
+
+```go
+ownerBoards, err := q.ListBoardsByUserAndRole(ctx, db.ListBoardsByUserAndRoleParams{
+    UserID: userID, Role: "owner",
+})
+// Каждый элемент содержит: BoardID, Name, OwnerID, CreatedAt, Role
 ```
 
 ### UpdateBoardMemberRole
@@ -183,7 +222,7 @@ boards, _ := q.ListBoardsByUser(ctx, userID)
 #### Пример
 
 ```go
-_, _ = q.UpdateBoardMemberRole(ctx, db.UpdateBoardMemberRoleParams{
+updated, err := q.UpdateBoardMemberRole(ctx, db.UpdateBoardMemberRoleParams{
     BoardID: 1, UserID: 2, Role: "owner",
 })
 ```
@@ -293,8 +332,11 @@ updated, _ := q.UpdateList(ctx, db.UpdateListParams{
 #### Пример
 
 ```go
-card, _ := q.CreateCard(ctx, db.CreateCardParams{
-    ListID: 10, Title: "Implement API", Description: pgtype.Text{String: "", Valid: false}, Position: 1,
+card, err := q.CreateCard(ctx, db.CreateCardParams{
+    ListID: 10,
+    Title: "Implement API",
+    Description: pgtype.Text{String: "API implementation task", Valid: true},
+    Position: 1,
 })
 ```
 
@@ -449,7 +491,76 @@ _, _ = q.UpdatePasswordHash(ctx, db.UpdatePasswordHashParams{
 #### Пример
 
 ```go
-usr, _ := q.UpdateUser(ctx, db.UpdateUserParams{
+usr, err := q.UpdateUser(ctx, db.UpdateUserParams{
     ID: 1, Name: "Alice B.", Email: "alice.b@example.com",
 })
 ```
+
+---
+
+## Модели данных
+
+Пакет содержит следующие основные структуры данных:
+
+### User
+```go
+type User struct {
+    ID           int32
+    Name         string
+    Email        string
+    PasswordHash string
+    CreatedAt    pgtype.Timestamp
+}
+```
+
+### Board
+```go
+type Board struct {
+    ID        int32
+    Name      string
+    OwnerID   int32
+    CreatedAt pgtype.Timestamp
+}
+```
+
+### BoardMember
+```go
+type BoardMember struct {
+    BoardID int32
+    UserID  int32
+    Role    string  // "owner" или "member"
+}
+```
+
+### List
+```go
+type List struct {
+    ID        int32
+    BoardID   int32
+    Title     string
+    Position  int32
+    CreatedAt pgtype.Timestamp
+}
+```
+
+### Card
+```go
+type Card struct {
+    ID          int32
+    ListID      int32
+    Title       string
+    Description pgtype.Text  // Может быть NULL
+    Position    int32
+    CreatedAt   pgtype.Timestamp
+}
+```
+
+---
+
+## Примечания по использованию
+
+1. **Транзакции**: Используйте `WithTx()` для выполнения операций в рамках транзакции.
+2. **Позиционирование**: Поля `position` в списках и карточках начинаются с 1 и должны быть последовательными.
+3. **Роли**: В `board_members` поддерживаются только роли "owner" и "member".
+4. **Каскадное удаление**: При удалении доски автоматически удаляются все связанные списки, карточки и участники.
+5. **pgtype.Text**: Используется для полей, которые могут быть NULL в базе данных.
