@@ -1,0 +1,1303 @@
+basePath: /
+definitions:
+  auth.AuthResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/auth.UserPublic'
+    type: object
+  auth.ChangePasswordRequest:
+    properties:
+      currentPassword:
+        example: oldpassword
+        type: string
+      newPassword:
+        example: newpassword123
+        minLength: 6
+        type: string
+    required:
+    - currentPassword
+    - newPassword
+    type: object
+  auth.ErrorResponse:
+    properties:
+      error:
+        example: Invalid credentials
+        type: string
+    type: object
+  auth.LoginRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.MessageResponse:
+    properties:
+      message:
+        example: Password changed successfully
+        type: string
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      name:
+        example: John Doe
+        type: string
+      password:
+        example: password123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  auth.UserPublic:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: John Doe
+        type: string
+    type: object
+  boards.AddMemberRequest:
+    properties:
+      role:
+        example: member
+        type: string
+      userId:
+        example: 2
+        type: integer
+    required:
+    - userId
+    type: object
+  boards.BoardMemberResponse:
+    properties:
+      boardId:
+        example: 1
+        type: integer
+      email:
+        example: john@example.com
+        type: string
+      name:
+        example: John Doe
+        type: string
+      role:
+        example: member
+        type: string
+      userId:
+        example: 2
+        type: integer
+    type: object
+  boards.BoardResponse:
+    properties:
+      createdAt:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: My Project Board
+        type: string
+      ownerId:
+        example: 1
+        type: integer
+      role:
+        example: owner
+        type: string
+    type: object
+  boards.CreateBoardRequest:
+    properties:
+      name:
+        example: My Project Board
+        type: string
+    required:
+    - name
+    type: object
+  boards.ErrorResponse:
+    properties:
+      error:
+        example: Board not found
+        type: string
+    type: object
+  boards.InviteMemberRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      role:
+        example: member
+        type: string
+    required:
+    - email
+    type: object
+  boards.MessageResponse:
+    properties:
+      message:
+        example: Board deleted
+        type: string
+    type: object
+  boards.UpdateBoardRequest:
+    properties:
+      name:
+        example: Updated Board Name
+        type: string
+    required:
+    - name
+    type: object
+  cards.CardResponse:
+    properties:
+      createdAt:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      description:
+        example: The login form is not validating email properly
+        type: string
+      id:
+        example: 1
+        type: integer
+      listId:
+        example: 1
+        type: integer
+      position:
+        example: 1
+        type: integer
+      title:
+        example: Fix login bug
+        type: string
+    type: object
+  cards.CreateCardRequest:
+    properties:
+      description:
+        example: The login form is not validating email properly
+        type: string
+      position:
+        example: 1
+        type: integer
+      title:
+        example: Fix login bug
+        type: string
+    required:
+    - position
+    - title
+    type: object
+  cards.ErrorResponse:
+    properties:
+      error:
+        example: Card not found
+        type: string
+    type: object
+  cards.MessageResponse:
+    properties:
+      message:
+        example: card deleted
+        type: string
+    type: object
+  cards.MoveCardRequest:
+    properties:
+      listId:
+        example: 2
+        type: integer
+      position:
+        example: 1
+        type: integer
+    required:
+    - position
+    type: object
+  cards.UpdateCardRequest:
+    properties:
+      description:
+        example: Updated description of the bug
+        type: string
+      listId:
+        example: 3
+        type: integer
+      position:
+        example: 2
+        type: integer
+      title:
+        example: Fix login validation bug
+        type: string
+    type: object
+  lists.CreateListRequest:
+    properties:
+      position:
+        example: 1
+        type: integer
+      title:
+        example: To Do
+        type: string
+    required:
+    - position
+    - title
+    type: object
+  lists.ErrorResponse:
+    properties:
+      error:
+        example: List not found
+        type: string
+    type: object
+  lists.ListResponse:
+    properties:
+      boardId:
+        example: 1
+        type: integer
+      createdAt:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 1
+        type: integer
+      position:
+        example: 1
+        type: integer
+      title:
+        example: To Do
+        type: string
+    type: object
+  lists.MessageResponse:
+    properties:
+      message:
+        example: list deleted
+        type: string
+    type: object
+  lists.MoveListRequest:
+    properties:
+      position:
+        example: 1.5
+        type: number
+    required:
+    - position
+    type: object
+  lists.NormalizePositionsResponse:
+    properties:
+      lists:
+        items:
+          $ref: '#/definitions/lists.ListResponse'
+        type: array
+      message:
+        example: positions normalized
+        type: string
+    type: object
+  lists.UpdateListRequest:
+    properties:
+      position:
+        example: 2
+        type: integer
+      title:
+        example: In Progress
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Collaborative Kanban board application with real-time updates
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: CollabBoard API
+  version: "1.0"
+paths:
+  /api/boards:
+    get:
+      description: Get all boards where the authenticated user is a member or owner
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of boards
+          schema:
+            items:
+              $ref: '#/definitions/boards.BoardResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List user's boards
+      tags:
+      - Boards
+    post:
+      consumes:
+      - application/json
+      description: Create a new Kanban board with the authenticated user as owner
+      parameters:
+      - description: Board creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/boards.CreateBoardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Board created successfully
+          schema:
+            $ref: '#/definitions/boards.BoardResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new board
+      tags:
+      - Boards
+  /api/boards/{boardId}:
+    delete:
+      description: Delete a board (only board owners can delete)
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Board deleted successfully
+          schema:
+            $ref: '#/definitions/boards.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - only owners can delete
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete board
+      tags:
+      - Boards
+    get:
+      description: Get detailed information about a specific board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Board information
+          schema:
+            $ref: '#/definitions/boards.BoardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - not a board member
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get board by ID
+      tags:
+      - Boards
+    put:
+      consumes:
+      - application/json
+      description: Update board information (only board owners can update)
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: Board update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/boards.UpdateBoardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Board updated successfully
+          schema:
+            $ref: '#/definitions/boards.BoardResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - only owners can update
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update board
+      tags:
+      - Boards
+  /api/boards/{boardId}/lists:
+    get:
+      description: Get all lists (columns) for a specific board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of board lists
+          schema:
+            items:
+              $ref: '#/definitions/lists.ListResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get board lists
+      tags:
+      - Lists
+    post:
+      consumes:
+      - application/json
+      description: Create a new list (column) in a Kanban board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: List creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/lists.CreateListRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: List created successfully
+          schema:
+            $ref: '#/definitions/lists.ListResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new list
+      tags:
+      - Lists
+  /api/boards/{boardId}/lists/{id}:
+    delete:
+      description: Delete a list and all its cards from the board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: List ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List deleted successfully
+          schema:
+            $ref: '#/definitions/lists.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete list
+      tags:
+      - Lists
+    put:
+      consumes:
+      - application/json
+      description: Update list title and/or position
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: List ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: List update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/lists.UpdateListRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List updated successfully
+          schema:
+            $ref: '#/definitions/lists.ListResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update list
+      tags:
+      - Lists
+  /api/boards/{boardId}/lists/{id}/move:
+    put:
+      consumes:
+      - application/json
+      description: Move a list to a new position within the board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: List ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New position
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/lists.MoveListRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List moved successfully
+          schema:
+            $ref: '#/definitions/lists.ListResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Move list
+      tags:
+      - Lists
+  /api/boards/{boardId}/lists/normalize:
+    post:
+      description: Manually trigger position normalization for all lists in a board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Positions normalized successfully
+          schema:
+            $ref: '#/definitions/lists.NormalizePositionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "403":
+          description: Forbidden - not a board member
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/lists.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Normalize list positions
+      tags:
+      - Lists
+  /api/boards/{boardId}/members:
+    get:
+      description: Get all members of a specific board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of board members
+          schema:
+            items:
+              $ref: '#/definitions/boards.BoardMemberResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - not a board member
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List board members
+      tags:
+      - Board Members
+    post:
+      consumes:
+      - application/json
+      description: Add a user as a member to a board (only board owners can add members)
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: Member details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/boards.AddMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Member added successfully
+          schema:
+            $ref: '#/definitions/boards.BoardMemberResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - only owners can add members
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add board member
+      tags:
+      - Board Members
+  /api/boards/{boardId}/members/{userId}:
+    delete:
+      description: Remove a user from a board (only board owners can remove members)
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: User ID to remove
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Member removed successfully
+          schema:
+            $ref: '#/definitions/boards.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - only owners can remove members
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove board member
+      tags:
+      - Board Members
+  /api/boards/{boardId}/members/invite:
+    post:
+      consumes:
+      - application/json
+      description: Invite a user to join a board using their email address
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: Invitation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/boards.InviteMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Member invited successfully
+          schema:
+            $ref: '#/definitions/boards.BoardMemberResponse'
+        "400":
+          description: Invalid request or role
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - only owners can invite
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Invite member by email
+      tags:
+      - Board Members
+  /api/boards/{boardId}/members/leave:
+    post:
+      description: Allow a user to leave a board they are a member of
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully left the board
+          schema:
+            $ref: '#/definitions/boards.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "403":
+          description: Forbidden - cannot leave board
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Leave board
+      tags:
+      - Board Members
+  /api/boards/by-role/{role}:
+    get:
+      description: Get boards where the user has a specific role (owner or member)
+      parameters:
+      - description: Role filter (owner or member)
+        in: path
+        name: role
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of boards
+          schema:
+            items:
+              $ref: '#/definitions/boards.BoardResponse'
+            type: array
+        "400":
+          description: Invalid role parameter
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/boards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List boards by role
+      tags:
+      - Boards
+  /api/cards/{id}/duplicate:
+    post:
+      description: Create a copy of an existing card in the same list
+      parameters:
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Card duplicated successfully
+          schema:
+            $ref: '#/definitions/cards.CardResponse'
+        "400":
+          description: Invalid card ID
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Duplicate card
+      tags:
+      - Cards
+  /api/lists/{listId}/cards:
+    get:
+      description: Get all cards in a specific list
+      parameters:
+      - description: List ID
+        in: path
+        name: listId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of cards
+          schema:
+            items:
+              $ref: '#/definitions/cards.CardResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get list cards
+      tags:
+      - Cards
+    post:
+      consumes:
+      - application/json
+      description: Create a new card in a specific list
+      parameters:
+      - description: List ID
+        in: path
+        name: listId
+        required: true
+        type: integer
+      - description: Card creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cards.CreateCardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Card created successfully
+          schema:
+            $ref: '#/definitions/cards.CardResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new card
+      tags:
+      - Cards
+  /api/lists/{listId}/cards/{id}:
+    delete:
+      description: Delete a card from the list
+      parameters:
+      - description: List ID
+        in: path
+        name: listId
+        required: true
+        type: integer
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Card deleted successfully
+          schema:
+            $ref: '#/definitions/cards.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete card
+      tags:
+      - Cards
+    put:
+      consumes:
+      - application/json
+      description: Update card title, description, position, or list
+      parameters:
+      - description: List ID
+        in: path
+        name: listId
+        required: true
+        type: integer
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Card update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cards.UpdateCardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Card updated successfully
+          schema:
+            $ref: '#/definitions/cards.CardResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update card
+      tags:
+      - Cards
+  /api/lists/{listId}/cards/{id}/move:
+    put:
+      consumes:
+      - application/json
+      description: Move a card to a new position within the same list or to a different
+        list
+      parameters:
+      - description: Current List ID
+        in: path
+        name: listId
+        required: true
+        type: integer
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Move details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cards.MoveCardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Card moved successfully
+          schema:
+            $ref: '#/definitions/cards.CardResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/cards.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Move card
+      tags:
+      - Cards
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change the password for the currently authenticated user
+      parameters:
+      - description: Password change details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            $ref: '#/definitions/auth.MessageResponse'
+        "400":
+          description: Invalid request or current password
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - Authentication
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Login user
+      tags:
+      - Authentication
+  /auth/me:
+    get:
+      description: Get information about the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User information
+          schema:
+            $ref: '#/definitions/auth.UserPublic'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with name, email and password
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registration successful
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Invalid request or email already exists
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

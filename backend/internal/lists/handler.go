@@ -22,6 +22,21 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	g.POST("/normalize", normalizePositionsHandler(svc))
 }
 
+// createListHandler creates a new list in a board
+//
+//	@Summary		Create a new list
+//	@Description	Create a new list (column) in a Kanban board
+//	@Tags			Lists
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			boardId	path		int					true	"Board ID"
+//	@Param			request	body		CreateListRequest	true	"List creation details"
+//	@Success		201		{object}	ListResponse		"List created successfully"
+//	@Failure		400		{object}	ErrorResponse		"Invalid request"
+//	@Failure		401		{object}	ErrorResponse		"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse		"Internal server error"
+//	@Router			/api/boards/{boardId}/lists [post]
 func createListHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		boardID, _ := strconv.Atoi(c.Param("boardId"))
@@ -43,6 +58,18 @@ func createListHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// listHandler gets all lists for a board
+//
+//	@Summary		Get board lists
+//	@Description	Get all lists (columns) for a specific board
+//	@Tags			Lists
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			boardId	path		int				true	"Board ID"
+//	@Success		200		{array}		ListResponse	"List of board lists"
+//	@Failure		401		{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse	"Internal server error"
+//	@Router			/api/boards/{boardId}/lists [get]
 func listHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		boardID, _ := strconv.Atoi(c.Param("boardId"))
@@ -57,6 +84,22 @@ func listHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// updateListHandler updates a list
+//
+//	@Summary		Update list
+//	@Description	Update list title and/or position
+//	@Tags			Lists
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			boardId	path		int					true	"Board ID"
+//	@Param			id		path		int					true	"List ID"
+//	@Param			request	body		UpdateListRequest	true	"List update details"
+//	@Success		200		{object}	ListResponse		"List updated successfully"
+//	@Failure		400		{object}	ErrorResponse		"Invalid request"
+//	@Failure		401		{object}	ErrorResponse		"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse		"Internal server error"
+//	@Router			/api/boards/{boardId}/lists/{id} [put]
 func updateListHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, _ := strconv.Atoi(c.Param("id"))
@@ -99,6 +142,22 @@ func updateListHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// moveListHandler moves a list to a new position
+//
+//	@Summary		Move list
+//	@Description	Move a list to a new position within the board
+//	@Tags			Lists
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			boardId	path		int				true	"Board ID"
+//	@Param			id		path		int				true	"List ID"
+//	@Param			request	body		MoveListRequest	true	"New position"
+//	@Success		200		{object}	ListResponse	"List moved successfully"
+//	@Failure		400		{object}	ErrorResponse	"Invalid request"
+//	@Failure		401		{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse	"Internal server error"
+//	@Router			/api/boards/{boardId}/lists/{id}/move [put]
 func moveListHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, _ := strconv.Atoi(c.Param("id"))
@@ -142,6 +201,19 @@ func moveListHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// deleteListHandler deletes a list
+//
+//	@Summary		Delete list
+//	@Description	Delete a list and all its cards from the board
+//	@Tags			Lists
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			boardId	path		int				true	"Board ID"
+//	@Param			id		path		int				true	"List ID"
+//	@Success		200		{object}	MessageResponse	"List deleted successfully"
+//	@Failure		401		{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse	"Internal server error"
+//	@Router			/api/boards/{boardId}/lists/{id} [delete]
 func deleteListHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, _ := strconv.Atoi(c.Param("id"))
@@ -155,7 +227,19 @@ func deleteListHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
-// normalizePositionsHandler provides an API endpoint to manually trigger position normalization
+// normalizePositionsHandler normalizes list positions
+//
+//	@Summary		Normalize list positions
+//	@Description	Manually trigger position normalization for all lists in a board
+//	@Tags			Lists
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			boardId	path		int							true	"Board ID"
+//	@Success		200		{object}	NormalizePositionsResponse	"Positions normalized successfully"
+//	@Failure		401		{object}	ErrorResponse				"Unauthorized"
+//	@Failure		403		{object}	ErrorResponse				"Forbidden - not a board member"
+//	@Failure		500		{object}	ErrorResponse				"Internal server error"
+//	@Router			/api/boards/{boardId}/lists/normalize [post]
 func normalizePositionsHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		boardID, _ := strconv.Atoi(c.Param("boardId"))

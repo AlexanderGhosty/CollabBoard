@@ -17,6 +17,17 @@ func RegisterRoutes(r *gin.Engine, svc *Service, jwtSecret string) {
 	g.POST("/change-password", middleware.Auth(jwtSecret), changePasswordHandler(svc))
 }
 
+// registerHandler handles user registration
+//
+//	@Summary		Register a new user
+//	@Description	Create a new user account with name, email and password
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RegisterRequest	true	"Registration details"
+//	@Success		200		{object}	AuthResponse	"Registration successful"
+//	@Failure		400		{object}	ErrorResponse	"Invalid request or email already exists"
+//	@Router			/auth/register [post]
 func registerHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req RegisterRequest
@@ -54,6 +65,18 @@ func registerHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// loginHandler handles user login
+//
+//	@Summary		Login user
+//	@Description	Authenticate user with email and password
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		LoginRequest	true	"Login credentials"
+//	@Success		200		{object}	AuthResponse	"Login successful"
+//	@Failure		400		{object}	ErrorResponse	"Invalid request format"
+//	@Failure		401		{object}	ErrorResponse	"Invalid credentials"
+//	@Router			/auth/login [post]
 func loginHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req LoginRequest
@@ -90,6 +113,17 @@ func loginHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// meHandler gets current user information
+//
+//	@Summary		Get current user
+//	@Description	Get information about the currently authenticated user
+//	@Tags			Authentication
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	UserPublic		"User information"
+//	@Failure		401	{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500	{object}	ErrorResponse	"Internal server error"
+//	@Router			/auth/me [get]
 func meHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := int32(c.GetInt("userID"))
@@ -109,6 +143,20 @@ func meHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// changePasswordHandler handles password change
+//
+//	@Summary		Change password
+//	@Description	Change the password for the currently authenticated user
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		ChangePasswordRequest	true	"Password change details"
+//	@Success		200		{object}	MessageResponse			"Password changed successfully"
+//	@Failure		400		{object}	ErrorResponse			"Invalid request or current password"
+//	@Failure		401		{object}	ErrorResponse			"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse			"Internal server error"
+//	@Router			/auth/change-password [post]
 func changePasswordHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req ChangePasswordRequest

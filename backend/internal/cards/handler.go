@@ -23,6 +23,21 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 	cardGroup.POST("/:id/duplicate", duplicateCardHandler(svc))
 }
 
+// createCardHandler creates a new card in a list
+//
+//	@Summary		Create a new card
+//	@Description	Create a new card in a specific list
+//	@Tags			Cards
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			listId	path		int					true	"List ID"
+//	@Param			request	body		CreateCardRequest	true	"Card creation details"
+//	@Success		201		{object}	CardResponse		"Card created successfully"
+//	@Failure		400		{object}	ErrorResponse		"Invalid request"
+//	@Failure		401		{object}	ErrorResponse		"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse		"Internal server error"
+//	@Router			/api/lists/{listId}/cards [post]
 func createCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		listID, _ := strconv.Atoi(c.Param("listId"))
@@ -45,6 +60,18 @@ func createCardHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// listCardsHandler gets all cards in a list
+//
+//	@Summary		Get list cards
+//	@Description	Get all cards in a specific list
+//	@Tags			Cards
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			listId	path		int				true	"List ID"
+//	@Success		200		{array}		CardResponse	"List of cards"
+//	@Failure		401		{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse	"Internal server error"
+//	@Router			/api/lists/{listId}/cards [get]
 func listCardsHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		listID, _ := strconv.Atoi(c.Param("listId"))
@@ -59,6 +86,22 @@ func listCardsHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// updateCardHandler updates a card
+//
+//	@Summary		Update card
+//	@Description	Update card title, description, position, or list
+//	@Tags			Cards
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			listId	path		int					true	"List ID"
+//	@Param			id		path		int					true	"Card ID"
+//	@Param			request	body		UpdateCardRequest	true	"Card update details"
+//	@Success		200		{object}	CardResponse		"Card updated successfully"
+//	@Failure		400		{object}	ErrorResponse		"Invalid request"
+//	@Failure		401		{object}	ErrorResponse		"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse		"Internal server error"
+//	@Router			/api/lists/{listId}/cards/{id} [put]
 func updateCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, _ := strconv.Atoi(c.Param("id"))
@@ -111,6 +154,22 @@ func updateCardHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// moveCardHandler moves a card to a new position or list
+//
+//	@Summary		Move card
+//	@Description	Move a card to a new position within the same list or to a different list
+//	@Tags			Cards
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			listId	path		int				true	"Current List ID"
+//	@Param			id		path		int				true	"Card ID"
+//	@Param			request	body		MoveCardRequest	true	"Move details"
+//	@Success		200		{object}	CardResponse	"Card moved successfully"
+//	@Failure		400		{object}	ErrorResponse	"Invalid request"
+//	@Failure		401		{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse	"Internal server error"
+//	@Router			/api/lists/{listId}/cards/{id}/move [put]
 func moveCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))
@@ -153,6 +212,19 @@ func moveCardHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// deleteCardHandler deletes a card
+//
+//	@Summary		Delete card
+//	@Description	Delete a card from the list
+//	@Tags			Cards
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			listId	path		int				true	"List ID"
+//	@Param			id		path		int				true	"Card ID"
+//	@Success		200		{object}	MessageResponse	"Card deleted successfully"
+//	@Failure		401		{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500		{object}	ErrorResponse	"Internal server error"
+//	@Router			/api/lists/{listId}/cards/{id} [delete]
 func deleteCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, _ := strconv.Atoi(c.Param("id"))
@@ -166,6 +238,19 @@ func deleteCardHandler(svc *Service) gin.HandlerFunc {
 	}
 }
 
+// duplicateCardHandler duplicates a card
+//
+//	@Summary		Duplicate card
+//	@Description	Create a copy of an existing card in the same list
+//	@Tags			Cards
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int				true	"Card ID"
+//	@Success		200	{object}	CardResponse	"Card duplicated successfully"
+//	@Failure		400	{object}	ErrorResponse	"Invalid card ID"
+//	@Failure		401	{object}	ErrorResponse	"Unauthorized"
+//	@Failure		500	{object}	ErrorResponse	"Internal server error"
+//	@Router			/api/cards/{id}/duplicate [post]
 func duplicateCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))

@@ -1,6 +1,28 @@
+// Package main CollabBoard API
+//
+//	@title			CollabBoard API
+//	@version		1.0
+//	@description	Collaborative Kanban board application with real-time updates
+//	@termsOfService	http://swagger.io/terms/
+//
+//	@contact.name	API Support
+//	@contact.url	http://www.swagger.io/support
+//	@contact.email	support@swagger.io
+//
+//	@license.name	Apache 2.0
+//	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
+//
+//	@host		localhost:8080
+//	@BasePath	/
+//
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				Type "Bearer" followed by a space and JWT token.
 package main
 
 import (
+	"backend/docs"
 	"backend/internal/auth"
 	"backend/internal/boards"
 	"backend/internal/cards"
@@ -17,6 +39,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -48,9 +72,25 @@ func main() {
 	r.Use(middleware.CORS())
 
 	// Health‑check
+	// healthCheck checks if the server is running
+	//
+	//	@Summary		Health check
+	//	@Description	Check if the server is running and healthy
+	//	@Tags			Health
+	//	@Produce		json
+	//	@Success		200	{object}	map[string]string	"Server is healthy"
+	//	@Router			/health [get]
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	// Swagger documentation
+	docs.SwaggerInfo.Title = "CollabBoard API"
+	docs.SwaggerInfo.Description = "Collaborative Kanban board application with real-time updates"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:8080"
+	docs.SwaggerInfo.BasePath = "/"
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Auth routes (public + /auth/me)
 	authSvc := auth.NewService(queries, cfg.JWTSecret)
@@ -76,6 +116,17 @@ func main() {
 	cards.RegisterRoutes(api, cardsSvc)
 
 	// User profile endpoint
+	// getUserProfile gets the current user's profile
+	//
+	//	@Summary		Get user profile
+	//	@Description	Get the profile information of the currently authenticated user
+	//	@Tags			User
+	//	@Produce		json
+	//	@Security		BearerAuth
+	//	@Success		200	{object}	auth.UserPublic	"User profile information"
+	//	@Failure		401	{object}	map[string]string	"Unauthorized"
+	//	@Failure		500	{object}	map[string]string	"Internal server error"
+	//	@Router			/api/me [get]
 	api.GET("/me", func(c *gin.Context) {
 		user, err := authSvc.GetUserByID(c.Request.Context(), int32(c.GetInt("userID")))
 		if err != nil {
