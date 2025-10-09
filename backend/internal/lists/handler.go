@@ -1,8 +1,8 @@
 package lists
 
 import (
-	db "backend/internal/db/sqlc"
 	"bytes"
+	"errors"
 	"io"
 	"log"
 	"math"
@@ -40,10 +40,7 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 func createListHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		boardID, _ := strconv.Atoi(c.Param("boardId"))
-		var req struct {
-			Title    string `json:"title" binding:"required"`
-			Position int32  `json:"position" binding:"required"`
-		}
+		var req CreateListRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -105,35 +102,12 @@ func updateListHandler(svc *Service) gin.HandlerFunc {
 		id, _ := strconv.Atoi(c.Param("id"))
 		userID := int32(c.GetInt("userID"))
 
-		var req struct {
-			Title    string `json:"title"`
-			Position *int32 `json:"position"`
-		}
+		var req UpdateListRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-
-		// Get the current list to preserve its position if not explicitly provided
-		currentList, err := svc.GetListByID(c.Request.Context(), int32(id))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current list: " + err.Error()})
-			return
-		}
-
-		// Create update params with the current position by default
-		p := db.UpdateListParams{
-			ID:       int32(id),
-			Title:    req.Title,
-			Position: currentList.Position, // Preserve the current position
-		}
-
-		// Only update position if explicitly provided
-		if req.Position != nil {
-			p.Position = *req.Position
-		}
-
-		lst, err := svc.Update(c.Request.Context(), userID, p)
+		lst, err := svc.Update(c.Request.Context(), userID, int32(id), req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -248,34 +222,18 @@ func normalizePositionsHandler(svc *Service) gin.HandlerFunc {
 		// Log the request
 		log.Printf("Normalize positions request: boardID=%d, userID=%d", boardID, userID)
 
-		// Check if user is a member of the board
-		if _, err := svc.q.GetBoardMember(c.Request.Context(), db.GetBoardMemberParams{
-			BoardID: int32(boardID), UserID: userID,
-		}); err != nil {
-			log.Printf("User %d is not a member of board %d", userID, boardID)
-			c.JSON(http.StatusForbidden, gin.H{"error": "not a member"})
-			return
-		}
-
-		// Call the normalization function
-		if err := svc.NormalizeListPositions(c.Request.Context(), int32(boardID)); err != nil {
-			log.Printf("Error normalizing positions: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		// Get the updated lists to return in the response
-		lists, err := svc.ListByBoard(c.Request.Context(), userID, int32(boardID))
+		resp, err := svc.NormalizeAndList(c.Request.Context(), userID, int32(boardID))
 		if err != nil {
-			log.Printf("Error getting lists after normalization: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			status := http.StatusInternalServerError
+			if errors.Is(err, ErrNotMember) {
+				status = http.StatusForbidden
+			}
+			log.Printf("Normalize positions error: %v", err)
+			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}
 
 		log.Printf("Successfully normalized positions for board %d", boardID)
-		c.JSON(http.StatusOK, gin.H{
-			"message": "positions normalized",
-			"lists":   lists,
-		})
+		c.JSON(http.StatusOK, resp)
 	}
 }

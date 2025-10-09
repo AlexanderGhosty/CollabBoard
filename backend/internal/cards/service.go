@@ -49,25 +49,94 @@ func (s *Service) ListByList(ctx context.Context, userID, listID int32) ([]db.Ca
 	return s.repo.ListByList(ctx, listID)
 }
 
-func (s *Service) Update(ctx context.Context, userID int32, arg db.UpdateCardParams) (db.Card, error) {
-	card0, err := s.q.GetCardByID(ctx, arg.ID)
+func (s *Service) Update(ctx context.Context, userID, cardID int32, req UpdateCardRequest) (db.Card, error) {
+	currentCard, err := s.q.GetCardByID(ctx, cardID)
 	if err != nil {
 		return db.Card{}, err
 	}
-	lst, err := s.q.GetListByID(ctx, card0.ListID)
+
+	srcList, err := s.q.GetListByID(ctx, currentCard.ListID)
 	if err != nil {
 		return db.Card{}, err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
-		BoardID: lst.BoardID, UserID: userID,
-	}); err != nil {
+
+	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: srcList.BoardID, UserID: userID}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
-	card, err := s.repo.Update(ctx, arg)
-	if err == nil {
-		s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "card_updated", Data: card})
+
+	dstList := srcList
+	if req.ListID != nil && *req.ListID != srcList.ID {
+		dstList, err = s.q.GetListByID(ctx, *req.ListID)
+		if err != nil {
+			return db.Card{}, err
+		}
+		if dstList.BoardID != srcList.BoardID {
+			return db.Card{}, errors.New("cannot move across boards")
+		}
 	}
-	return card, err
+
+	var maxPos int
+	includesCurrent := dstList.ID == currentCard.ListID
+	if req.Position != nil || !includesCurrent {
+		cards, err := s.repo.ListByList(ctx, dstList.ID)
+		if err != nil {
+			return db.Card{}, err
+		}
+		maxPos = len(cards)
+		if !includesCurrent {
+			maxPos++
+		}
+	} else {
+		maxPos = int(currentCard.Position)
+	}
+
+	targetPos := currentCard.Position
+	if req.Position != nil {
+		targetPos = *req.Position
+	} else if !includesCurrent {
+		targetPos = int32(maxPos)
+	}
+
+	if targetPos < 1 {
+		targetPos = 1
+	}
+	if maxPos > 0 && targetPos > int32(maxPos) {
+		targetPos = int32(maxPos)
+	}
+
+	needsRelocation := dstList.ID != currentCard.ListID || targetPos != currentCard.Position
+	if needsRelocation {
+		if err := s.repo.ShiftLeft(ctx, currentCard.ListID, currentCard.Position); err != nil {
+			return db.Card{}, err
+		}
+		if err := s.repo.ShiftRight(ctx, dstList.ID, targetPos); err != nil {
+			return db.Card{}, err
+		}
+	}
+
+	title := currentCard.Title
+	if req.Title != nil {
+		title = *req.Title
+	}
+
+	description := currentCard.Description
+	if req.Description != nil {
+		description = pgtype.Text{String: *req.Description, Valid: true}
+	}
+
+	updated, err := s.repo.Update(ctx, db.UpdateCardParams{
+		ID:          currentCard.ID,
+		Title:       title,
+		Description: description,
+		Position:    targetPos,
+		ListID:      dstList.ID,
+	})
+	if err != nil {
+		return db.Card{}, err
+	}
+
+	s.hub.Broadcast(srcList.BoardID, websocket.EventMessage{Event: "card_updated", Data: updated})
+	return updated, nil
 }
 
 func (s *Service) Delete(ctx context.Context, userID, cardID int32) error {
@@ -93,47 +162,71 @@ func (s *Service) Delete(ctx context.Context, userID, cardID int32) error {
 	return nil
 }
 
-func (s *Service) Move(ctx context.Context, userID, cardID, dstListID, newPos int32) (db.Card, error) {
+func (s *Service) Move(ctx context.Context, userID, cardID int32, req MoveCardRequest) (db.Card, error) {
 	card, err := s.q.GetCardByID(ctx, cardID)
 	if err != nil {
 		return db.Card{}, err
 	}
+
 	srcList, err := s.q.GetListByID(ctx, card.ListID)
 	if err != nil {
 		return db.Card{}, err
 	}
-	dstList, err := s.q.GetListByID(ctx, dstListID)
-	if err != nil {
-		return db.Card{}, err
-	}
 
-	if srcList.BoardID != dstList.BoardID {
-		return db.Card{}, errors.New("cannot move across boards")
-	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
-		BoardID: srcList.BoardID, UserID: userID,
-	}); err != nil {
+	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: srcList.BoardID, UserID: userID}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
 
-	if err := s.repo.ShiftLeft(ctx, srcList.ID, card.Position); err != nil {
+	dstList := srcList
+	if req.ListID != nil && *req.ListID != srcList.ID {
+		dstList, err = s.q.GetListByID(ctx, *req.ListID)
+		if err != nil {
+			return db.Card{}, err
+		}
+		if dstList.BoardID != srcList.BoardID {
+			return db.Card{}, errors.New("cannot move across boards")
+		}
+	}
+
+	cards, err := s.repo.ListByList(ctx, dstList.ID)
+	if err != nil {
 		return db.Card{}, err
 	}
-	if err := s.repo.ShiftRight(ctx, dstList.ID, newPos); err != nil {
+	maxPos := len(cards)
+	if dstList.ID != card.ListID {
+		maxPos++
+	}
+
+	targetPos := req.Position
+	if targetPos < 1 {
+		targetPos = 1
+	}
+	if targetPos > int32(maxPos) {
+		targetPos = int32(maxPos)
+	}
+
+	if dstList.ID == card.ListID && targetPos == card.Position {
+		return card, nil
+	}
+
+	if err := s.repo.ShiftLeft(ctx, card.ListID, card.Position); err != nil {
+		return db.Card{}, err
+	}
+	if err := s.repo.ShiftRight(ctx, dstList.ID, targetPos); err != nil {
 		return db.Card{}, err
 	}
 
 	updated, err := s.repo.Update(ctx, db.UpdateCardParams{
 		ID:          cardID,
-		ListID:      dstListID,
-		Position:    newPos,
+		ListID:      dstList.ID,
+		Position:    targetPos,
 		Title:       card.Title,
 		Description: card.Description,
 	})
 	if err != nil {
 		return db.Card{}, err
 	}
-	// Send WebSocket event in the format expected by the frontend
+
 	s.hub.Broadcast(srcList.BoardID, websocket.EventMessage{
 		Event: "card_moved",
 		Data: map[string]any{
