@@ -42,8 +42,10 @@ func (s *Service) Create(ctx context.Context, userID, boardID int32, title strin
 		"position", position,
 	)
 
-	_ = s.repo.ShiftRight(ctx, boardID, position)
-	lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: position})
+        if err := s.repo.ShiftRight(ctx, boardID, position); err != nil {
+                return db.List{}, err
+        }
+        lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: position})
 	if err == nil {
 		logger.WithContext(ctx).Info("List created successfully",
 			"list_id", lst.ID,

@@ -29,8 +29,10 @@ func (s *Service) Create(ctx context.Context, userID, listID int32, title string
 	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
-	_ = s.cards.ShiftRight(ctx, listID, position)
-	card, err := s.cards.Create(ctx, db.CreateCardParams{ListID: listID, Title: title, Description: pgtype.Text{String: description, Valid: description != ""}, Position: position})
+        if err := s.cards.ShiftRight(ctx, listID, position); err != nil {
+                return db.Card{}, err
+        }
+        card, err := s.cards.Create(ctx, db.CreateCardParams{ListID: listID, Title: title, Description: pgtype.Text{String: description, Valid: description != ""}, Position: position})
 	if err == nil {
 		s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "card_created", Data: card})
 	}
