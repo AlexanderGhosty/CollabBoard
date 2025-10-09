@@ -49,7 +49,7 @@ func (s *Service) ListBoardsByRole(ctx context.Context, userID int32, role strin
 }
 
 func (s *Service) UpdateBoard(ctx context.Context, userID int32, arg db.UpdateBoardParams) (db.Board, error) {
-	member, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: arg.ID, UserID: userID})
+	member, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: arg.ID, UserID: userID})
 	if err != nil || member.Role != "owner" {
 		return db.Board{}, ErrForbidden
 	}
@@ -62,7 +62,7 @@ func (s *Service) UpdateBoard(ctx context.Context, userID int32, arg db.UpdateBo
 }
 
 func (s *Service) DeleteBoard(ctx context.Context, userID, boardID int32) error {
-	member, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID})
+	member, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID})
 	if err != nil || member.Role != "owner" {
 		return ErrForbidden
 	}
@@ -74,7 +74,7 @@ func (s *Service) DeleteBoard(ctx context.Context, userID, boardID int32) error 
 }
 
 func (s *Service) GetBoard(ctx context.Context, userID, boardID int32) (db.Board, error) {
-	if _, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	}); err != nil {
 		return db.Board{}, ErrForbidden
@@ -83,7 +83,7 @@ func (s *Service) GetBoard(ctx context.Context, userID, boardID int32) (db.Board
 }
 
 func (s *Service) ListMembers(ctx context.Context, userID, boardID int32) ([]db.ListBoardMembersRow, error) {
-	if _, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	}); err != nil {
 		return nil, ErrForbidden
@@ -94,7 +94,7 @@ func (s *Service) ListMembers(ctx context.Context, userID, boardID int32) ([]db.
 func (s *Service) AddMember(
 	ctx context.Context, userID, boardID, newUserID int32, role string,
 ) (db.BoardMember, error) {
-	owner, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+	owner, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	})
 	if err != nil || owner.Role != "owner" {
@@ -117,7 +117,7 @@ func (s *Service) AddMember(
 func (s *Service) RemoveMember(
 	ctx context.Context, userID, boardID, memberID int32,
 ) error {
-	owner, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+	owner, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	})
 	if err != nil || owner.Role != "owner" {
@@ -139,7 +139,7 @@ func (s *Service) LeaveBoard(
 	ctx context.Context, userID, boardID int32,
 ) error {
 	// Get the member to check if they exist and are not an owner
-	member, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+	member, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	})
 	if err != nil {
@@ -169,7 +169,7 @@ func (s *Service) AddMemberByEmail(
 	ctx context.Context, userID, boardID int32, email, role string,
 ) (db.BoardMember, error) {
 	// Check if the current user is the owner of the board
-	owner, err := s.repo.queries.GetBoardMember(ctx, db.GetBoardMemberParams{
+	owner, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	})
 	if err != nil || owner.Role != "owner" {
@@ -177,7 +177,7 @@ func (s *Service) AddMemberByEmail(
 	}
 
 	// Find the user by email
-	user, err := s.repo.queries.GetUserByEmail(ctx, email)
+	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return db.BoardMember{}, ErrUserNotFound
 	}

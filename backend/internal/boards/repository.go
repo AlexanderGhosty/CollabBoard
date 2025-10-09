@@ -14,6 +14,14 @@ func NewRepository(q *db.Queries) *Repository {
 	return &Repository{queries: q}
 }
 
+func (r *Repository) GetBoardMember(ctx context.Context, arg db.GetBoardMemberParams) (db.BoardMember, error) {
+	return r.queries.GetBoardMember(ctx, arg)
+}
+
+func (r *Repository) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
+	return r.queries.GetUserByEmail(ctx, email)
+}
+
 func (r *Repository) Create(ctx context.Context, arg db.CreateBoardParams) (db.Board, error) {
 	return r.queries.CreateBoard(ctx, arg)
 }
