@@ -120,7 +120,7 @@ func main() {
 	lists.RegisterRoutes(api, listsSvc)
 
 	cardsRepo := cards.NewRepository(queries)
-	cardsSvc := cards.NewService(cardsRepo, queries, hub)
+	cardsSvc := cards.NewService(cardsRepo, listsRepo, boardsRepo, hub)
 	cards.RegisterRoutes(api, cardsSvc)
 
 	// User profile endpoint

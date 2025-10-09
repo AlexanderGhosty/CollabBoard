@@ -43,6 +43,12 @@ func (r *Repository) ShiftLeft(ctx context.Context, boardID, from int32) error {
 func (r *Repository) GetByID(ctx context.Context, id int32) (db.List, error) {
 	return r.q.GetListByID(ctx, id)
 }
+
+// GetListByID provides a named alias for fetching a list by ID to satisfy
+// external interfaces that expect this method signature.
+func (r *Repository) GetListByID(ctx context.Context, id int32) (db.List, error) {
+	return r.q.GetListByID(ctx, id)
+}
 func (r *Repository) GetBoardMember(ctx context.Context, arg db.GetBoardMemberParams) (db.BoardMember, error) {
 	return r.q.GetBoardMember(ctx, arg)
 }

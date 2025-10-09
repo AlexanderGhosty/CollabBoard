@@ -11,25 +11,26 @@ import (
 )
 
 type Service struct {
-	repo *Repository
-	q    *db.Queries
-	hub  *websocket.Hub
+	cards   CardRepository
+	lists   ListRepository
+	members BoardMemberRepository
+	hub     *websocket.Hub
 }
 
-func NewService(repo *Repository, q *db.Queries, hub *websocket.Hub) *Service {
-	return &Service{repo: repo, q: q, hub: hub}
+func NewService(cards CardRepository, lists ListRepository, members BoardMemberRepository, hub *websocket.Hub) *Service {
+	return &Service{cards: cards, lists: lists, members: members, hub: hub}
 }
 
 func (s *Service) Create(ctx context.Context, userID, listID int32, title string, description string, position int32) (db.Card, error) {
-	lst, err := s.q.GetListByID(ctx, listID)
+	lst, err := s.lists.GetListByID(ctx, listID)
 	if err != nil {
 		return db.Card{}, err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
-	_ = s.repo.ShiftRight(ctx, listID, position)
-	card, err := s.repo.Create(ctx, db.CreateCardParams{ListID: listID, Title: title, Description: pgtype.Text{String: description, Valid: description != ""}, Position: position})
+	_ = s.cards.ShiftRight(ctx, listID, position)
+	card, err := s.cards.Create(ctx, db.CreateCardParams{ListID: listID, Title: title, Description: pgtype.Text{String: description, Valid: description != ""}, Position: position})
 	if err == nil {
 		s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "card_created", Data: card})
 	}
@@ -37,36 +38,36 @@ func (s *Service) Create(ctx context.Context, userID, listID int32, title string
 }
 
 func (s *Service) ListByList(ctx context.Context, userID, listID int32) ([]db.Card, error) {
-	lst, err := s.q.GetListByID(ctx, listID)
+	lst, err := s.lists.GetListByID(ctx, listID)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: lst.BoardID, UserID: userID,
 	}); err != nil {
 		return nil, errors.New("not a member")
 	}
-	return s.repo.ListByList(ctx, listID)
+	return s.cards.ListByList(ctx, listID)
 }
 
 func (s *Service) Update(ctx context.Context, userID, cardID int32, req UpdateCardRequest) (db.Card, error) {
-	currentCard, err := s.q.GetCardByID(ctx, cardID)
+	currentCard, err := s.cards.GetCardByID(ctx, cardID)
 	if err != nil {
 		return db.Card{}, err
 	}
 
-	srcList, err := s.q.GetListByID(ctx, currentCard.ListID)
+	srcList, err := s.lists.GetListByID(ctx, currentCard.ListID)
 	if err != nil {
 		return db.Card{}, err
 	}
 
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: srcList.BoardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: srcList.BoardID, UserID: userID}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
 
 	dstList := srcList
 	if req.ListID != nil && *req.ListID != srcList.ID {
-		dstList, err = s.q.GetListByID(ctx, *req.ListID)
+		dstList, err = s.lists.GetListByID(ctx, *req.ListID)
 		if err != nil {
 			return db.Card{}, err
 		}
@@ -78,7 +79,7 @@ func (s *Service) Update(ctx context.Context, userID, cardID int32, req UpdateCa
 	var maxPos int
 	includesCurrent := dstList.ID == currentCard.ListID
 	if req.Position != nil || !includesCurrent {
-		cards, err := s.repo.ListByList(ctx, dstList.ID)
+		cards, err := s.cards.ListByList(ctx, dstList.ID)
 		if err != nil {
 			return db.Card{}, err
 		}
@@ -106,10 +107,10 @@ func (s *Service) Update(ctx context.Context, userID, cardID int32, req UpdateCa
 
 	needsRelocation := dstList.ID != currentCard.ListID || targetPos != currentCard.Position
 	if needsRelocation {
-		if err := s.repo.ShiftLeft(ctx, currentCard.ListID, currentCard.Position); err != nil {
+		if err := s.cards.ShiftLeft(ctx, currentCard.ListID, currentCard.Position); err != nil {
 			return db.Card{}, err
 		}
-		if err := s.repo.ShiftRight(ctx, dstList.ID, targetPos); err != nil {
+		if err := s.cards.ShiftRight(ctx, dstList.ID, targetPos); err != nil {
 			return db.Card{}, err
 		}
 	}
@@ -124,7 +125,7 @@ func (s *Service) Update(ctx context.Context, userID, cardID int32, req UpdateCa
 		description = pgtype.Text{String: *req.Description, Valid: true}
 	}
 
-	updated, err := s.repo.Update(ctx, db.UpdateCardParams{
+	updated, err := s.cards.Update(ctx, db.UpdateCardParams{
 		ID:          currentCard.ID,
 		Title:       title,
 		Description: description,
@@ -140,20 +141,20 @@ func (s *Service) Update(ctx context.Context, userID, cardID int32, req UpdateCa
 }
 
 func (s *Service) Delete(ctx context.Context, userID, cardID int32) error {
-	card0, err := s.q.GetCardByID(ctx, cardID)
+	card0, err := s.cards.GetCardByID(ctx, cardID)
 	if err != nil {
 		return err
 	}
-	lst, err := s.q.GetListByID(ctx, card0.ListID)
+	lst, err := s.lists.GetListByID(ctx, card0.ListID)
 	if err != nil {
 		return err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: lst.BoardID, UserID: userID,
 	}); err != nil {
 		return errors.New("not a member")
 	}
-	if err := s.repo.Delete(ctx, cardID); err != nil {
+	if err := s.cards.Delete(ctx, cardID); err != nil {
 		return err
 	}
 	s.hub.Broadcast(lst.BoardID, websocket.EventMessage{
@@ -163,23 +164,23 @@ func (s *Service) Delete(ctx context.Context, userID, cardID int32) error {
 }
 
 func (s *Service) Move(ctx context.Context, userID, cardID int32, req MoveCardRequest) (db.Card, error) {
-	card, err := s.q.GetCardByID(ctx, cardID)
+	card, err := s.cards.GetCardByID(ctx, cardID)
 	if err != nil {
 		return db.Card{}, err
 	}
 
-	srcList, err := s.q.GetListByID(ctx, card.ListID)
+	srcList, err := s.lists.GetListByID(ctx, card.ListID)
 	if err != nil {
 		return db.Card{}, err
 	}
 
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: srcList.BoardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: srcList.BoardID, UserID: userID}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
 
 	dstList := srcList
 	if req.ListID != nil && *req.ListID != srcList.ID {
-		dstList, err = s.q.GetListByID(ctx, *req.ListID)
+		dstList, err = s.lists.GetListByID(ctx, *req.ListID)
 		if err != nil {
 			return db.Card{}, err
 		}
@@ -188,7 +189,7 @@ func (s *Service) Move(ctx context.Context, userID, cardID int32, req MoveCardRe
 		}
 	}
 
-	cards, err := s.repo.ListByList(ctx, dstList.ID)
+	cards, err := s.cards.ListByList(ctx, dstList.ID)
 	if err != nil {
 		return db.Card{}, err
 	}
@@ -209,14 +210,14 @@ func (s *Service) Move(ctx context.Context, userID, cardID int32, req MoveCardRe
 		return card, nil
 	}
 
-	if err := s.repo.ShiftLeft(ctx, card.ListID, card.Position); err != nil {
+	if err := s.cards.ShiftLeft(ctx, card.ListID, card.Position); err != nil {
 		return db.Card{}, err
 	}
-	if err := s.repo.ShiftRight(ctx, dstList.ID, targetPos); err != nil {
+	if err := s.cards.ShiftRight(ctx, dstList.ID, targetPos); err != nil {
 		return db.Card{}, err
 	}
 
-	updated, err := s.repo.Update(ctx, db.UpdateCardParams{
+	updated, err := s.cards.Update(ctx, db.UpdateCardParams{
 		ID:          cardID,
 		ListID:      dstList.ID,
 		Position:    targetPos,
@@ -240,26 +241,26 @@ func (s *Service) Move(ctx context.Context, userID, cardID int32, req MoveCardRe
 
 func (s *Service) Duplicate(ctx context.Context, userID, cardID int32) (db.Card, error) {
 	// Get the original card
-	origCard, err := s.q.GetCardByID(ctx, cardID)
+	origCard, err := s.cards.GetCardByID(ctx, cardID)
 	if err != nil {
 		return db.Card{}, err
 	}
 
 	// Get the list to check permissions and calculate position
-	list, err := s.q.GetListByID(ctx, origCard.ListID)
+	list, err := s.lists.GetListByID(ctx, origCard.ListID)
 	if err != nil {
 		return db.Card{}, err
 	}
 
 	// Check if user is a member of the board
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: list.BoardID, UserID: userID,
 	}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
 
 	// Get the highest position in the list
-	cards, err := s.repo.ListByList(ctx, list.ID)
+	cards, err := s.cards.ListByList(ctx, list.ID)
 	if err != nil {
 		return db.Card{}, err
 	}
@@ -276,7 +277,7 @@ func (s *Service) Duplicate(ctx context.Context, userID, cardID int32) (db.Card,
 	}
 
 	// Create a duplicate card with the same content but new position
-	newCard, err := s.repo.Create(ctx, db.CreateCardParams{
+	newCard, err := s.cards.Create(ctx, db.CreateCardParams{
 		ListID:      origCard.ListID,
 		Title:       origCard.Title + " (copy)",
 		Description: origCard.Description,
