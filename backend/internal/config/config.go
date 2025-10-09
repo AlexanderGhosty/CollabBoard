@@ -27,7 +27,7 @@ func Load() *Config {
 	dbURL := "postgres://" + user + ":" + pwd + "@" + host + ":" + dbPort + "/" + dbName + "?sslmode=disable"
 
 	logConfig := LogConfig{
-		Level:  getenv("LOG_LEVEL", "INFO"),
+		Level:  getenv("LOG_LEVEL", "WARN"),
 		Format: getenv("LOG_FORMAT", "json"),
 		Output: getenv("LOG_OUTPUT", "stdout"),
 	}

@@ -35,6 +35,7 @@ import (
 	"backend/internal/websocket"
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -64,7 +65,13 @@ func main() {
 
 	queries := db.New(pool)
 
-	r := gin.Default()
+	if strings.ToUpper(cfg.Log.Level) == "DEBUG" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	r := gin.New()
 
 	// Global middleware
 	r.Use(logger.RequestLogging())
