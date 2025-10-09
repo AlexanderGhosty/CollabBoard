@@ -235,6 +235,7 @@ POSTGRES_HOST=your_production_db_host
 POSTGRES_USER=your_db_user
 POSTGRES_PASSWORD=strong_production_password
 POSTGRES_DB=collabboard
+POSTGRES_PORT=5432
 
 # Приложение
 API_PORT=8080

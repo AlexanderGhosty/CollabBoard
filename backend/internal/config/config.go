@@ -20,10 +20,11 @@ func Load() *Config {
 	user := getenv("POSTGRES_USER", "postgres")
 	pwd := getenv("POSTGRES_PASSWORD", "postgres")
 	dbName := getenv("POSTGRES_DB", "postgres")
+	dbPort := getenv("POSTGRES_PORT", "5432")
 	port := getenv("API_PORT", "8080")
 	secret := getenv("JWT_SECRET", "secret")
 
-	dbURL := "postgres://" + user + ":" + pwd + "@" + host + "/" + dbName + "?sslmode=disable"
+	dbURL := "postgres://" + user + ":" + pwd + "@" + host + ":" + dbPort + "/" + dbName + "?sslmode=disable"
 
 	logConfig := LogConfig{
 		Level:  getenv("LOG_LEVEL", "INFO"),
