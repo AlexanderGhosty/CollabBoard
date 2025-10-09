@@ -100,7 +100,8 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Auth routes (public + /auth/me)
-	authSvc := auth.NewService(queries, cfg.JWTSecret)
+	authRepo := auth.NewRepository(queries)
+	authSvc := auth.NewService(authRepo, cfg.JWTSecret)
 	auth.RegisterRoutes(r, authSvc, cfg.JWTSecret)
 
 	// Protected API routes

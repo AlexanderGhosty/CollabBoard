@@ -13,12 +13,12 @@ import (
 )
 
 type Service struct {
-	queries   *db.Queries
+	repo      Repository
 	jwtSecret string
 }
 
-func NewService(q *db.Queries, secret string) *Service {
-	return &Service{queries: q, jwtSecret: secret}
+func NewService(repo Repository, secret string) *Service {
+	return &Service{repo: repo, jwtSecret: secret}
 }
 
 var (
@@ -27,14 +27,14 @@ var (
 )
 
 func (s *Service) Register(ctx context.Context, name, email, password string) (string, UserPublic, error) {
-	if _, err := s.queries.GetUserByEmail(ctx, email); err == nil {
+	if _, err := s.repo.GetUserByEmail(ctx, email); err == nil {
 		return "", UserPublic{}, errors.New("email already registered")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", UserPublic{}, errors.New("failed to hash password")
 	}
-	u, err := s.queries.CreateUser(ctx, db.CreateUserParams{
+	u, err := s.repo.CreateUser(ctx, db.CreateUserParams{
 		Name:         name,
 		Email:        email,
 		PasswordHash: string(hash),
@@ -50,7 +50,7 @@ func (s *Service) Register(ctx context.Context, name, email, password string) (s
 }
 
 func (s *Service) Login(ctx context.Context, email, password string) (string, UserPublic, error) {
-	u, err := s.queries.GetUserByEmail(ctx, email)
+	u, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return "", UserPublic{}, ErrInvalidCredentials
 	}
@@ -65,7 +65,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, Us
 }
 
 func (s *Service) GetUserByID(ctx context.Context, id int32) (UserPublic, error) {
-	u, err := s.queries.GetUserByID(ctx, id)
+	u, err := s.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return UserPublic{}, err
 	}
@@ -74,7 +74,7 @@ func (s *Service) GetUserByID(ctx context.Context, id int32) (UserPublic, error)
 
 func (s *Service) ChangePassword(ctx context.Context, userID int32, currentPassword, newPassword string) error {
 	// Get the user to verify the current password
-	user, err := s.queries.GetUserByID(ctx, userID)
+	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID int32, currentPassw
 	}
 
 	// Update the password hash
-	_, err = s.queries.UpdatePasswordHash(ctx, db.UpdatePasswordHashParams{
+	_, err = s.repo.UpdatePasswordHash(ctx, db.UpdatePasswordHashParams{
 		ID:           userID,
 		PasswordHash: string(newHash),
 	})
