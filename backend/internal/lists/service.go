@@ -15,18 +15,18 @@ import (
 var ErrNotMember = errors.New("not a member")
 
 type Service struct {
-	repo *Repository
-	q    *db.Queries // for cross‑repo checks
-	hub  *websocket.Hub
+	repo    ListRepository
+	members BoardMemberRepository
+	hub     *websocket.Hub
 }
 
-func NewService(repo *Repository, q *db.Queries, hub *websocket.Hub) *Service {
-	return &Service{repo: repo, q: q, hub: hub}
+func NewService(repo ListRepository, members BoardMemberRepository, hub *websocket.Hub) *Service {
+	return &Service{repo: repo, members: members, hub: hub}
 }
 
 func (s *Service) Create(ctx context.Context, userID, boardID int32, title string, position int32) (db.List, error) {
 	// check membership
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
 		logger.WithContext(ctx).Warn("List creation failed: user not a member",
 			"user_id", userID,
 			"board_id", boardID,
@@ -62,7 +62,7 @@ func (s *Service) Create(ctx context.Context, userID, boardID int32, title strin
 }
 
 func (s *Service) ListByBoard(ctx context.Context, userID, boardID int32) ([]db.List, error) {
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	}); err != nil {
 		return nil, ErrNotMember
@@ -72,15 +72,15 @@ func (s *Service) ListByBoard(ctx context.Context, userID, boardID int32) ([]db.
 
 // GetListByID retrieves a list by its ID
 func (s *Service) GetListByID(ctx context.Context, listID int32) (db.List, error) {
-	return s.q.GetListByID(ctx, listID)
+	return s.repo.GetByID(ctx, listID)
 }
 
 func (s *Service) Update(ctx context.Context, userID, listID int32, req UpdateListRequest) (db.List, error) {
-	lst, err := s.q.GetListByID(ctx, listID)
+	lst, err := s.repo.GetByID(ctx, listID)
 	if err != nil {
 		return db.List{}, err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
 		return db.List{}, ErrNotMember
 	}
 
@@ -128,11 +128,11 @@ func (s *Service) Update(ctx context.Context, userID, listID int32, req UpdateLi
 }
 
 func (s *Service) Delete(ctx context.Context, userID, listID int32) error {
-	lst, err := s.q.GetListByID(ctx, listID)
+	lst, err := s.repo.GetByID(ctx, listID)
 	if err != nil {
 		return err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: lst.BoardID, UserID: userID,
 	}); err != nil {
 		return ErrNotMember
@@ -202,7 +202,7 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	)
 
 	// Get the list to move
-	lst, err := s.q.GetListByID(ctx, listID)
+	lst, err := s.repo.GetByID(ctx, listID)
 	if err != nil {
 		logger.WithContext(ctx).Error("Error getting list to move",
 			"list_id", listID,
@@ -218,7 +218,7 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	)
 
 	// Check if user is a member of the board
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
 		logger.WithContext(ctx).Warn("List move failed: user not a member",
 			"user_id", userID,
 			"board_id", lst.BoardID,
@@ -279,7 +279,7 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 		}
 
 		// Refresh the list after normalization
-		lst, err = s.q.GetListByID(ctx, listID)
+		lst, err = s.repo.GetByID(ctx, listID)
 		if err != nil {
 			logger.WithContext(ctx).Error("Error getting list after normalization",
 				"list_id", listID,
@@ -395,7 +395,7 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 }
 
 func (s *Service) NormalizeAndList(ctx context.Context, userID, boardID int32) (NormalizePositionsResponse, error) {
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
 		return NormalizePositionsResponse{}, ErrNotMember
 	}
 

@@ -116,7 +116,7 @@ func main() {
 	boards.RegisterRoutes(api, boardsSvc)
 
 	listsRepo := lists.NewRepository(queries)
-	listsSvc := lists.NewService(listsRepo, queries, hub)
+	listsSvc := lists.NewService(listsRepo, listsRepo, hub)
 	lists.RegisterRoutes(api, listsSvc)
 
 	cardsRepo := cards.NewRepository(queries)
