@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gin-gonic/gin"
-
 	db "backend/internal/db/sqlc"
 	"backend/internal/websocket"
 )
@@ -33,13 +31,8 @@ func (s *Service) CreateBoard(ctx context.Context, ownerID int32, name string) (
 	_, _ = s.repo.AddMember(ctx, db.AddBoardMemberParams{BoardID: b.ID, UserID: ownerID, Role: "owner"})
 
 	// Create board data with role information for WebSocket broadcast
-	boardData := gin.H{
-		"ID":        b.ID,
-		"Name":      b.Name,
-		"OwnerID":   b.OwnerID,
-		"CreatedAt": b.CreatedAt,
-		"role":      "owner", // Creator is always the owner
-	}
+	boardData := newBoardEventPayload(b)
+	boardData.Role = "owner" // Creator is always the owner
 	s.hub.Broadcast(b.ID, websocket.EventMessage{Event: "board_created", Data: boardData})
 	return b, nil
 }
@@ -62,7 +55,8 @@ func (s *Service) UpdateBoard(ctx context.Context, userID int32, arg db.UpdateBo
 	}
 	b, err := s.repo.Update(ctx, arg)
 	if err == nil {
-		s.hub.Broadcast(b.ID, websocket.EventMessage{Event: "board_updated", Data: b})
+		payload := newBoardEventPayload(b)
+		s.hub.Broadcast(b.ID, websocket.EventMessage{Event: "board_updated", Data: payload})
 	}
 	return b, err
 }
@@ -75,7 +69,7 @@ func (s *Service) DeleteBoard(ctx context.Context, userID, boardID int32) error 
 	if err := s.repo.Delete(ctx, boardID); err != nil {
 		return err
 	}
-	s.hub.Broadcast(boardID, websocket.EventMessage{Event: "board_deleted", Data: gin.H{"id": boardID}})
+	s.hub.Broadcast(boardID, websocket.EventMessage{Event: "board_deleted", Data: BoardEventPayload{ID: boardID}})
 	return nil
 }
 

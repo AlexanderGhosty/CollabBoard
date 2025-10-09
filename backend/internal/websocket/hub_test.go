@@ -26,11 +26,18 @@ func TestHub_Broadcast(t *testing.T) {
 	h.register <- c2
 	h.register <- c3
 
-	// Use map[string]interface{} so JSON unmarshal yields the same type
-	msg := EventMessage{Event: "test", Data: map[string]interface{}{"hello": "world"}}
+	type payload struct {
+		Hello string `json:"hello"`
+	}
+
+	originalPayload := payload{Hello: "world"}
+	msg := EventMessage{Event: "test", Data: originalPayload}
 	h.Broadcast(boardID, msg)
 
-	expect := EventMessage{}
+	var expect struct {
+		Event string  `json:"event"`
+		Data  payload `json:"data"`
+	}
 	select {
 	case raw := <-c1.send:
 		_ = json.Unmarshal(raw, &expect)
@@ -38,7 +45,7 @@ func TestHub_Broadcast(t *testing.T) {
 		t.Fatal("timeout waiting for message on client1")
 	}
 	assert.Equal(t, msg.Event, expect.Event)
-	assert.Equal(t, msg.Data, expect.Data)
+	assert.Equal(t, originalPayload, expect.Data)
 
 	select {
 	case <-c2.send:
