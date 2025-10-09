@@ -34,8 +34,14 @@ import (
 	"backend/internal/middleware"
 	"backend/internal/websocket"
 	"context"
+	"errors"
 	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -53,10 +59,9 @@ func main() {
 	}
 	logger.Info("Starting CollabBoard server", "version", "1.0.0", "log_level", cfg.Log.Level)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	pool, err := pgxpool.New(ctx, cfg.DBUrl)
+	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	pool, err := pgxpool.New(dbCtx, cfg.DBUrl)
+	cancel()
 	if err != nil {
 		logger.Fatal("cannot connect to DB", "error", err)
 	}
@@ -65,7 +70,7 @@ func main() {
 
 	queries := db.New(pool)
 
-	if strings.ToUpper(cfg.Log.Level) == "DEBUG" {
+	if strings.EqualFold(cfg.Log.Level, "DEBUG") {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -156,8 +161,40 @@ func main() {
 	defer positionNormalizer.Stop()
 	logger.Info("Position normalizer background job started", "interval", "30m")
 
-	logger.Info("Starting HTTP server", "port", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
-		logger.Fatal("server failed", "error", err)
+	srv := &http.Server{
+		Addr:    net.JoinHostPort("", cfg.Port),
+		Handler: r,
+	}
+
+	// Start server in background so we can listen for shutdown signals
+	serverErrCh := make(chan error, 1)
+	go func() {
+		logger.Info("Starting HTTP server", "port", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErrCh <- err
+		}
+		close(serverErrCh)
+	}()
+
+	shutdownCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case <-shutdownCtx.Done():
+		logger.Info("Shutdown signal received, stopping server")
+	case err := <-serverErrCh:
+		if err != nil {
+			logger.Fatal("server failed", "error", err)
+		}
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("server shutdown error", "error", err)
+	} else {
+		logger.Info("Server gracefully stopped")
 	}
 }
