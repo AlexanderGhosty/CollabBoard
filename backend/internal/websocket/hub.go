@@ -77,30 +77,55 @@ func (h *Hub) Run() {
 
 		case b := <-h.broadcast:
 			h.mu.RLock()
-			if clients, ok := h.rooms[b.boardID]; ok {
-				clientCount := len(clients)
-				successCount := 0
-				for c := range clients {
-					select {
-					case c.send <- b.message:
-						successCount++
-					default:
-						// client buffer full; disconnect
+			room, ok := h.rooms[b.boardID]
+			if !ok {
+				h.mu.RUnlock()
+				continue
+			}
+			clients := make([]*Client, 0, len(room))
+			for c := range room {
+				clients = append(clients, c)
+			}
+			h.mu.RUnlock()
+
+			clientCount := len(clients)
+			successCount := 0
+			saturated := make([]*Client, 0)
+			for _, c := range clients {
+				select {
+				case c.send <- b.message:
+					successCount++
+				default:
+					saturated = append(saturated, c)
+				}
+			}
+
+			if len(saturated) > 0 {
+				h.mu.Lock()
+				if room, ok := h.rooms[b.boardID]; ok {
+					for _, c := range saturated {
+						if _, exists := room[c]; !exists {
+							continue
+						}
+						delete(room, c)
 						close(c.send)
-						delete(clients, c)
 						logger.Warn("WebSocket client disconnected due to full buffer",
 							"board_id", c.boardID,
 							"user_id", c.userID,
 						)
 					}
+					if len(room) == 0 {
+						delete(h.rooms, b.boardID)
+					}
 				}
-				logger.Debug("WebSocket message broadcasted",
-					"board_id", b.boardID,
-					"total_clients", clientCount,
-					"successful_sends", successCount,
-				)
+				h.mu.Unlock()
 			}
-			h.mu.RUnlock()
+
+			logger.Debug("WebSocket message broadcasted",
+				"board_id", b.boardID,
+				"total_clients", clientCount,
+				"successful_sends", successCount,
+			)
 		}
 	}
 }
