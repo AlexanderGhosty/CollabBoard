@@ -10,6 +10,12 @@ import (
 	"backend/internal/logger"
 )
 
+// Normalizer represents a background job with lifecycle hooks.
+type Normalizer interface {
+	Start()
+	Stop()
+}
+
 // PositionNormalizer is a background job that periodically checks for and fixes position conflicts
 type PositionNormalizer struct {
 	listsSvc    *lists.Service

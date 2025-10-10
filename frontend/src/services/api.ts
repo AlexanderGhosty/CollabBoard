@@ -1,6 +1,7 @@
 // src/services/api.ts
 import axios from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
+import { logger } from '@/utils/logger';
 
 // Extract the base URL without the '/api' suffix for auth endpoints
 const baseURL = import.meta.env.VITE_API_URL || '';
@@ -46,7 +47,7 @@ const handleAuthErrors = (err: import('axios').AxiosError) => {
     // 2. The user is currently authenticated (has a token)
     // This prevents logout on failed login attempts but handles expired tokens
     if (!isAuthEndpoint && isCurrentlyAuthenticated) {
-      console.log('Received 401 Unauthorized response, logging out user');
+      logger.debug('Received 401 Unauthorized response, logging out user');
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }

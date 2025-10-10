@@ -1,18 +1,24 @@
 # CollabBoard
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)
-![Go](https://img.shields.io/badge/Go-1.23-00ADD8?style=flat&logo=go&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.24-00ADD8?style=flat&logo=go&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat&logo=postgresql&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat&logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat&logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)
 
-Современная система для совместной работы с Kanban-досками в реальном времени. Полнофункциональное веб-приложение с интуитивным интерфейсом, поддержкой множественных пользователей и мгновенной синхронизацией изменений.
+Современная система для совместной работы с Kanban-досками в реальном времени.
+Полнофункциональное веб-приложение с интуитивным интерфейсом и поддержкой множественных пользователей.
+Система обеспечивает мгновенную синхронизацию изменений.
 
 ## 🌟 Обзор проекта
 
-CollabBoard — это полнофункциональная платформа для управления проектами в стиле Kanban, созданная для команд, которым необходима эффективная совместная работа в реальном времени. Приложение объединяет современные веб-технологии для создания быстрого, надежного и интуитивно понятного инструмента управления задачами.
+CollabBoard — это полнофункциональная платформа для управления проектами в стиле Kanban.
+Она создана для команд, которым необходима эффективная совместная работа в реальном времени.
+Приложение объединяет современные веб-технологии.
+Это даёт быстрый, надежный и интуитивно понятный инструмент управления задачами.
 
 ### Ключевые преимущества
+
 - **🚀 Real-time синхронизация** — все изменения мгновенно отображаются у всех участников
 - **🎯 Интуитивный интерфейс** — drag-and-drop управление карточками и списками
 - **👥 Командная работа** — система ролей и приглашений участников
@@ -23,10 +29,10 @@ CollabBoard — это полнофункциональная платформа
 
 ### Высокоуровневая схема
 
-```
+```text
 ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
 │     Frontend        │    │      Backend        │    │     Database        │
-│   (React 19 + TS)   │◄──►│   (Go 1.23 + Gin)  │◄──►│  (PostgreSQL 16)    │
+│   (React 19 + TS)   │◄──►│   (Go 1.24 + Gin)  │◄──►│  (PostgreSQL 16)    │
 │                     │    │                     │    │                     │
 │ • Zustand Store     │    │ • WebSocket Hub     │    │ • Users & Boards    │
 │ • React Router      │    │ • JWT Middleware    │    │ • Lists & Cards     │
@@ -49,11 +55,11 @@ CollabBoard — это полнофункциональная платформа
 | Компонент | Технология | Версия | Назначение |
 |-----------|------------|--------|------------|
 | **Frontend** | React | 19 | Пользовательский интерфейс |
-| | TypeScript | 5.0+ | Типизация и безопасность кода |
-| | Zustand | 4.x | Управление состоянием |
+| | TypeScript | 5.7+ | Типизация и безопасность кода |
+| | Zustand | 5.x | Управление состоянием |
 | | Tailwind CSS | 3.x | Стилизация и дизайн-система |
-| | Vite | 5.x | Сборка и разработка |
-| **Backend** | Go | 1.23 | Серверная логика |
+| | Vite | 6.x | Сборка и разработка |
+| **Backend** | Go | 1.24 | Серверная логика |
 | | Gin | 1.x | HTTP веб-фреймворк |
 | | sqlc | 1.x | Генерация типобезопасного SQL |
 | | JWT-Go | 5.x | Аутентификация |
@@ -64,25 +70,29 @@ CollabBoard — это полнофункциональная платформа
 
 ## ✨ Ключевые функции
 
-### 📋 Управление досками
+### 📋 Управление досок
+
 - **Создание и настройка** — быстрое создание новых Kanban досок
 - **Система ролей** — владельцы (owner) и участники (member) с разными правами
 - **Приглашения по email** — добавление новых участников в команду
 - **Переименование в реальном времени** — мгновенное обновление названий
 
 ### 🎯 Kanban интерфейс
+
 - **Списки задач** — создание, редактирование и удаление колонок
 - **Карточки** — полный CRUD функционал с описаниями и метаданными
 - **Drag & Drop** — интуитивное перемещение между списками
 - **Автоматическое позиционирование** — умное управление порядком элементов
 
 ### ⚡ Real-time синхронизация
+
 - **WebSocket соединения** — мгновенные обновления для всех участников
 - **Автоматическое переподключение** — восстановление связи при сбоях
 - **Конфликт-резолюция** — корректная обработка одновременных изменений
 - **Оптимистичные обновления** — отзывчивый интерфейс без задержек
 
 ### 🎨 Пользовательский опыт
+
 - **Адаптивный дизайн** — оптимизация для всех размеров экранов
 - **Темная/светлая тема** — автоматическое определение и ручное переключение
 - **Плавные анимации** — современные переходы и эффекты
@@ -90,7 +100,7 @@ CollabBoard — это полнофункциональная платформа
 
 ## 📁 Структура проекта
 
-```
+```text
 collabboard/
 ├── 📁 backend/                    # Go backend приложение
 │   ├── 📁 cmd/server/            # Точка входа приложения
@@ -138,12 +148,14 @@ collabboard/
 ### Программное обеспечение
 
 #### Обязательно
+
 - **Docker** 20.10+ с Docker Compose 2.0+
 - **Git** 2.30+
 
 #### Для ручной разработки (опционально)
-- **Go** 1.23+
-- **Node.js** 18+ с npm/yarn
+
+- **Go** 1.24+
+- **Node.js** 20+ с npm/yarn
 - **PostgreSQL** 16+
 
 ## 🚀 Быстрый старт
@@ -159,37 +171,37 @@ collabboard/
 ```bash
 # Клонирование проекта
 git clone <repository-url>
-cd collabboard
+cd CollabBoard
 
 # Настройка окружения
 cp .env.example .env
 
-# Запуск всех сервисов
-docker-compose up -d
+# Запуск всех сервисов с пересборкой образов
+docker compose up --build -d
 
 # Просмотр логов (опционально)
-docker-compose logs -f
+docker compose logs --follow
 ```
 
 ### Доступ к приложению
 
 После запуска сервисы будут доступны по адресам:
 
-- **🌐 Веб-приложение**: http://localhost:5173
-- **🔌 API Backend**: http://localhost:8080
+- **🌐 Веб-приложение**: <http://localhost:5173>
+- **🔌 API Backend**: <http://localhost:8080>
 - **📊 База данных**: localhost:5432
 
 ### Проверка работоспособности
 
 ```bash
 # Статус всех сервисов
-docker-compose ps
+docker compose ps
 
 # Проверка API
 curl http://localhost:8080/health
 
 # Остановка сервисов
-docker-compose down
+docker compose down
 ```
 
 ## 🚀 Инструкции по развертыванию
@@ -197,20 +209,22 @@ docker-compose down
 ### Локальная разработка
 
 #### Docker Compose (рекомендуется)
+
 ```bash
 # Полная настройка окружения
 git clone <repository-url>
-cd collabboard
+cd CollabBoard
 cp .env.example .env
 
 # Запуск в режиме разработки
-docker-compose up -d
+docker compose up -d
 
 # Просмотр логов в реальном времени
-docker-compose logs -f api web
+docker compose logs -f api web
 ```
 
 #### Ручная настройка
+
 ```bash
 # 1. База данных
 createdb collabboard
@@ -226,6 +240,7 @@ cd frontend && npm install && npm run dev
 ### Продакшн развертывание
 
 #### Переменные окружения
+
 ```env
 # Безопасность
 JWT_SECRET=very_long_random_string_for_production_min_32_chars
@@ -235,6 +250,7 @@ POSTGRES_HOST=your_production_db_host
 POSTGRES_USER=your_db_user
 POSTGRES_PASSWORD=strong_production_password
 POSTGRES_DB=collabboard
+POSTGRES_PORT=5432
 
 # Приложение
 API_PORT=8080
@@ -243,13 +259,14 @@ LOG_FORMAT=json
 ```
 
 #### Docker Compose продакшн
+
 ```bash
-# Сборка и запуск продакшн контейнеров
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Сборка и запуск контейнеров
+docker compose up -d
 
 # Мониторинг
-docker-compose logs -f
-docker-compose ps
+docker compose logs -f
+docker compose ps
 ```
 
 ## 📚 Ссылки на документацию
@@ -273,6 +290,7 @@ docker-compose ps
 ### API документация
 
 #### Основные эндпоинты
+
 ```bash
 # Аутентификация
 POST /auth/register    # Регистрация
@@ -290,6 +308,7 @@ ws://localhost:8080/ws/board/:boardId?token=JWT_TOKEN
 ```
 
 #### События WebSocket
+
 - **Доски**: `board_updated`, `board_deleted`
 - **Списки**: `list_created`, `list_updated`, `list_moved`, `list_deleted`
 - **Карточки**: `card_created`, `card_updated`, `card_moved`, `card_deleted`
@@ -303,13 +322,10 @@ cd backend
 go test ./...
 go test -cover ./...
 
-# Frontend тесты (при наличии)
+# Frontend тесты
 cd frontend
-npm test
-npm run test:coverage
-
-# Интеграционные тесты
-docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+npm run test
+npm run test -- --coverage
 ```
 
 ## 🤝 Участие в разработке
@@ -342,8 +358,26 @@ docker-compose -f docker-compose.test.yml up --abort-on-container-exit
 3. 🆕 Создайте новый issue с детальным описанием проблемы
 4. 💬 Укажите версии ПО и шаги для воспроизведения
 
+## 🛡️ Безопасность
+
+Нашей приоритет — безопасность данных команд. Если вы обнаружили уязвимость:
+
+1. Не создавайте публичный issue.
+2. Отправьте приватное сообщение через
+   [GitHub Security Advisories](https://docs.github.com/code-security/security-advisories).
+3. Предоставьте подробности для воспроизведения и предложенные варианты исправления.
+
+Мы придерживаемся принципов [Semantic Versioning](https://semver.org/lang/ru/) при выпуске обновлений.
+О критических изменениях сообщаем заранее.
+
+## 🗺️ Roadmap
+
+- Подготовка публичной дорожной карты проекта.
+- Интеграция метрик производительности в реальном времени.
+- Улучшения UX на мобильных устройствах на основе отзывов пользователей.
+
 ---
 
-**Создано с ❤️ для эффективной командной работы**
+## Создано с ❤️ для эффективной командной работы
 
-*CollabBoard — ваш инструмент для организации проектов в стиле Kanban с поддержкой real-time совместной работы*
+CollabBoard — ваш инструмент для организации проектов в стиле Kanban с поддержкой real-time совместной работы.

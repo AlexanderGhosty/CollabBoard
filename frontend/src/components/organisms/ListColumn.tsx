@@ -1,11 +1,11 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useState, useEffect } from 'react';
 import { List } from '@/services/boardService';
 import CardItem from '@/components/molecules/CardItem';
 import ListHeader from '@/components/molecules/ListHeader';
 import { useCardsStore } from '@/store/board';
+import { logger } from '@/utils/logger';
 
 interface Props {
   list: List;
@@ -61,7 +61,7 @@ export default function ListColumn({ list }: Props) {
   const cards = storeCards.length > 0 ? storeCards : (list.cards || []);
 
   // Log the cards for debugging
-  console.log(`ListColumn rendering for list ${list.id} with ${cards.length} cards:`, cards);
+  logger.debug(`ListColumn rendering for list ${list.id} with ${cards.length} cards:`, cards);
 
   // Filter out any cards without valid IDs to prevent key prop errors
   const validCards = cards.filter(card => card && card.id);

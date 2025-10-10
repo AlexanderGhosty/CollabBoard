@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, KeyboardEvent, FocusEvent } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import clsx from 'clsx';
 
 interface EditableTextProps {
@@ -59,7 +59,7 @@ export default function EditableText({
     }
   };
 
-  const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
+  const handleBlur = () => {
     // Only save on blur if there are no errors and the value has changed
     if (!error && editValue !== value) {
       handleSave();

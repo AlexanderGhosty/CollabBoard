@@ -6,22 +6,29 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
-  DragOverEvent,
   rectIntersection
 } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import type { CollisionDetection } from '@dnd-kit/core';
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { useBoardStore, useListsStore, useCardsStore } from '@/store/board';
-import { List, Card } from '@/services/boardService';
+import { List, Card, Board } from '@/services/boardService';
 import { subscribeWS } from '@/services/websocket';
 import DragOverlay from '@/components/molecules/DragOverlay';
 import SortableListColumn from '@/components/molecules/SortableListColumn';
+import { logger } from '@/utils/logger';
+
+type BoardState = Board & { role?: 'owner' | 'member' };
+type ListCardsMap = Record<string, Card[]>;
+type DragItemData =
+  | { type: 'card'; card: Card }
+  | { type: 'list'; list: List };
 
 export default function BoardTemplate() {
   // State for board data
-  const [board, setBoard] = useState(null);
-  const [lists, setLists] = useState([]);
-  const [listCards, setListCards] = useState({});
+  const [board, setBoard] = useState<BoardState | null>(null);
+  const [lists, setLists] = useState<List[]>([]);
+  const [listCards, setListCards] = useState<ListCardsMap>({});
   const [isLoading, setIsLoading] = useState(true);
 
   // Get store actions
@@ -32,30 +39,27 @@ export default function BoardTemplate() {
 
   // Get active board ID once
   const activeBoard = useBoardStore(state => state.activeBoard);
-  const boards = useBoardStore(state => state.boards);
 
   // Subscribe to lists store changes
   const listsState = useListsStore(state => state.lists);
-  const boardListsState = useListsStore(state => state.boardLists);
 
   // Subscribe to cards store changes
   const cardsState = useCardsStore(state => state.cards);
-  const listCardsState = useCardsStore(state => state.listCards);
 
   // Memoized function to load data from stores - only depends on activeBoard
   const loadBoardData = useCallback(() => {
     if (!activeBoard) {
-      console.log("No active board, skipping loadBoardData");
+      logger.debug("No active board, skipping loadBoardData");
       return;
     }
 
-    console.log(`Loading data for board ${activeBoard}`);
+    logger.debug(`Loading data for board ${activeBoard}`);
 
     // Get board data from current state
     const currentBoards = useBoardStore.getState().boards;
     const boardData = currentBoards[activeBoard];
     if (!boardData) {
-      console.log(`Board data not found for ID ${activeBoard}`);
+      logger.debug(`Board data not found for ID ${activeBoard}`);
       return;
     }
 
@@ -65,41 +69,41 @@ export default function BoardTemplate() {
     const listsStore = useListsStore.getState();
 
     // Debug the state of the lists store
-    console.log('Lists store state:', {
+    logger.debug('Lists store state:', {
       lists: listsStore.lists,
       boardLists: listsStore.boardLists,
       activeBoardId: activeBoard
     });
 
     const listsData = listsStore.getSortedListsByBoardId(activeBoard);
-    console.log(`Found ${listsData.length} lists for board ${activeBoard}:`, listsData);
+    logger.debug(`Found ${listsData.length} lists for board ${activeBoard}:`, listsData);
 
     // If no lists were found but we know they should exist, log a warning
     if (listsData.length === 0) {
-      console.warn(`No lists found for board ${activeBoard} in the store. This might indicate a data synchronization issue.`);
+      logger.warn(`No lists found for board ${activeBoard} in the store. This might indicate a data synchronization issue.`);
     }
 
     setLists(listsData);
 
     // Get cards for each list
     const cardsStore = useCardsStore.getState();
-    const cardsData = {};
+    const cardsData: ListCardsMap = {};
 
     listsData.forEach(list => {
       // Get cards for this list
-      const listCards = cardsStore.getSortedCardsByListId(list.id);
+      const cardsForList = cardsStore.getSortedCardsByListId(list.id);
 
       // Debug the cards data
-      console.log(`Raw cards data for list ${list.id}:`, cardsStore.listCards[list.id]);
-      console.log(`Found ${listCards.length} cards for list ${list.id}:`, listCards);
+      logger.debug(`Raw cards data for list ${list.id}:`, cardsStore.listCards[list.id]);
+      logger.debug(`Found ${cardsForList.length} cards for list ${list.id}:`, cardsForList);
 
       // Store the cards for this list
-      cardsData[list.id] = listCards;
+      cardsData[list.id] = cardsForList;
     });
 
     setListCards(cardsData);
     setIsLoading(false);
-    console.log("Board data loaded successfully");
+    logger.debug("Board data loaded successfully");
   }, [activeBoard]); // Only depend on activeBoard to reduce re-renders
 
   // Load data from stores initially
@@ -118,7 +122,7 @@ export default function BoardTemplate() {
     // Debounce updates to prevent excessive re-renders (max once per 100ms)
     if (now - lastUpdateRef.current < 100) return;
 
-    console.log('Store state changed, reloading board data');
+    logger.debug('Store state changed, reloading board data');
     lastUpdateRef.current = now;
     loadBoardData();
   }, [listsState, cardsState, activeBoard, loadBoardData]);
@@ -127,53 +131,53 @@ export default function BoardTemplate() {
   useEffect(() => {
     if (!activeBoard) return;
 
-    console.log(`Setting up WebSocket subscriptions for board ${activeBoard}`);
+    logger.debug(`Setting up WebSocket subscriptions for board ${activeBoard}`);
 
     // Set up WebSocket subscriptions for real-time updates
     const unsubscribers = [
       // List events
       subscribeWS('list_created', (data) => {
-        console.log('BoardTemplate received list_created event:', data);
+        logger.debug('BoardTemplate received list_created event:', data);
         loadBoardData();
       }),
       subscribeWS('list_updated', (data) => {
-        console.log('BoardTemplate received list_updated event:', data);
+        logger.debug('BoardTemplate received list_updated event:', data);
         loadBoardData();
       }),
       subscribeWS('list_moved', (data) => {
-        console.log('BoardTemplate received list_moved event:', data);
+        logger.debug('BoardTemplate received list_moved event:', data);
         loadBoardData();
       }),
       subscribeWS('list_deleted', (data) => {
-        console.log('BoardTemplate received list_deleted event:', data);
+        logger.debug('BoardTemplate received list_deleted event:', data);
         loadBoardData();
       }),
 
       // Card events
       subscribeWS('card_created', (data) => {
-        console.log('BoardTemplate received card_created event:', data);
+        logger.debug('BoardTemplate received card_created event:', data);
         // Force immediate update of the UI
         setTimeout(() => {
           loadBoardData();
         }, 0);
       }),
       subscribeWS('card_updated', (data) => {
-        console.log('BoardTemplate received card_updated event:', data);
+        logger.debug('BoardTemplate received card_updated event:', data);
         loadBoardData();
       }),
       subscribeWS('card_moved', (data) => {
-        console.log('BoardTemplate received card_moved event:', data);
+        logger.debug('BoardTemplate received card_moved event:', data);
         loadBoardData();
       }),
       subscribeWS('card_deleted', (data) => {
-        console.log('BoardTemplate received card_deleted event:', data);
+        logger.debug('BoardTemplate received card_deleted event:', data);
         loadBoardData();
       }),
     ];
 
     // Clean up subscriptions when component unmounts
     return () => {
-      console.log(`Cleaning up WebSocket subscriptions for board ${activeBoard}`);
+      logger.debug(`Cleaning up WebSocket subscriptions for board ${activeBoard}`);
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
   }, [activeBoard, loadBoardData]);
@@ -181,10 +185,10 @@ export default function BoardTemplate() {
   // Define the createList callback
   const handleCreateList = useCallback(async () => {
     if (activeBoard) {
-      console.log(`Creating new list for board ${activeBoard}`);
+      logger.debug(`Creating new list for board ${activeBoard}`);
       try {
         await createList(activeBoard, 'Новый список');
-        console.log("List created, reloading board data");
+        logger.debug("List created, reloading board data");
         // Обновляем данные доски после создания списка
         setTimeout(() => loadBoardData(), 100);
       } catch (error) {
@@ -197,7 +201,7 @@ export default function BoardTemplate() {
 
   // State to track the currently active (dragged) item
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeData, setActiveData] = useState<any>(null);
+  const [activeData, setActiveData] = useState<DragItemData | null>(null);
 
   // Define sensors - cannot be memoized as useSensors is itself a hook
   const sensors = useSensors(
@@ -210,8 +214,8 @@ export default function BoardTemplate() {
   );
 
   // Memoized collision detection for better performance with many items
-  const collisionDetection = useMemo(() => {
-    return (args: any) => {
+  const collisionDetection = useMemo<CollisionDetection>(() => {
+    return (args) => {
       // Use rect intersection for better performance with many items
       const rectIntersectionCollisions = rectIntersection(args);
 
@@ -236,12 +240,13 @@ export default function BoardTemplate() {
 
     const { active } = event;
     setActiveId(String(active.id));
-    setActiveData(active.data?.current);
+    const currentData = active.data?.current as DragItemData | undefined;
+    setActiveData(currentData ?? null);
   }, [isCardModalOpen]);
 
   // Define all hooks before any conditional returns
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    console.log("Drag end event:", event);
+    logger.debug("Drag end event:", event);
     const { active, over } = event;
 
     // Reset active drag state
@@ -249,33 +254,33 @@ export default function BoardTemplate() {
     setActiveData(null);
 
     if (!over || active.id === over.id) {
-      console.log("No valid drop target or same source and target");
+      logger.debug("No valid drop target or same source and target");
       return;
     }
 
     // Get data from the draggable and droppable elements
-    const activeData = active.data?.current;
-    const overData = over.data?.current;
+    const activeDragData = active.data?.current as DragItemData | undefined;
+    const overDragData = over.data?.current as DragItemData | undefined;
 
-    if (!activeData || !overData) {
-      console.log("Missing data in drag elements");
+    if (!activeDragData || !overDragData) {
+      logger.debug("Missing data in drag elements");
       return;
     }
 
     // Check if this is a card being dragged
-    if (activeData.type === 'card') {
-      console.log("Card drag detected");
+    if (activeDragData.type === 'card') {
+      logger.debug("Card drag detected");
 
       const cardId = String(active.id);
-      const sourceListId = activeData.card.listId;
+      const sourceListId = activeDragData.card.listId;
       const targetListId = String(over.id);
 
       // If dropped on another card, we need to get its list ID
-      const targetList = overData.type === 'card'
-        ? overData.card.listId  // Dropped on another card
+      const targetList = overDragData.type === 'card'
+        ? overDragData.card.listId  // Dropped on another card
         : targetListId;         // Dropped directly on a list
 
-      console.log("Card move details:", {
+      logger.debug("Card move details:", {
         cardId,
         sourceListId,
         targetList,
@@ -304,14 +309,14 @@ export default function BoardTemplate() {
     }
 
     // Handle list drag
-    if (activeData.type === 'list') {
-      console.log("List drag detected");
+    if (activeDragData.type === 'list') {
+      logger.debug("List drag detected");
 
       const oldIdx = lists.findIndex((l: List) => l.id === active.id);
       const newIdx = lists.findIndex((l: List) => l.id === over.id);
 
       if (oldIdx === -1 || newIdx === -1) {
-        console.log("Could not find list indexes:", {
+        logger.debug("Could not find list indexes:", {
           oldIdx,
           newIdx,
           activeId: active.id,
@@ -321,7 +326,7 @@ export default function BoardTemplate() {
       }
 
       if (oldIdx === newIdx) {
-        console.log("List dropped in the same position, no action needed");
+        logger.debug("List dropped in the same position, no action needed");
         return;
       }
 
@@ -331,7 +336,7 @@ export default function BoardTemplate() {
         console.error("Could not find the list being moved");
         return;
       }
-      console.log("Moving list:", movingList);
+      logger.debug("Moving list:", movingList);
 
       // Calculate the new position
       let newPosition: number;
@@ -340,13 +345,13 @@ export default function BoardTemplate() {
       const sortedLists = [...lists].sort((a, b) => a.position - b.position);
 
       // Log the current positions of all lists
-      console.log("Current list positions:", sortedLists.map(l => ({ id: l.id, position: l.position })));
+      logger.debug("Current list positions:", sortedLists.map(l => ({ id: l.id, position: l.position })));
 
       // Find the target position based on the visual order after drag
       // This is simpler and more reliable than trying to calculate intermediate positions
       newPosition = newIdx + 1; // Positions start at 1
 
-      console.log(`Moving list from visual position ${oldIdx + 1} to ${newIdx + 1}`);
+      logger.debug(`Moving list from visual position ${oldIdx + 1} to ${newIdx + 1}`);
 
       // Ensure position is a valid integer
       newPosition = Math.round(newPosition);
@@ -359,8 +364,8 @@ export default function BoardTemplate() {
           Math.max(...sortedLists.map(l => l.position)) + 1 : 1;
       }
 
-      console.log(`Final position for list ${movingList.id}: ${newPosition}`);
-      console.log("New position calculated:", newPosition);
+      logger.debug(`Final position for list ${movingList.id}: ${newPosition}`);
+      logger.debug("New position calculated:", newPosition);
 
       // Call the API to persist the change
       moveList(movingList.id, newPosition);
@@ -368,7 +373,7 @@ export default function BoardTemplate() {
   }, [lists, listCards, moveCard, moveList]);
 
   // Memoized calculations to prevent unnecessary recalculations
-  const { listsWithValidIds, listIds, listsWithCards } = useMemo(() => {
+  const { listIds, listsWithCards } = useMemo(() => {
     // Filter lists to ensure all have valid IDs
     const validLists = lists.filter(list => list && list.id);
 
@@ -382,7 +387,6 @@ export default function BoardTemplate() {
     }));
 
     return {
-      listsWithValidIds: validLists,
       listIds: ids,
       listsWithCards: withCards
     };

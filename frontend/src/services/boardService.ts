@@ -15,6 +15,7 @@ import {
   sendBoardEvent
 } from '@/utils/websocket/events';
 import { useAuthStore } from '@/store/useAuthStore';
+import { logger } from '@/utils/logger';
 
 /** Entity types (minimal required) */
 export type Card = {
@@ -46,7 +47,7 @@ export const boardService = {
   async getBoards(): Promise<Board[]> {
     try {
       const { data } = await api.get<ApiBoard[]>(BOARD_ENDPOINTS.boards);
-      console.log("Raw board data from API:", data);
+      logger.debug("Raw board data from API:", data);
 
       // Normalize and filter out boards without IDs
       return data
@@ -62,11 +63,11 @@ export const boardService = {
   async getBoardsByRole(role: 'owner' | 'member'): Promise<Board[]> {
     try {
       const { data } = await api.get<ApiBoard[]>(BOARD_ENDPOINTS.boardsByRole(role));
-      console.log(`Raw board data for role ${role} from API:`, data);
+      logger.debug(`Raw board data for role ${role} from API:`, data);
 
       // Check if data is null or undefined, return empty array if it is
       if (!data) {
-        console.warn(`No data returned for role ${role}, returning empty array`);
+        logger.warn(`No data returned for role ${role}, returning empty array`);
         return [];
       }
 
@@ -88,27 +89,27 @@ export const boardService = {
   /** Получить доску по ID */
   async getBoardById(id: string): Promise<Board> {
     try {
-      console.log(`Fetching board with ID: ${id}`);
+      logger.debug(`Fetching board with ID: ${id}`);
 
       // Step 1: Fetch the board data
       const { data: boardData } = await api.get<ApiBoard>(BOARD_ENDPOINTS.board(id));
-      console.log("Raw board data:", boardData);
+      logger.debug("Raw board data:", boardData);
 
       // Step 2: Fetch the lists for this board
-      console.log(`Fetching lists for board ${id}`);
+      logger.debug(`Fetching lists for board ${id}`);
       const lists = await this.fetchBoardLists(id);
-      console.log(`Fetched ${lists.length} lists for board ${id}:`, lists);
+      logger.debug(`Fetched ${lists.length} lists for board ${id}:`, lists);
 
       // Step 3: Fetch board members to determine the current user's role
       let userRole: 'owner' | 'member' = 'member'; // Default to member
       try {
         const members = await this.getBoardMembers(id);
-        console.log("Board members:", members);
+        logger.debug("Board members:", members);
 
         // Get current user ID from auth store
         const { user } = useAuthStore.getState();
         const currentUserId = user?.id;
-        console.log("Current user ID:", currentUserId);
+        logger.debug("Current user ID:", currentUserId);
 
         if (currentUserId) {
           // Convert to string for comparison
@@ -155,11 +156,11 @@ export const boardService = {
   async createBoard(name: string): Promise<Board> {
     try {
       const { data } = await api.post<ApiBoard>(BOARD_ENDPOINTS.boards, { name });
-      console.log("Raw board creation data from API:", data);
+      logger.debug("Raw board creation data from API:", data);
 
       // Normalize the board data
       const board = normalizeBoard(data);
-      console.log("Normalized board data:", board);
+      logger.debug("Normalized board data:", board);
 
       // Send WebSocket event
       sendBoardEvent(WebSocketEventType.BOARD_CREATED, board);
@@ -174,9 +175,9 @@ export const boardService = {
   /** Удалить доску */
   async deleteBoard(boardId: string): Promise<void> {
     try {
-      console.log(`Deleting board ${boardId}`);
+      logger.debug(`Deleting board ${boardId}`);
       await api.delete(BOARD_ENDPOINTS.board(boardId));
-      console.log("Board deleted successfully");
+      logger.debug("Board deleted successfully");
 
       // The backend will broadcast the board_deleted event to all connected clients
     } catch (error) {
@@ -188,14 +189,14 @@ export const boardService = {
   /** Обновить название доски */
   async updateBoard(boardId: string, name: string): Promise<Board> {
     try {
-      console.log(`Updating board ${boardId} with name: ${name}`);
+      logger.debug(`Updating board ${boardId} with name: ${name}`);
 
       const { data } = await api.put<ApiBoard>(BOARD_ENDPOINTS.board(boardId), { name });
-      console.log("Raw updated board data from API:", data);
+      logger.debug("Raw updated board data from API:", data);
 
       // Normalize the board data
       const normalizedBoard = normalizeBoard(data);
-      console.log("Board updated successfully:", normalizedBoard);
+      logger.debug("Board updated successfully:", normalizedBoard);
 
       // Send WebSocket event
       sendBoardEvent(WebSocketEventType.BOARD_UPDATED, normalizedBoard);
@@ -210,9 +211,9 @@ export const boardService = {
   /** Получить списки для доски */
   async fetchBoardLists(boardId: string): Promise<List[]> {
     try {
-      console.log(`Fetching lists for board ${boardId}`);
+      logger.debug(`Fetching lists for board ${boardId}`);
       const { data } = await api.get<ApiList[]>(LIST_ENDPOINTS.lists(boardId));
-      console.log("Raw lists data from API:", data);
+      logger.debug("Raw lists data from API:", data);
 
       // Check if data is an array
       if (!Array.isArray(data)) {
@@ -231,9 +232,9 @@ export const boardService = {
   /** Получить список участников доски */
   async getBoardMembers(boardId: string): Promise<BoardMember[]> {
     try {
-      console.log(`Fetching members for board ${boardId}`);
+      logger.debug(`Fetching members for board ${boardId}`);
       const { data } = await api.get<ApiBoardMember[]>(BOARD_ENDPOINTS.boardMembers(boardId));
-      console.log("Raw board members data from API:", data);
+      logger.debug("Raw board members data from API:", data);
 
       // Check if data is an array
       if (!Array.isArray(data)) {
@@ -243,7 +244,7 @@ export const boardService = {
 
       // Normalize the members data
       const normalizedMembers = data.map(member => normalizeBoardMember(member, boardId));
-      console.log("Normalized members:", normalizedMembers);
+      logger.debug("Normalized members:", normalizedMembers);
 
       return normalizedMembers;
     } catch (error) {
@@ -255,7 +256,7 @@ export const boardService = {
   /** Пригласить пользователя на доску по email */
   async inviteMemberByEmail(boardId: string, email: string, role: 'owner' | 'member' = 'member'): Promise<BoardMember> {
     try {
-      console.log(`Inviting user ${email} to board ${boardId} with role ${role}`);
+      logger.debug(`Inviting user ${email} to board ${boardId} with role ${role}`);
 
       // Validate email format before sending to API
       if (!email || !email.includes('@')) {
@@ -263,11 +264,11 @@ export const boardService = {
       }
 
       const { data } = await api.post<ApiBoardMember>(BOARD_ENDPOINTS.inviteMember(boardId), { email, role });
-      console.log("Invitation successful:", data);
+      logger.debug("Invitation successful:", data);
 
       // Normalize the member data
       const normalizedMember = normalizeBoardMember(data, boardId);
-      console.log("Normalized invitation data:", normalizedMember);
+      logger.debug("Normalized invitation data:", normalizedMember);
 
       // Send WebSocket event
       sendBoardEvent(WebSocketEventType.MEMBER_ADDED, normalizedMember);
@@ -282,9 +283,9 @@ export const boardService = {
   /** Удалить участника с доски */
   async removeMember(boardId: string, userId: string): Promise<void> {
     try {
-      console.log(`Removing user ${userId} from board ${boardId}`);
+      logger.debug(`Removing user ${userId} from board ${boardId}`);
       await api.delete(BOARD_ENDPOINTS.removeMember(boardId, userId));
-      console.log("Member removed successfully");
+      logger.debug("Member removed successfully");
 
       // Send WebSocket event
       sendBoardEvent(WebSocketEventType.MEMBER_REMOVED, { boardId, userId });

@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/useAuthStore';
+import { logger } from '@/utils/logger';
 
 /** Сообщение, которое мы шлём / получаем по сокету */
 export type WSMessage<T = unknown> = {
@@ -20,13 +21,16 @@ class WebSocketClient {
   private boardId: string | null = null;
 
   /** Список подписок: { event: Set<handlers> } */
-  private subscriptions = new Map<string, Set<WSEventHandler<any>>>();
+  private subscriptions = new Map<string, Set<WSEventHandler<unknown>>>();
 
   /** id таймера ping‑pong */
   private heartbeatId: number | null = null;
 
   /** id таймера реконнекта */
   private reconnectId: number | null = null;
+
+  /** Нужно ли пытаться переподключаться после закрытия соединения */
+  private shouldReconnect = true;
 
   private constructor() {} // приватный ctor
 
@@ -49,24 +53,30 @@ class WebSocketClient {
 
     // если уже подключены к этой же доске — выходим
     if (this.socket && this.boardId === normalizedBoardId) {
-      console.log(`Already connected to WebSocket for board ${normalizedBoardId}`);
+      logger.debug(`Already connected to WebSocket for board ${normalizedBoardId}`);
       return;
     }
 
     // если было старое соединение — закрываем
     if (this.socket) {
-      console.log(`Closing existing WebSocket connection for board ${this.boardId}`);
+      logger.debug(`Closing existing WebSocket connection for board ${this.boardId}`);
       this.socket.close();
     }
 
+    // включаем авто-реконнект для новой доски
+    this.shouldReconnect = true;
+
     // Set the board ID
     this.boardId = normalizedBoardId;
-    console.log(`Connecting to WebSocket for board ${this.boardId}`);
+    logger.debug(`Connecting to WebSocket for board ${this.boardId}`);
     this.openSocket();
   }
 
   /** Отключиться от сервера и очистить все ресурсы */
   disconnect() {
+    // отключаем авто-реконнект, т.к. соединение закрываем намеренно
+    this.shouldReconnect = false;
+
     if (this.socket) {
       this.socket.close();
     }
@@ -87,25 +97,32 @@ class WebSocketClient {
     if (!this.subscriptions.has(event)) {
       this.subscriptions.set(event, new Set());
     }
-    this.subscriptions.get(event)!.add(handler);
+    const handlers = this.subscriptions.get(event)!;
+    const storedHandler = handler as WSEventHandler<unknown>;
+    handlers.add(storedHandler);
 
     // Return a safe unsubscribe function that checks if the subscription set exists
     return () => {
       const handlers = this.subscriptions.get(event);
       if (handlers) {
-        handlers.delete(handler);
+        handlers.delete(storedHandler);
       }
     };
   }
 
   private openSocket() {
+    if (!this.boardId) {
+      logger.debug('Skip opening WebSocket: boardId is not set');
+      return;
+    }
+
     const token = useAuthStore.getState().token;
     const url = `${import.meta.env.VITE_WS_URL}/${this.boardId}?token=${token}`;
-    console.log(`Opening WebSocket connection to: ${url}`);
+    logger.debug(`Opening WebSocket connection to: ${url}`);
     this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
-      console.log(`WebSocket connection established for board ${this.boardId}`);
+      logger.debug(`WebSocket connection established for board ${this.boardId}`);
       // запускаем heartbeat (ping‑pong)
       this.heartbeatId = window.setInterval(() => {
         if (this.socket?.readyState === WebSocket.OPEN) {
@@ -117,10 +134,10 @@ class WebSocketClient {
     this.socket.onmessage = (e) => {
       try {
         const msg: WSMessage = JSON.parse(e.data);
-        console.log(`WebSocket message received: ${msg.event}`, msg.data);
+        logger.debug(`WebSocket message received: ${msg.event}`, msg.data);
 
         // Mark the data as coming from WebSocket to help prevent duplicate notifications
-        const dataWithSource = typeof msg.data === 'object' && msg.data !== null
+        const dataWithSource: unknown = typeof msg.data === 'object' && msg.data !== null
           ? { ...msg.data, _source: 'ws' }
           : { data: msg.data, _source: 'ws' };
 
@@ -132,10 +149,13 @@ class WebSocketClient {
     };
 
     this.socket.onclose = (event) => {
-      console.log(`WebSocket connection closed for board ${this.boardId}. Code: ${event.code}, Reason: ${event.reason}`);
+      const closedBoardId = this.boardId;
+      logger.debug(`WebSocket connection closed for board ${closedBoardId}. Code: ${event.code}, Reason: ${event.reason}`);
       this.cleanup();
-      // пытаемся переподключиться раз в 3 сек
-      this.reconnectId = window.setTimeout(() => this.openSocket(), 3_000);
+      // пытаемся переподключиться раз в 3 сек, если это не ручное отключение
+      if (this.shouldReconnect && this.boardId) {
+        this.reconnectId = window.setTimeout(() => this.openSocket(), 3_000);
+      }
     };
 
     this.socket.onerror = (error) => {

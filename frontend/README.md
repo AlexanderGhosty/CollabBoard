@@ -2,29 +2,52 @@
 
 Клиентская часть приложения CollabBoard — современный интерфейс для совместной работы с Kanban-досками в реальном времени.
 
+## 📚 Содержание
+
+- [🏗️ Архитектура](#architecture)
+- [📁 Структура проекта](#structure)
+- [🚀 Быстрый старт](#quick-start)
+- [✨ Основные функции](#features)
+- [🎨 Дизайн-система](#design-system)
+- [🔄 Управление состоянием](#state-management)
+- [🔌 WebSocket интеграция](#websocket)
+- [🎯 Ключевые функции](#key-capabilities)
+- [🛡️ Аутентификация](#auth)
+- [🔧 Разработка](#development)
+- [🐳 Docker](#docker)
+- [📊 Производительность](#performance)
+- [🚀 Продакшн](#production)
+- [🧪 Тестирование](#testing)
+- [📝 Лицензия](#license)
+
+<a id="architecture"></a>
+
 ## 🏗️ Архитектура
 
 **Технологический стек:**
+
 - **React 19** — современная библиотека для создания пользовательских интерфейсов
-- **TypeScript** — типизированный JavaScript для надежности кода
+- **TypeScript 5.7** — типизированный JavaScript для надежности кода
 - **Tailwind CSS** — utility-first CSS фреймворк для быстрой стилизации
 - **Vite** — быстрый инструмент сборки и разработки
 - **Zustand** — легковесное управление состоянием
-- **React Router v6** — маршрутизация в SPA
+- **React Router v7** — маршрутизация в SPA
 - **@dnd-kit** — современная библиотека drag-and-drop
 - **Axios** — HTTP клиент для API запросов
-- **React Icons** — библиотека иконок
 - **Zod** — валидация схем данных
 
 **Принципы архитектуры:**
+
 - **Atomic Design** — организация компонентов по уровням (atoms → molecules → organisms → templates → pages)
 - **Feature-based** — группировка по функциональности
 - **Separation of Concerns** — разделение логики, состояния и представления
 - **Real-time First** — приоритет синхронизации в реальном времени
 
+<a id="structure"></a>
+
 ## 📁 Структура проекта
 
-```
+```text
 frontend/
 ├── public/                  # Статические ресурсы
 │   ├── logo.svg            # Логотип приложения
@@ -98,11 +121,13 @@ frontend/
 └── Dockerfile              # Контейнеризация
 ```
 
+<a id="quick-start"></a>
+
 ## 🚀 Быстрый старт
 
 ### Предварительные требования
 
-- **Node.js 18+** — [Установка Node.js](https://nodejs.org/)
+- **Node.js 20+** — [Установка Node.js](https://nodejs.org/)
 - **npm** или **yarn** — менеджер пакетов
 - **Backend API** — запущенный сервер CollabBoard
 
@@ -160,9 +185,12 @@ npm run lint
 npm run lint -- --fix
 ```
 
+<a id="features"></a>
+
 ## ✨ Основные функции
 
 ### Управление досками
+
 - **Создание досок**: быстрое создание новых Kanban досок
 - **Система ролей**: владелец (owner) и участник (member) с разными правами
 - **Приглашение пользователей**: добавление участников по email адресу
@@ -170,6 +198,7 @@ npm run lint -- --fix
 - **Переименование досок**: редактирование названий в реальном времени
 
 ### Kanban интерфейс
+
 - **Списки (колонки)**: создание, редактирование, перемещение и удаление
 - **Карточки задач**: полный CRUD функционал с описаниями
 - **Drag-and-drop**: интуитивное перемещение карточек между списками
@@ -177,12 +206,14 @@ npm run lint -- --fix
 - **Детальные модальные окна**: редактирование карточек с полной информацией
 
 ### Real-time синхронизация
+
 - **WebSocket соединения**: мгновенные обновления для всех участников
 - **Автоматическое переподключение**: восстановление связи при потере соединения
 - **Синхронизация состояния**: все изменения отображаются в реальном времени
 - **Обработка конфликтов**: корректная работа при одновременном редактировании
 
 ### Пользовательский интерфейс
+
 - **Адаптивный дизайн**: оптимизация для мобильных устройств и десктопа
 - **Система тем**: переключение между светлой и темной темами
 - **Современный дизайн**: синий градиент и плавные переходы
@@ -190,10 +221,13 @@ npm run lint -- --fix
 - **Уведомления**: toast сообщения для обратной связи с пользователем
 
 ### Аутентификация и безопасность
+
 - **JWT токены**: безопасная аутентификация
 - **Регистрация и вход**: полный цикл управления аккаунтом
 - **Смена пароля**: возможность обновления учетных данных
 - **Защищенные маршруты**: доступ только для авторизованных пользователей
+
+<a id="design-system"></a>
 
 ## 🎨 Дизайн-система
 
@@ -220,7 +254,9 @@ colors: {
 ### Компонентная архитектура (Atomic Design)
 
 #### Atoms (Атомы)
+
 Базовые неделимые элементы интерфейса:
+
 - `Button` — кнопки с различными вариантами стилизации
 - `Input` — поля ввода с валидацией
 - `Logo` — логотип с поддержкой темной темы
@@ -228,7 +264,9 @@ colors: {
 - `ThemeToggle` — переключатель темы
 
 #### Molecules (Молекулы)
+
 Составные компоненты из атомов:
+
 - `AuthForm` — формы аутентификации
 - `CardItem` — карточка задачи с drag-and-drop
 - `CardDetailModal` — модальное окно деталей карточки
@@ -237,24 +275,32 @@ colors: {
 - `ParticipantsModal` — управление участниками
 
 #### Organisms (Организмы)
+
 Сложные блоки интерфейса:
+
 - `Header` — шапка приложения с навигацией
 - `BoardHeader` — заголовок доски с действиями
 - `ListColumn` — колонка списка с карточками
 
 #### Templates (Шаблоны)
+
 Макеты страниц:
+
 - `AuthTemplate` — шаблон страниц аутентификации
 - `BoardTemplate` — шаблон страницы доски
 - `WelcomeTemplate` — шаблон приветственной страницы
 
 #### Pages (Страницы)
+
 Готовые страницы приложения:
+
 - `WelcomePage` — приветственная страница
 - `LoginPage` / `RegisterPage` — аутентификация
 - `BoardsPage` — список досок
 - `BoardPage` — рабочая область доски
 - `AccountSettingsPage` — настройки аккаунта
+
+<a id="state-management"></a>
 
 ## 🔄 Управление состоянием
 
@@ -263,11 +309,13 @@ colors: {
 Приложение использует модульную архитектуру состояния:
 
 #### Глобальные stores
+
 - `useAuthStore` — аутентификация пользователя
 - `useThemeStore` — управление темой (светлая/темная)
 - `useToastStore` — система уведомлений
 
 #### Board-специфичные stores
+
 - `useBoardStore` — информация о доске
 - `useListsStore` — управление списками (колонками)
 - `useCardsStore` — управление карточками
@@ -285,6 +333,8 @@ const { boards, fetchBoards, createBoard } = useBoardStore();
 await login(email, password);
 await createBoard({ name: 'Новая доска' });
 ```
+
+<a id="websocket"></a>
 
 ## 🔌 WebSocket интеграция
 
@@ -313,11 +363,14 @@ sendCardEvent(WebSocketEventType.CARD_UPDATED, updatedCard);
 - **Карточки**: `card_created`, `card_updated`, `card_moved`, `card_deleted`
 - **Участники**: `member_added`, `member_removed`
 
+<a id="key-capabilities"></a>
+
 ## 🎯 Ключевые функции
 
 ### Drag & Drop
 
 Реализовано с помощью `@dnd-kit`:
+
 - Перетаскивание карточек между списками
 - Изменение порядка списков
 - Плавные анимации
@@ -338,6 +391,8 @@ sendCardEvent(WebSocketEventType.CARD_UPDATED, updatedCard);
 - Сохранение предпочтений в localStorage
 - Адаптация всех компонентов
 - Специальные цвета и тени для темной темы
+
+<a id="auth"></a>
 
 ## 🛡️ Аутентификация
 
@@ -371,6 +426,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 - Toast-уведомления для пользователя
 - Graceful handling при потере соединения
 - Автоматическая повторная попытка подключения
+
+<a id="development"></a>
 
 ## 🔧 Разработка
 
@@ -417,16 +474,19 @@ import { Button } from '@/components/atoms/Button';
 ### Утилиты и хелперы
 
 #### API утилиты
+
 - `normalizeEntities` — нормализация данных для состояния
 - `errorHandling` — обработка ошибок API
 - `apiEndpoints` — централизованные эндпоинты
 
 #### Board утилиты
+
 - `permissions` — проверка прав доступа
 - `sorting` — сортировка списков и карточек
 - `idNormalization` — нормализация ID
 
 #### Валидация
+
 - Zod схемы для валидации форм
 - Клиентская валидация перед отправкой
 - Типобезопасная валидация
@@ -434,12 +494,14 @@ import { Button } from '@/components/atoms/Button';
 ### Соглашения по коду
 
 #### Именование файлов и компонентов
+
 - **Компоненты**: PascalCase (`Button.tsx`, `CardItem.tsx`)
 - **Хуки**: camelCase с префиксом `use` (`useAuthStore.ts`)
 - **Утилиты**: camelCase (`normalizeEntities.ts`)
 - **Константы**: UPPER_SNAKE_CASE (`API_ENDPOINTS.ts`)
 
 #### Структура импортов
+
 ```typescript
 // 1. React и библиотеки
 import React, { useState, useEffect } from 'react';
@@ -454,35 +516,50 @@ import type { Board, Card } from '@/types';
 ```
 
 #### Комментарии
+
 - Все комментарии в коде на английском языке
 - Пользовательские сообщения (toast, ошибки) на русском языке
 - JSDoc для публичных функций и компонентов
 
+<a id="docker"></a>
+
 ## 🐳 Docker
 
-### Многоэтапная сборка
+### Контейнер разработки
+
+Репозиторий содержит Dockerfile, запускающий Vite dev server внутри контейнера Node.js 20:
 
 ```dockerfile
-# Этап сборки
-FROM node:18-alpine AS builder
+FROM node:20-alpine
+
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
+COPY package.json package-lock.json* ./
+RUN npm ci --legacy-peer-deps
 
-# Продакшн образ
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 ```
 
-### Nginx конфигурация
+### Запуск через Docker Compose
 
-Для SPA необходима настройка fallback на index.html:
+```bash
+# Запуск только фронтенда
+docker compose up web
 
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
+# Полный стек (БД + API + фронтенд)
+docker compose up --build
+
+# Просмотр логов dev-сервера
+docker compose logs -f web
 ```
+
+Контейнер ориентирован на разработку: код монтируется внутрь, работает HMR.
+Итоговая сборка создаётся командой `npm run build` вне контейнера.
+
+<a id="performance"></a>
 
 ## 📊 Производительность
 
@@ -500,6 +577,8 @@ location / {
 - Vite HMR для быстрой разработки
 - ESLint для качества кода
 - TypeScript для типобезопасности
+
+<a id="production"></a>
 
 ## 🚀 Продакшн
 
@@ -521,14 +600,14 @@ NODE_ENV=production
 ### Оптимизация сборки
 
 ```bash
-# Анализ размера сборки
-npm run build -- --analyze
-
-# Сборка с оптимизацией
+# Сборка оптимизированной версии
 npm run build
 
-# Проверка сборки локально
+# Проверка готовой сборки локально
 npm run preview
+
+# Анализ размера бандла (пример с vite-bundle-visualizer)
+npx vite-bundle-visualizer dist/stats.html
 ```
 
 ### Рекомендации
@@ -539,24 +618,26 @@ npm run preview
 4. **Caching** — настройка кеширования
 5. **Error Monitoring** — интеграция с Sentry
 
+<a id="testing"></a>
+
 ## 🧪 Тестирование
 
 ### Рекомендуемые инструменты
 
 ```bash
-# Установка тестовых зависимостей
-npm install --save-dev @testing-library/react @testing-library/jest-dom vitest
-
-# Запуск тестов
+# Запуск всех тестов в CI-режиме
 npm run test
 
-# Тесты с покрытием
-npm run test:coverage
+# Наблюдение за тестами в ходе разработки
+npm run test:watch
+
+# Подсчёт покрытия
+npm run test -- --coverage
 ```
 
 ### Структура тестов
 
-```
+```text
 src/
 ├── components/
 │   ├── atoms/
@@ -569,6 +650,8 @@ src/
     ├── utils/
     └── services/
 ```
+
+<a id="license"></a>
 
 ## 📝 Лицензия
 

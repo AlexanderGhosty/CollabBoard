@@ -124,7 +124,7 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
         originalError: error,
         statusCode,
       };
-    default:
+    default: {
       // Try to extract error message from response
       const errorMessage = axiosError.response?.data?.error || axiosError.message;
       return {
@@ -133,6 +133,7 @@ export function handleApiError(error: Error | AxiosError | unknown): ApiError {
         originalError: error,
         statusCode,
       };
+    }
   }
 }
 

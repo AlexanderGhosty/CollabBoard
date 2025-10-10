@@ -1,0 +1,37 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+      - 'backend/go.mod'
+      - 'backend/go.sum'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+      - 'backend/go.mod'
+      - 'backend/go.sum'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+
+      - name: Run go vet
+        run: go vet ./...
+        working-directory: backend
+
+      - name: Run tests
+        run: go test ./... -cover
+        working-directory: backend

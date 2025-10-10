@@ -5,42 +5,61 @@ import (
 	"errors"
 	"log"
 	"sort"
+	"time"
 
 	db "backend/internal/db/sqlc"
 	"backend/internal/logger"
 	"backend/internal/websocket"
 )
 
+var ErrNotMember = errors.New("not a member")
+
 type Service struct {
-	repo *Repository
-	q    *db.Queries // for cross‑repo checks
-	hub  *websocket.Hub
+	repo    ListRepository
+	members BoardMemberRepository
+	hub     *websocket.Hub
 }
 
-func NewService(repo *Repository, q *db.Queries, hub *websocket.Hub) *Service {
-	return &Service{repo: repo, q: q, hub: hub}
+func NewService(repo ListRepository, members BoardMemberRepository, hub *websocket.Hub) *Service {
+	return &Service{repo: repo, members: members, hub: hub}
 }
 
 func (s *Service) Create(ctx context.Context, userID, boardID int32, title string, position int32) (db.List, error) {
 	// check membership
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
 		logger.WithContext(ctx).Warn("List creation failed: user not a member",
 			"user_id", userID,
 			"board_id", boardID,
 			"error", err,
 		)
-		return db.List{}, errors.New("not a member")
+		return db.List{}, ErrNotMember
+	}
+
+	lists, err := s.repo.ListByBoard(ctx, boardID)
+	if err != nil {
+		return db.List{}, err
+	}
+
+	nextSlot := int32(len(lists) + 1)
+	sanitizedPosition := position
+	if sanitizedPosition < 1 {
+		sanitizedPosition = 1
+	}
+	if sanitizedPosition > nextSlot {
+		sanitizedPosition = nextSlot
 	}
 
 	logger.WithContext(ctx).Info("Creating list",
 		"user_id", userID,
 		"board_id", boardID,
 		"title", title,
-		"position", position,
+		"position", sanitizedPosition,
 	)
 
-	_ = s.repo.ShiftRight(ctx, boardID, position)
-	lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: position})
+	if err := s.repo.ShiftRight(ctx, boardID, sanitizedPosition); err != nil {
+		return db.List{}, err
+	}
+	lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: sanitizedPosition})
 	if err == nil {
 		logger.WithContext(ctx).Info("List created successfully",
 			"list_id", lst.ID,
@@ -59,45 +78,80 @@ func (s *Service) Create(ctx context.Context, userID, boardID int32, title strin
 }
 
 func (s *Service) ListByBoard(ctx context.Context, userID, boardID int32) ([]db.List, error) {
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: boardID, UserID: userID,
 	}); err != nil {
-		return nil, errors.New("not a member")
+		return nil, ErrNotMember
 	}
 	return s.repo.ListByBoard(ctx, boardID)
 }
 
 // GetListByID retrieves a list by its ID
 func (s *Service) GetListByID(ctx context.Context, listID int32) (db.List, error) {
-	return s.q.GetListByID(ctx, listID)
+	return s.repo.GetByID(ctx, listID)
 }
 
-func (s *Service) Update(ctx context.Context, userID int32, arg db.UpdateListParams) (db.List, error) {
-	lst, err := s.q.GetListByID(ctx, arg.ID)
+func (s *Service) Update(ctx context.Context, userID, listID int32, req UpdateListRequest) (db.List, error) {
+	lst, err := s.repo.GetByID(ctx, listID)
 	if err != nil {
 		return db.List{}, err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
-		BoardID: lst.BoardID, UserID: userID,
-	}); err != nil {
-		return db.List{}, errors.New("not a member")
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
+		return db.List{}, ErrNotMember
 	}
-	updated, err := s.repo.Update(ctx, arg)
-	if err == nil {
-		s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "list_updated", Data: updated})
+
+	title := lst.Title
+	if req.Title != "" {
+		title = req.Title
 	}
-	return updated, err
+
+	newPosition := lst.Position
+	if req.Position != nil {
+		newPosition = *req.Position
+		if newPosition < 1 {
+			newPosition = 1
+		}
+
+		lists, err := s.repo.ListByBoard(ctx, lst.BoardID)
+		if err != nil {
+			return db.List{}, err
+		}
+		maxPos := len(lists)
+		if maxPos == 0 {
+			maxPos = 1
+		}
+		if newPosition > int32(maxPos) {
+			newPosition = int32(maxPos)
+		}
+
+		if newPosition != lst.Position {
+			if err := s.repo.ShiftLeft(ctx, lst.BoardID, lst.Position); err != nil {
+				return db.List{}, err
+			}
+			if err := s.repo.ShiftRight(ctx, lst.BoardID, newPosition); err != nil {
+				return db.List{}, err
+			}
+		}
+	}
+
+	updated, err := s.repo.Update(ctx, db.UpdateListParams{ID: listID, Title: title, Position: newPosition})
+	if err != nil {
+		return db.List{}, err
+	}
+
+	s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "list_updated", Data: updated})
+	return updated, nil
 }
 
 func (s *Service) Delete(ctx context.Context, userID, listID int32) error {
-	lst, err := s.q.GetListByID(ctx, listID)
+	lst, err := s.repo.GetByID(ctx, listID)
 	if err != nil {
 		return err
 	}
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{
 		BoardID: lst.BoardID, UserID: userID,
 	}); err != nil {
-		return errors.New("not a member")
+		return ErrNotMember
 	}
 	if err := s.repo.Delete(ctx, listID); err != nil {
 		return err
@@ -164,7 +218,7 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	)
 
 	// Get the list to move
-	lst, err := s.q.GetListByID(ctx, listID)
+	lst, err := s.repo.GetByID(ctx, listID)
 	if err != nil {
 		logger.WithContext(ctx).Error("Error getting list to move",
 			"list_id", listID,
@@ -180,13 +234,13 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	)
 
 	// Check if user is a member of the board
-	if _, err := s.q.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
 		logger.WithContext(ctx).Warn("List move failed: user not a member",
 			"user_id", userID,
 			"board_id", lst.BoardID,
 			"error", err,
 		)
-		return db.List{}, errors.New("not a member")
+		return db.List{}, ErrNotMember
 	}
 
 	// Validate the new position
@@ -241,7 +295,7 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 		}
 
 		// Refresh the list after normalization
-		lst, err = s.q.GetListByID(ctx, listID)
+		lst, err = s.repo.GetByID(ctx, listID)
 		if err != nil {
 			logger.WithContext(ctx).Error("Error getting list after normalization",
 				"list_id", listID,
@@ -354,4 +408,41 @@ func (s *Service) Move(ctx context.Context, userID, listID, newPos int32) (db.Li
 	}
 
 	return updated, nil
+}
+
+func (s *Service) NormalizeAndList(ctx context.Context, userID, boardID int32) (NormalizePositionsResponse, error) {
+	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: boardID, UserID: userID}); err != nil {
+		return NormalizePositionsResponse{}, ErrNotMember
+	}
+
+	if err := s.NormalizeListPositions(ctx, boardID); err != nil {
+		return NormalizePositionsResponse{}, err
+	}
+
+	lists, err := s.ListByBoard(ctx, userID, boardID)
+	if err != nil {
+		return NormalizePositionsResponse{}, err
+	}
+
+	resp := NormalizePositionsResponse{
+		Message: "positions normalized",
+		Lists:   make([]ListResponse, 0, len(lists)),
+	}
+
+	for _, lst := range lists {
+		var createdAt time.Time
+		if lst.CreatedAt.Valid {
+			createdAt = lst.CreatedAt.Time
+		}
+
+		resp.Lists = append(resp.Lists, ListResponse{
+			ID:        lst.ID,
+			BoardID:   lst.BoardID,
+			Title:     lst.Title,
+			Position:  lst.Position,
+			CreatedAt: createdAt,
+		})
+	}
+
+	return resp, nil
 }

@@ -1,11 +1,8 @@
 package cards
 
 import (
-	db "backend/internal/db/sqlc"
 	"net/http"
 	"strconv"
-
-	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,12 +37,12 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 //	@Router			/api/lists/{listId}/cards [post]
 func createCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		listID, _ := strconv.Atoi(c.Param("listId"))
-		var req struct {
-			Title       string `json:"title" binding:"required"`
-			Description string `json:"description"`
-			Position    int32  `json:"position" binding:"required"`
+		listID, err := strconv.Atoi(c.Param("listId"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid list id"})
+			return
 		}
+		var req CreateCardRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -74,7 +71,11 @@ func createCardHandler(svc *Service) gin.HandlerFunc {
 //	@Router			/api/lists/{listId}/cards [get]
 func listCardsHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		listID, _ := strconv.Atoi(c.Param("listId"))
+		listID, err := strconv.Atoi(c.Param("listId"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid list id"})
+			return
+		}
 		userID := int32(c.GetInt("userID"))
 
 		cs, err := svc.ListByList(c.Request.Context(), userID, int32(listID))
@@ -104,48 +105,19 @@ func listCardsHandler(svc *Service) gin.HandlerFunc {
 //	@Router			/api/lists/{listId}/cards/{id} [put]
 func updateCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid card id"})
+			return
+		}
 		userID := int32(c.GetInt("userID"))
 
-		var req struct {
-			Title       string `json:"title"`
-			Description string `json:"description"`
-			Position    *int32 `json:"position"`
-			ListID      *int32 `json:"listId"`
-		}
+		var req UpdateCardRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-
-		// Get the original card to retrieve its current values
-		originalCard, err := svc.q.GetCardByID(c.Request.Context(), int32(id))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve original card: " + err.Error()})
-			return
-		}
-
-		p := db.UpdateCardParams{
-			ID:    int32(id),
-			Title: req.Title,
-			Description: pgtype.Text{
-				String: req.Description,
-				Valid:  true,
-			},
-			// Use the original card's values as defaults
-			Position: originalCard.Position,
-			ListID:   originalCard.ListID,
-		}
-
-		// Override with request values if provided
-		if req.Position != nil {
-			p.Position = *req.Position
-		}
-		if req.ListID != nil {
-			p.ListID = *req.ListID
-		}
-
-		card, err := svc.Update(c.Request.Context(), userID, p)
+		card, err := svc.Update(c.Request.Context(), userID, int32(id), req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -178,31 +150,14 @@ func moveCardHandler(svc *Service) gin.HandlerFunc {
 			return
 		}
 
-		var req struct {
-			ListID   *int32 `json:"listId"`
-			Position int32  `json:"position" binding:"required"`
-		}
+		var req MoveCardRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
 		userID := int32(c.GetInt("userID"))
-
-		// Get the original card to retrieve its current list ID
-		originalCard, err := svc.q.GetCardByID(c.Request.Context(), int32(id))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve original card: " + err.Error()})
-			return
-		}
-
-		// Use the original list ID if not provided in the request
-		dstListID := originalCard.ListID
-		if req.ListID != nil {
-			dstListID = *req.ListID
-		}
-
-		card, err := svc.Move(c.Request.Context(), userID, int32(id), dstListID, req.Position)
+		card, err := svc.Move(c.Request.Context(), userID, int32(id), req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -227,7 +182,11 @@ func moveCardHandler(svc *Service) gin.HandlerFunc {
 //	@Router			/api/lists/{listId}/cards/{id} [delete]
 func deleteCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid card id"})
+			return
+		}
 		userID := int32(c.GetInt("userID"))
 
 		if err := svc.Delete(c.Request.Context(), userID, int32(id)); err != nil {

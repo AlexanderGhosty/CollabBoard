@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { Card } from '@/services/boardService';
 import { cardService } from '@/services/cardService';
 import { useToastStore } from '@/store/useToastStore';
 import { CardsState } from './types';
 import { sortCards, getNextCardPosition } from '@/utils/board/sorting';
+import { logger } from '@/utils/logger';
 
 export const useCardsStore = create<CardsState>()(
   immer((set, get) => ({
@@ -30,18 +30,18 @@ export const useCardsStore = create<CardsState>()(
       set((s) => { s.loading = true; s.error = null; });
 
       try {
-        console.log(`Creating card in list ${listId} with title "${title}"`);
+        logger.debug(`Creating card in list ${listId} with title "${title}"`);
 
         // Calculate position for the new card (at the end)
         const cards = get().getCardsByListId(listId);
         const position = getNextCardPosition(cards);
 
-        console.log(`Calculated position for new card: ${position}`);
+        logger.debug(`Calculated position for new card: ${position}`);
 
         // Create the card
         const card = await cardService.createCard(listId, title, description, position);
 
-        console.log("Card created successfully:", card);
+        logger.debug("Card created successfully:", card);
 
         // Ensure we have a valid card ID
         if (!card.id) {
@@ -67,7 +67,7 @@ export const useCardsStore = create<CardsState>()(
 
         // Debug the state after update
         const updatedState = get();
-        console.log(`After card creation - Cards for list ${listId}:`,
+        logger.debug(`After card creation - Cards for list ${listId}:`,
           updatedState.getCardsByListId(listId));
 
         // Force a state update to trigger UI refresh
@@ -115,6 +115,15 @@ export const useCardsStore = create<CardsState>()(
       try {
         // Call API to update the card
         const updatedCard = await cardService.updateCard(cardId, card.listId, updates);
+
+        set((s) => {
+          if (s.cards[cardId]) {
+            s.cards[cardId] = {
+              ...s.cards[cardId],
+              ...updatedCard
+            };
+          }
+        });
       } catch (error) {
         console.error(`Error updating card ${cardId}:`, error);
 

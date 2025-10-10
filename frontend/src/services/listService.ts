@@ -1,6 +1,6 @@
 import { api } from '@/services/api';
-import { LIST_ENDPOINTS, CARD_ENDPOINTS } from '@/utils/api/apiEndpoints';
-import { ApiList, normalizeList, ApiCard, normalizeCard } from '@/utils/api/normalizeEntities';
+import { LIST_ENDPOINTS } from '@/utils/api/apiEndpoints';
+import { ApiList, normalizeList } from '@/utils/api/normalizeEntities';
 import { handleApiError } from '@/utils/api/errorHandling';
 import { WebSocketEventType, sendListEvent, sendListDeletedEvent } from '@/utils/websocket/events';
 import { List, Card } from '@/services/boardService';
@@ -8,6 +8,7 @@ import { cardService } from '@/services/cardService';
 import { useBoardStore } from '@/store/board';
 import { useListsStore } from '@/store/board/useListsStore';
 import { useCardsStore } from '@/store/board/useCardsStore';
+import { logger } from '@/utils/logger';
 
 /**
  * List service - handles list-related operations
@@ -16,9 +17,9 @@ export const listService = {
   /** Получить списки для доски */
   async fetchBoardLists(boardId: string): Promise<List[]> {
     try {
-      console.log(`Fetching lists for board ${boardId}`);
+      logger.debug(`Fetching lists for board ${boardId}`);
       const { data } = await api.get<ApiList[]>(LIST_ENDPOINTS.lists(boardId));
-      console.log("Raw lists data from API:", data);
+      logger.debug("Raw lists data from API:", data);
 
       // Check if data is an array
       if (!Array.isArray(data)) {
@@ -29,15 +30,12 @@ export const listService = {
       // Normalize the lists data
       const normalizedLists = data.map(list => normalizeList(list, boardId));
 
-      // Get the cards store to update it with the fetched cards
-      const cardsStore = useCardsStore.getState();
-
       // For each list, fetch its cards
       for (const list of normalizedLists) {
         try {
-          console.log(`Fetching cards for list ${list.id}`);
+          logger.debug(`Fetching cards for list ${list.id}`);
           const normalizedCards = await cardService.fetchListCards(list.id);
-          console.log(`Fetched ${normalizedCards.length} cards for list ${list.id}:`, normalizedCards);
+          logger.debug(`Fetched ${normalizedCards.length} cards for list ${list.id}:`, normalizedCards);
 
           // Add the normalized cards to the list
           list.cards = normalizedCards;
@@ -60,7 +58,7 @@ export const listService = {
             });
           });
 
-          console.log(`Added ${normalizedCards.length} cards to list ${list.id}`);
+          logger.debug(`Added ${normalizedCards.length} cards to list ${list.id}`);
         } catch (error) {
           console.error(`Error fetching cards for list ${list.id}:`, error);
           list.cards = []; // Ensure cards is at least an empty array if fetch fails
@@ -77,7 +75,7 @@ export const listService = {
   /** Получить карточки для списка */
   async fetchListCards(listId: string): Promise<Card[]> {
     try {
-      console.log(`List service: Fetching cards for list ${listId}`);
+      logger.debug(`List service: Fetching cards for list ${listId}`);
       return await cardService.fetchListCards(listId);
     } catch (error) {
       console.error(`Error fetching cards for list ${listId}:`, error);
@@ -88,18 +86,18 @@ export const listService = {
   /** Создать список */
   async createList(boardId: string, title: string, position: number): Promise<List> {
     try {
-      console.log(`Creating list "${title}" at position ${position} for board ${boardId}`);
+      logger.debug(`Creating list "${title}" at position ${position} for board ${boardId}`);
 
       const { data } = await api.post<ApiList>(LIST_ENDPOINTS.lists(boardId), {
         title,
         position
       });
 
-      console.log("Raw list data from API:", data);
+      logger.debug("Raw list data from API:", data);
 
       // Normalize the list data
       const list = normalizeList(data, boardId);
-      console.log("Normalized list data:", list);
+      logger.debug("Normalized list data:", list);
 
       // Add a flag to the WebSocket data to indicate this was created locally
       const wsData = {
@@ -121,7 +119,7 @@ export const listService = {
   /** Обновить заголовок списка */
   async updateList(listId: string, title: string): Promise<List> {
     try {
-      console.log(`Updating list ${listId} with title: ${title}`);
+      logger.debug(`Updating list ${listId} with title: ${title}`);
 
       // Find the board ID for this list
       const boardStore = useBoardStore.getState();
@@ -140,7 +138,7 @@ export const listService = {
       }
 
       const boardId = list.boardId;
-      console.log(`Found list ${listId} in board ${boardId}`);
+      logger.debug(`Found list ${listId} in board ${boardId}`);
 
       // Use the correct endpoint format: /boards/:boardId/lists/:id
       const { data } = await api.put<ApiList>(LIST_ENDPOINTS.list(boardId, listId), { title });
@@ -149,7 +147,7 @@ export const listService = {
       const normalizedList = normalizeList(data, boardId);
       normalizedList.cards = list.cards || []; // Preserve cards from the original list
 
-      console.log("List updated successfully:", normalizedList);
+      logger.debug("List updated successfully:", normalizedList);
 
       // Send WebSocket event
       sendListEvent(WebSocketEventType.LIST_UPDATED, normalizedList);
@@ -164,7 +162,7 @@ export const listService = {
   /** Переместить список (изменить порядок) */
   async moveList(listId: string, position: number): Promise<List> {
     try {
-      console.log(`Moving list ${listId} to position ${position}`);
+      logger.debug(`Moving list ${listId} to position ${position}`);
 
       // Find the board ID for this list
       const boardStore = useBoardStore.getState();
@@ -183,7 +181,7 @@ export const listService = {
       }
 
       const boardId = list.boardId;
-      console.log(`Found list ${listId} in board ${boardId}`);
+      logger.debug(`Found list ${listId} in board ${boardId}`);
 
       // Ensure position is a valid number
       if (isNaN(position) || !isFinite(position)) {
@@ -193,14 +191,14 @@ export const listService = {
 
       // Convert position to integer to match backend expectations
       const intPosition = Math.round(position);
-      console.log(`Sending position ${intPosition} to server (original: ${position})`);
+      logger.debug(`Sending position ${intPosition} to server (original: ${position})`);
 
       // Use PUT method as expected by the backend
       const { data } = await api.put<ApiList>(LIST_ENDPOINTS.moveList(boardId, listId), {
         position: intPosition
       });
 
-      console.log("List moved successfully, response:", data);
+      logger.debug("List moved successfully, response:", data);
 
       // Normalize the list data
       const normalizedList = normalizeList(data, boardId);
@@ -226,7 +224,7 @@ export const listService = {
   /** Удалить список */
   async deleteList(listId: string): Promise<void> {
     try {
-      console.log(`Deleting list ${listId}`);
+      logger.debug(`Deleting list ${listId}`);
 
       // Find the board ID for this list
       const boardStore = useBoardStore.getState();
@@ -245,11 +243,11 @@ export const listService = {
       }
 
       const boardId = list.boardId;
-      console.log(`Found list ${listId} in board ${boardId}`);
+      logger.debug(`Found list ${listId} in board ${boardId}`);
 
       // Use the correct endpoint format: /boards/:boardId/lists/:id
       await api.delete(LIST_ENDPOINTS.list(boardId, listId));
-      console.log("List deleted successfully");
+      logger.debug("List deleted successfully");
 
       // Send WebSocket event
       sendListDeletedEvent(listId, boardId);

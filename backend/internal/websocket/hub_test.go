@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHub_Broadcast(t *testing.T) {
@@ -59,4 +60,45 @@ func TestHub_Broadcast(t *testing.T) {
 		t.Fatal("client3 should not receive message for different board")
 	case <-time.After(50 * time.Millisecond):
 	}
+}
+
+func TestHub_BroadcastSaturatedClient(t *testing.T) {
+	h := NewHub()
+	go h.Run()
+	defer func() {
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	boardID := int32(1)
+	saturatedClient := &Client{hub: h, send: make(chan []byte, 1), boardID: boardID}
+
+	h.register <- saturatedClient
+	time.Sleep(10 * time.Millisecond)
+
+	// Fill the buffer so the broadcast will hit the default case.
+	saturatedClient.send <- []byte("existing")
+
+	msg := EventMessage{Event: "test"}
+	h.Broadcast(boardID, msg)
+
+	time.Sleep(10 * time.Millisecond)
+
+	select {
+	case <-saturatedClient.send:
+		// drained the buffered message
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for buffered message")
+	}
+
+	select {
+	case _, ok := <-saturatedClient.send:
+		require.False(t, ok, "expected saturated client channel to be closed")
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for saturated client channel to close")
+	}
+
+	h.mu.RLock()
+	_, clientStillPresent := h.rooms[boardID][saturatedClient]
+	h.mu.RUnlock()
+	require.False(t, clientStillPresent, "saturated client should have been removed from the room")
 }

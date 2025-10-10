@@ -2,10 +2,25 @@
 
 Серверная часть приложения CollabBoard — современная система для совместной работы с Kanban-досками в реальном времени.
 
+## 📚 Содержание
+
+- [🏗️ Архитектура](#architecture)
+- [📁 Структура проекта](#structure)
+- [🚀 Быстрый старт](#quick-start)
+- [🔐 Аутентификация и авторизация](#security)
+- [🔧 Разработка](#development)
+- [🐳 Docker](#docker)
+- [📊 Мониторинг и логирование](#observability)
+- [🚀 Продакшн](#production)
+- [📝 Лицензия](#license)
+
+<a id="architecture"></a>
+
 ## 🏗️ Архитектура
 
 **Технологический стек:**
-- **Go 1.23** — современный язык программирования с высокой производительностью
+
+- **Go 1.24** — современный язык программирования с высокой производительностью
 - **Gin Framework** — быстрый HTTP веб-фреймворк для Go
 - **PostgreSQL 16** — надежная реляционная база данных
 - **WebSockets** — двунаправленная связь в реальном времени
@@ -15,15 +30,18 @@
 - **Structured Logging** — JSON логирование с настраиваемыми уровнями
 
 **Принципы архитектуры:**
+
 - Clean Architecture с разделением на слои
 - Dependency Injection для тестируемости
 - Repository Pattern для работы с данными
 - Service Layer для бизнес-логики
 - Middleware для сквозной функциональности
 
+<a id="structure"></a>
+
 ## 📁 Структура проекта
 
-```
+```text
 backend/
 ├── cmd/
 │   └── server/              # Точка входа приложения
@@ -59,6 +77,8 @@ backend/
 └── Dockerfile             # Контейнеризация
 ```
 
+<a id="quick-start"></a>
+
 ## 🚀 Быстрый старт
 
 ### Docker Compose (рекомендуется)
@@ -68,7 +88,7 @@ backend/
 ```bash
 # Клонирование репозитория
 git clone <repository-url>
-cd collabboard
+cd CollabBoard
 
 # Создание файла окружения
 cp .env.example .env
@@ -77,21 +97,21 @@ cp .env.example .env
 nano .env
 
 # Запуск всех сервисов (PostgreSQL + API + Frontend)
-docker-compose up -d
+docker compose up -d
 
 # Просмотр логов
-docker-compose logs -f api
-docker-compose logs -f db
+docker compose logs -f api
+docker compose logs -f db
 
 # Остановка сервисов
-docker-compose down
+docker compose down
 ```
 
 ### Ручная установка
 
 #### Предварительные требования
 
-- **Go 1.23+** — [Установка Go](https://golang.org/doc/install)
+- **Go 1.24+** — [Установка Go](https://golang.org/doc/install)
 - **PostgreSQL 16+** — [Установка PostgreSQL](https://www.postgresql.org/download/)
 - **golang-migrate** — [Установка migrate](https://github.com/golang-migrate/migrate)
 - **Docker** (опционально) — [Установка Docker](https://docs.docker.com/get-docker/)
@@ -158,7 +178,7 @@ migrate -source file://internal/db/migrations -database "$DB_URL" up
 # Запуск с автоперезагрузкой
 go run cmd/server/main.go
 
-# Или с использованием air для hot reload
+# Или с использованием [Air](https://github.com/cosmtrek/air) для hot reload (требуется собственная конфигурация)
 air
 ```
 
@@ -176,10 +196,10 @@ make backend
 
 ```bash
 # Запуск всех сервисов
-docker-compose up -d
+docker compose up -d
 
 # Просмотр логов
-docker-compose logs -f api
+docker compose logs -f api
 ```
 
 ## 📚 API Документация
@@ -187,7 +207,8 @@ docker-compose logs -f api
 ### Аутентификация
 
 Все защищенные эндпоинты требуют JWT токен в заголовке:
-```
+
+```text
 Authorization: Bearer <your_jwt_token>
 ```
 
@@ -291,13 +312,15 @@ curl -X POST http://localhost:8080/api/lists \
 ### Подключение
 
 WebSocket соединения устанавливаются по адресу:
-```
+
+```text
 ws://localhost:8080/ws/board/:boardId?token=YOUR_JWT_TOKEN
 ```
 
 ### Схема событий
 
 Все WebSocket сообщения следуют единой схеме:
+
 ```json
 {
   "event": "event_type",
@@ -408,6 +431,8 @@ migrate -source file://internal/db/migrations -database "$DB_URL" down 1
 migrate -source file://internal/db/migrations -database "$DB_URL" version
 ```
 
+<a id="security"></a>
+
 ## 🔐 Аутентификация и авторизация
 
 ### JWT Токены
@@ -442,13 +467,15 @@ api.Use(middleware.Auth(cfg.JWTSecret))
 | `owner` | Владелец доски | Полный доступ: создание, редактирование, удаление доски и управление участниками |
 | `member` | Участник доски | Работа с карточками и списками, просмотр доски |
 
+<a id="development"></a>
+
 ## 🔧 Разработка
 
 ### Структура кода
 
 Проект следует принципам Clean Architecture:
 
-```
+```text
 internal/
 ├── auth/           # Домен аутентификации
 │   ├── handler.go  # HTTP слой (контроллеры)
@@ -497,6 +524,8 @@ golangci-lint run
 golangci-lint run --fix
 ```
 
+<a id="docker"></a>
+
 ## 🐳 Docker
 
 ### Многоэтапная сборка
@@ -505,7 +534,7 @@ Dockerfile использует многоэтапную сборку для о�
 
 ```dockerfile
 # Этап сборки
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 # ... сборка приложения
 
 # Продакшн образ
@@ -517,24 +546,24 @@ FROM gcr.io/distroless/static-debian12 AS runtime
 
 ```bash
 # Запуск в режиме разработки
-docker-compose up -d
-
-# Запуск в продакшн режиме
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose up -d
 
 # Просмотр логов
-docker-compose logs -f api
+docker compose logs -f api
 
 # Остановка сервисов
-docker-compose down
+docker compose down
 ```
+
+<a id="observability"></a>
 
 ## 📊 Мониторинг и логирование
 
 ### Health Check
 
 Эндпоинт для проверки состояния сервера:
-```
+
+```text
 GET /health
 ```
 
@@ -584,12 +613,15 @@ LOG_OUTPUT=stdout       # stdout, file
 ### Метрики
 
 В Docker Compose настроена проверка состояния PostgreSQL:
+
 ```yaml
 healthcheck:
   test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
   interval: 10s
   retries: 5
 ```
+
+<a id="production"></a>
 
 ## 🚀 Продакшн
 
@@ -630,6 +662,8 @@ LOG_OUTPUT=stdout
 - Приложение stateless и может быть легко масштабировано горизонтально
 - WebSocket соединения привязаны к конкретным инстансам
 - Для масштабирования WebSocket рекомендуется использовать Redis для синхронизации между инстансами
+
+<a id="license"></a>
 
 ## 📝 Лицензия
 

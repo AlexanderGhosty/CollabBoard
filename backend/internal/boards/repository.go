@@ -2,16 +2,59 @@ package boards
 
 import (
 	"context"
+	"errors"
 
 	db "backend/internal/db/sqlc"
+	"github.com/jackc/pgx/v5"
 )
 
 type Repository struct {
 	queries *db.Queries
+	tx      TxBeginner
 }
 
-func NewRepository(q *db.Queries) *Repository {
-	return &Repository{queries: q}
+var ErrTransactionUnsupported = errors.New("boards repository: transactions unsupported")
+
+type TxBeginner interface {
+	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
+}
+
+func NewRepository(q *db.Queries, tx TxBeginner) *Repository {
+	return &Repository{queries: q, tx: tx}
+}
+
+func (r *Repository) RunInTransaction(ctx context.Context, fn func(*Repository) error) error {
+	if r.tx == nil {
+		return ErrTransactionUnsupported
+	}
+
+	tx, err := r.tx.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	txRepo := &Repository{queries: r.queries.WithTx(tx)}
+
+	if err := fn(txRepo); err != nil {
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			return errors.Join(err, rbErr)
+		}
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) GetBoardMember(ctx context.Context, arg db.GetBoardMemberParams) (db.BoardMember, error) {
+	return r.queries.GetBoardMember(ctx, arg)
+}
+
+func (r *Repository) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
+	return r.queries.GetUserByEmail(ctx, email)
 }
 
 func (r *Repository) Create(ctx context.Context, arg db.CreateBoardParams) (db.Board, error) {

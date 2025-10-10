@@ -2,15 +2,14 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { boardService, Board } from '@/services/boardService';
 import { listService } from '@/services/listService';
-import { memberService } from '@/services/memberService';
 import { wsClient } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
 import { BoardState } from './types';
-import { normalizeId, extractBoardId } from '@/utils/board/idNormalization';
 import { setupWebSocketSubscriptions } from './useWebSocketStore';
 import { useListsStore } from './useListsStore';
 import { useMembersStore } from './useMembersStore';
 import { useCardsStore } from './useCardsStore';
+import { logger } from '@/utils/logger';
 
 export const useBoardStore = create<BoardState>()(
   immer((set, get) => ({
@@ -20,7 +19,9 @@ export const useBoardStore = create<BoardState>()(
     memberBoardIds: [],
     activeBoard: null,
     boardMembers: {},
+    wsSubscriptionCleanup: null,
     isCardModalOpen: false,
+    isMemberModalOpen: false,
     loading: false,
     error: null,
 
@@ -28,6 +29,11 @@ export const useBoardStore = create<BoardState>()(
     setCardModalOpen(isOpen) {
       set((s) => {
         s.isCardModalOpen = isOpen;
+      });
+    },
+    setMemberModalOpen(isOpen) {
+      set((s) => {
+        s.isMemberModalOpen = isOpen;
       });
     },
 
@@ -129,7 +135,21 @@ export const useBoardStore = create<BoardState>()(
 
       // Normalize the board ID
       const normalizedId = id.trim();
-      console.log(`Loading board with ID: ${normalizedId}`);
+      logger.debug(`Loading board with ID: ${normalizedId}`);
+
+      // Always dispose previous WebSocket subscriptions before loading a new board
+      const existingCleanup = get().wsSubscriptionCleanup;
+      if (existingCleanup) {
+        try {
+          existingCleanup();
+        } catch (cleanupError) {
+          console.error('Error cleaning up previous WebSocket subscriptions:', cleanupError);
+        }
+
+        set((s) => {
+          s.wsSubscriptionCleanup = null;
+        });
+      }
 
       set((s) => { s.loading = true; s.error = null; });
 
@@ -154,11 +174,11 @@ export const useBoardStore = create<BoardState>()(
 
         // Use the setLists method to safely update the lists for this board
         if (board.lists && Array.isArray(board.lists)) {
-          console.log(`Setting ${board.lists.length} lists for board ${normalizedId} using setLists`);
+          logger.debug(`Setting ${board.lists.length} lists for board ${normalizedId} using setLists`);
           listsStore.setLists(board.lists, normalizedId);
 
           // Fetch cards for each list
-          console.log(`Fetching cards for ${board.lists.length} lists`);
+          logger.debug(`Fetching cards for ${board.lists.length} lists`);
 
           // Import the batchPromises utility
           const { batchPromises } = await import('@/utils/async/batchPromises');
@@ -167,9 +187,9 @@ export const useBoardStore = create<BoardState>()(
           const cardFetchingTasks = board.lists.map(list => {
             return async () => {
               try {
-                console.log(`Fetching cards for list ${list.id}`);
+                logger.debug(`Fetching cards for list ${list.id}`);
                 const cards = await listService.fetchListCards(list.id);
-                console.log(`Fetched ${cards.length} cards for list ${list.id}`);
+                logger.debug(`Fetched ${cards.length} cards for list ${list.id}`);
 
                 // Update the cards store with the fetched cards
                 useCardsStore.setState(state => {
@@ -200,7 +220,7 @@ export const useBoardStore = create<BoardState>()(
           // Execute the tasks in batches of 3 (or adjust as needed)
           await batchPromises(cardFetchingTasks, 3);
         } else {
-          console.log(`No lists found for board ${normalizedId}`);
+          logger.debug(`No lists found for board ${normalizedId}`);
           // Still clear any existing lists for this board
           listsStore.setLists([], normalizedId);
         }
@@ -217,11 +237,15 @@ export const useBoardStore = create<BoardState>()(
         await useMembersStore.getState().fetchBoardMembers(normalizedId);
 
         // Connect to WebSocket for real-time updates with the normalized ID
-        console.log(`Connecting to WebSocket for board ${normalizedId}`);
+        logger.debug(`Connecting to WebSocket for board ${normalizedId}`);
         wsClient.connect(normalizedId);
 
         // Setup WebSocket subscriptions
-        setupWebSocketSubscriptions(normalizedId);
+        const disposer = setupWebSocketSubscriptions(normalizedId);
+
+        set((s) => {
+          s.wsSubscriptionCleanup = disposer;
+        });
 
       } catch (error) {
         console.error("Failed to load board:", error);
@@ -334,6 +358,15 @@ export const useBoardStore = create<BoardState>()(
         // Call the API to update the board
         const updatedBoard = await boardService.updateBoard(boardId, name);
 
+        set((s) => {
+          if (s.boards[boardId]) {
+            s.boards[boardId] = {
+              ...s.boards[boardId],
+              ...updatedBoard
+            };
+          }
+        });
+
         // Show success toast
         useToastStore.getState().success("Название доски обновлено");
       } catch (error) {
@@ -353,13 +386,26 @@ export const useBoardStore = create<BoardState>()(
     },
 
     // WebSocket event handling
-    applyWS(msg) {
+    applyWS() {
       // This will be implemented in useWebSocketStore.ts
       // and will be called from there
     },
 
     // Cleanup method
     cleanup() {
+      const existingCleanup = get().wsSubscriptionCleanup;
+      if (existingCleanup) {
+        try {
+          existingCleanup();
+        } catch (cleanupError) {
+          console.error('Error cleaning up WebSocket subscriptions during cleanup:', cleanupError);
+        }
+
+        set((s) => {
+          s.wsSubscriptionCleanup = null;
+        });
+      }
+
       // Disconnect WebSocket
       wsClient.disconnect();
 

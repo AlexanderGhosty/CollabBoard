@@ -11,10 +11,10 @@ type CreateCardRequest struct {
 
 // UpdateCardRequest represents the request body for updating a card
 type UpdateCardRequest struct {
-	Title       string `json:"title" example:"Fix login validation bug"`
-	Description string `json:"description" example:"Updated description of the bug"`
-	Position    *int32 `json:"position" example:"2"`
-	ListID      *int32 `json:"listId" example:"3"`
+	Title       *string `json:"title" example:"Fix login validation bug"`
+	Description *string `json:"description" example:"Updated description of the bug"`
+	Position    *int32  `json:"position" example:"2"`
+	ListID      *int32  `json:"listId" example:"3"`
 }
 
 // MoveCardRequest represents the request body for moving a card
