@@ -1,6 +1,9 @@
+SHELL         := /bin/bash
+.SHELLFLAGS   := -eu -o pipefail -c  # Fail fast on errors across recipes
+
 APP_NAME      := collabboard
 BACKEND_DIR   := backend
-SERVER_PKG    := ./$(BACKEND_DIR)/cmd/server
+SERVER_PKG    := ./cmd/server
 BIN_DIR       := $(BACKEND_DIR)/bin
 MIGRATION_DIR := $(BACKEND_DIR)/internal/db/migrations
 GO            := go
@@ -10,7 +13,7 @@ GO            := go
 backend:
 	@echo "→ Building $(APP_NAME)…"
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -o $(BIN_DIR)/$(APP_NAME) $(SERVER_PKG)
+	cd $(BACKEND_DIR) && $(GO) build -o bin/$(APP_NAME) $(SERVER_PKG)
 
 # lint:
 # 	@echo "→ Running go vet…"
@@ -40,7 +43,9 @@ test:
 
 lint:
 	@echo "→ Running golangci-lint…"
-	golangci-lint run ./...
+	cd $(BACKEND_DIR) && golangci-lint run ./...
 
 format:
-	go fmt ./... && go vet ./...
+	@echo "→ Formatting backend code…"
+	cd $(BACKEND_DIR) && $(GO) fmt ./...
+	cd $(BACKEND_DIR) && $(GO) vet ./...
