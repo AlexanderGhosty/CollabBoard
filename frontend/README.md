@@ -2,19 +2,38 @@
 
 Клиентская часть приложения CollabBoard — современный интерфейс для совместной работы с Kanban-досками в реальном времени.
 
+## 📚 Содержание
+
+- [🏗️ Архитектура](#architecture)
+- [📁 Структура проекта](#structure)
+- [🚀 Быстрый старт](#quick-start)
+- [✨ Основные функции](#features)
+- [🎨 Дизайн-система](#design-system)
+- [🔄 Управление состоянием](#state-management)
+- [🔌 WebSocket интеграция](#websocket)
+- [🎯 Ключевые функции](#key-capabilities)
+- [🛡️ Аутентификация](#auth)
+- [🔧 Разработка](#development)
+- [🐳 Docker](#docker)
+- [📊 Производительность](#performance)
+- [🚀 Продакшн](#production)
+- [🧪 Тестирование](#testing)
+- [📝 Лицензия](#license)
+
+<a id="architecture"></a>
+
 ## 🏗️ Архитектура
 
 **Технологический стек:**
 
 - **React 19** — современная библиотека для создания пользовательских интерфейсов
-- **TypeScript** — типизированный JavaScript для надежности кода
+- **TypeScript 5.7** — типизированный JavaScript для надежности кода
 - **Tailwind CSS** — utility-first CSS фреймворк для быстрой стилизации
 - **Vite** — быстрый инструмент сборки и разработки
 - **Zustand** — легковесное управление состоянием
-- **React Router v6** — маршрутизация в SPA
+- **React Router v7** — маршрутизация в SPA
 - **@dnd-kit** — современная библиотека drag-and-drop
 - **Axios** — HTTP клиент для API запросов
-- **React Icons** — библиотека иконок
 - **Zod** — валидация схем данных
 
 **Принципы архитектуры:**
@@ -23,6 +42,8 @@
 - **Feature-based** — группировка по функциональности
 - **Separation of Concerns** — разделение логики, состояния и представления
 - **Real-time First** — приоритет синхронизации в реальном времени
+
+<a id="structure"></a>
 
 ## 📁 Структура проекта
 
@@ -100,6 +121,8 @@ frontend/
 └── Dockerfile              # Контейнеризация
 ```
 
+<a id="quick-start"></a>
+
 ## 🚀 Быстрый старт
 
 ### Предварительные требования
@@ -162,6 +185,8 @@ npm run lint
 npm run lint -- --fix
 ```
 
+<a id="features"></a>
+
 ## ✨ Основные функции
 
 ### Управление досками
@@ -201,6 +226,8 @@ npm run lint -- --fix
 - **Регистрация и вход**: полный цикл управления аккаунтом
 - **Смена пароля**: возможность обновления учетных данных
 - **Защищенные маршруты**: доступ только для авторизованных пользователей
+
+<a id="design-system"></a>
 
 ## 🎨 Дизайн-система
 
@@ -273,6 +300,8 @@ colors: {
 - `BoardPage` — рабочая область доски
 - `AccountSettingsPage` — настройки аккаунта
 
+<a id="state-management"></a>
+
 ## 🔄 Управление состоянием
 
 ### Zustand Stores
@@ -305,6 +334,8 @@ await login(email, password);
 await createBoard({ name: 'Новая доска' });
 ```
 
+<a id="websocket"></a>
+
 ## 🔌 WebSocket интеграция
 
 ### Real-time синхронизация
@@ -332,6 +363,8 @@ sendCardEvent(WebSocketEventType.CARD_UPDATED, updatedCard);
 - **Карточки**: `card_created`, `card_updated`, `card_moved`, `card_deleted`
 - **Участники**: `member_added`, `member_removed`
 
+<a id="key-capabilities"></a>
+
 ## 🎯 Ключевые функции
 
 ### Drag & Drop
@@ -358,6 +391,8 @@ sendCardEvent(WebSocketEventType.CARD_UPDATED, updatedCard);
 - Сохранение предпочтений в localStorage
 - Адаптация всех компонентов
 - Специальные цвета и тени для темной темы
+
+<a id="auth"></a>
 
 ## 🛡️ Аутентификация
 
@@ -391,6 +426,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 - Toast-уведомления для пользователя
 - Graceful handling при потере соединения
 - Автоматическая повторная попытка подключения
+
+<a id="development"></a>
 
 ## 🔧 Разработка
 
@@ -484,31 +521,45 @@ import type { Board, Card } from '@/types';
 - Пользовательские сообщения (toast, ошибки) на русском языке
 - JSDoc для публичных функций и компонентов
 
+<a id="docker"></a>
+
 ## 🐳 Docker
 
-### Многоэтапная сборка
+### Контейнер разработки
+
+Репозиторий содержит Dockerfile, запускающий Vite dev server внутри контейнера Node.js 20:
 
 ```dockerfile
-# Этап сборки
-FROM node:18-alpine AS builder
+FROM node:20-alpine
+
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
+COPY package.json package-lock.json* ./
+RUN npm ci --legacy-peer-deps
 
-# Продакшн образ
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 ```
 
-### Nginx конфигурация
+### Запуск через Docker Compose
 
-Для SPA необходима настройка fallback на index.html:
+```bash
+# Запуск только фронтенда
+docker compose up web
 
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
+# Полный стек (БД + API + фронтенд)
+docker compose up --build
+
+# Просмотр логов dev-сервера
+docker compose logs -f web
 ```
+
+Контейнер ориентирован на разработку: код монтируется внутрь, работает HMR.
+Итоговая сборка создаётся командой `npm run build` вне контейнера.
+
+<a id="performance"></a>
 
 ## 📊 Производительность
 
@@ -526,6 +577,8 @@ location / {
 - Vite HMR для быстрой разработки
 - ESLint для качества кода
 - TypeScript для типобезопасности
+
+<a id="production"></a>
 
 ## 🚀 Продакшн
 
@@ -547,14 +600,14 @@ NODE_ENV=production
 ### Оптимизация сборки
 
 ```bash
-# Анализ размера сборки
-npm run build -- --analyze
-
-# Сборка с оптимизацией
+# Сборка оптимизированной версии
 npm run build
 
-# Проверка сборки локально
+# Проверка готовой сборки локально
 npm run preview
+
+# Анализ размера бандла (пример с vite-bundle-visualizer)
+npx vite-bundle-visualizer dist/stats.html
 ```
 
 ### Рекомендации
@@ -565,19 +618,21 @@ npm run preview
 4. **Caching** — настройка кеширования
 5. **Error Monitoring** — интеграция с Sentry
 
+<a id="testing"></a>
+
 ## 🧪 Тестирование
 
 ### Рекомендуемые инструменты
 
 ```bash
-# Установка тестовых зависимостей
-npm install --save-dev @testing-library/react @testing-library/jest-dom vitest
-
-# Запуск тестов
+# Запуск всех тестов в CI-режиме
 npm run test
 
-# Тесты с покрытием
-npm run test:coverage
+# Наблюдение за тестами в ходе разработки
+npm run test:watch
+
+# Подсчёт покрытия
+npm run test -- --coverage
 ```
 
 ### Структура тестов
@@ -595,6 +650,8 @@ src/
     ├── utils/
     └── services/
 ```
+
+<a id="license"></a>
 
 ## 📝 Лицензия
 

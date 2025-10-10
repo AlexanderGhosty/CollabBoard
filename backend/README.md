@@ -2,6 +2,20 @@
 
 Серверная часть приложения CollabBoard — современная система для совместной работы с Kanban-досками в реальном времени.
 
+## 📚 Содержание
+
+- [🏗️ Архитектура](#architecture)
+- [📁 Структура проекта](#structure)
+- [🚀 Быстрый старт](#quick-start)
+- [🔐 Аутентификация и авторизация](#security)
+- [🔧 Разработка](#development)
+- [🐳 Docker](#docker)
+- [📊 Мониторинг и логирование](#observability)
+- [🚀 Продакшн](#production)
+- [📝 Лицензия](#license)
+
+<a id="architecture"></a>
+
 ## 🏗️ Архитектура
 
 **Технологический стек:**
@@ -22,6 +36,8 @@
 - Repository Pattern для работы с данными
 - Service Layer для бизнес-логики
 - Middleware для сквозной функциональности
+
+<a id="structure"></a>
 
 ## 📁 Структура проекта
 
@@ -61,6 +77,8 @@ backend/
 └── Dockerfile             # Контейнеризация
 ```
 
+<a id="quick-start"></a>
+
 ## 🚀 Быстрый старт
 
 ### Docker Compose (рекомендуется)
@@ -70,7 +88,7 @@ backend/
 ```bash
 # Клонирование репозитория
 git clone <repository-url>
-cd collabboard
+cd CollabBoard
 
 # Создание файла окружения
 cp .env.example .env
@@ -79,14 +97,14 @@ cp .env.example .env
 nano .env
 
 # Запуск всех сервисов (PostgreSQL + API + Frontend)
-docker-compose up -d
+docker compose up -d
 
 # Просмотр логов
-docker-compose logs -f api
-docker-compose logs -f db
+docker compose logs -f api
+docker compose logs -f db
 
 # Остановка сервисов
-docker-compose down
+docker compose down
 ```
 
 ### Ручная установка
@@ -160,7 +178,7 @@ migrate -source file://internal/db/migrations -database "$DB_URL" up
 # Запуск с автоперезагрузкой
 go run cmd/server/main.go
 
-# Или с использованием air для hot reload
+# Или с использованием [Air](https://github.com/cosmtrek/air) для hot reload (требуется собственная конфигурация)
 air
 ```
 
@@ -178,10 +196,10 @@ make backend
 
 ```bash
 # Запуск всех сервисов
-docker-compose up -d
+docker compose up -d
 
 # Просмотр логов
-docker-compose logs -f api
+docker compose logs -f api
 ```
 
 ## 📚 API Документация
@@ -413,6 +431,8 @@ migrate -source file://internal/db/migrations -database "$DB_URL" down 1
 migrate -source file://internal/db/migrations -database "$DB_URL" version
 ```
 
+<a id="security"></a>
+
 ## 🔐 Аутентификация и авторизация
 
 ### JWT Токены
@@ -446,6 +466,8 @@ api.Use(middleware.Auth(cfg.JWTSecret))
 |------|----------|-------|
 | `owner` | Владелец доски | Полный доступ: создание, редактирование, удаление доски и управление участниками |
 | `member` | Участник доски | Работа с карточками и списками, просмотр доски |
+
+<a id="development"></a>
 
 ## 🔧 Разработка
 
@@ -502,6 +524,8 @@ golangci-lint run
 golangci-lint run --fix
 ```
 
+<a id="docker"></a>
+
 ## 🐳 Docker
 
 ### Многоэтапная сборка
@@ -522,17 +546,16 @@ FROM gcr.io/distroless/static-debian12 AS runtime
 
 ```bash
 # Запуск в режиме разработки
-docker-compose up -d
-
-# Запуск в продакшн режиме
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose up -d
 
 # Просмотр логов
-docker-compose logs -f api
+docker compose logs -f api
 
 # Остановка сервисов
-docker-compose down
+docker compose down
 ```
+
+<a id="observability"></a>
 
 ## 📊 Мониторинг и логирование
 
@@ -598,6 +621,8 @@ healthcheck:
   retries: 5
 ```
 
+<a id="production"></a>
+
 ## 🚀 Продакшн
 
 ### Переменные окружения
@@ -637,6 +662,8 @@ LOG_OUTPUT=stdout
 - Приложение stateless и может быть легко масштабировано горизонтально
 - WebSocket соединения привязаны к конкретным инстансам
 - Для масштабирования WebSocket рекомендуется использовать Redis для синхронизации между инстансами
+
+<a id="license"></a>
 
 ## 📝 Лицензия
 

@@ -1,6 +1,20 @@
-# Пакет `db`
+# Пакет `db`
 
-Пакет `db` — это набор типобезопасных обёрток, сгенерированных **sqlc**, которые связывают Go‑код с SQL‑запросами PostgreSQL, позволяя вызывать базу данных как обычные функции и получать структурированные результаты.
+Пакет `db` — это набор типобезопасных обёрток, сгенерированных **sqlc**.
+Они связывают Go‑код с SQL‑запросами PostgreSQL.
+Это позволяет вызывать базу данных как обычные функции и получать структурированные результаты.
+
+## 📚 Содержание
+
+- [Структура пакета](#структура-пакета)
+- [Базовые функции](#базовые-функции)
+- [Boards](#boards)
+- [Board Members](#board-members)
+- [Lists](#lists)
+- [Cards](#cards)
+- [Users](#users)
+- [Модели данных](#модели-данных)
+- [Примечания по использованию](#примечания-по-использованию)
 
 ## Структура пакета
 
@@ -66,7 +80,7 @@ qTx := q.WithTx(tx)
 
 ```go
 board, err := q.CreateBoard(ctx, db.CreateBoardParams{
-    Name: "Project X", OwnerID: 1,
+    Name: "Project X", OwnerID: 1,
 })
 ```
 
@@ -74,7 +88,7 @@ board, err := q.CreateBoard(ctx, db.CreateBoardParams{
 
 | Имя           | Параметры         | Описание             | Возвращает |
 | ------------- | ----------------- | -------------------- | ---------- |
-| `DeleteBoard` | `ctx`, `id int32` | Удаляет доску по ID. | `error`    |
+| `DeleteBoard` | `ctx`, `id int32` | Удаляет доску по ID. | `error`    |
 
 #### Пример использования DeleteBoard
 
@@ -86,7 +100,7 @@ err := q.DeleteBoard(ctx, 3)
 
 | Имя            | Параметры         | Описание                | Возвращает       |
 | -------------- | ----------------- | ----------------------- | ---------------- |
-| `GetBoardByID` | `ctx`, `id int32` | Возвращает доску по ID. | `(Board, error)` |
+| `GetBoardByID` | `ctx`, `id int32` | Возвращает доску по ID. | `(Board, error)` |
 
 #### Пример использования GetBoardByID
 
@@ -132,7 +146,7 @@ updated, _ := q.UpdateBoard(ctx, db.UpdateBoardParams{ID: 1, Name: "Renamed"})
 
 ---
 
-## Board Members
+## Board Members
 
 ### AddBoardMember
 
@@ -152,7 +166,7 @@ _, err := q.AddBoardMember(ctx, db.AddBoardMemberParams{
 
 | Имя                 | Параметры                            | Описание                    | Возвращает |
 | ------------------- | ------------------------------------ | --------------------------- | ---------- |
-| `DeleteBoardMember` | `ctx`, `arg {BoardID, UserID int32}` | Удаляет участника из доски. | `error`    |
+| `DeleteBoardMember` | `ctx`, `arg {BoardID, UserID int32}` | Удаляет участника из доски. | `error`    |
 
 #### Пример использования DeleteBoardMember
 
@@ -164,7 +178,7 @@ _ = q.DeleteBoardMember(ctx, db.DeleteBoardMemberParams{BoardID: 1, UserID: 2})
 
 | Имя              | Параметры                            | Описание                            | Возвращает             |
 | ---------------- | ------------------------------------ | ----------------------------------- | ---------------------- |
-| `GetBoardMember` | `ctx`, `arg {BoardID, UserID int32}` | Получает данные участника на доске. | `(BoardMember, error)` |
+| `GetBoardMember` | `ctx`, `arg {BoardID, UserID int32}` | Получает данные участника на доске. | `(BoardMember, error)` |
 
 #### Пример использования GetBoardMember
 
@@ -189,7 +203,7 @@ members, err := q.ListBoardMembers(ctx, 1)
 
 | Имя                | Параметры             | Описание                                                   | Возвращает                       |
 | ------------------ | --------------------- | ---------------------------------------------------------- | -------------------------------- |
-| `ListBoardsByUser` | `ctx`, `userID int32` | Доски, доступные конкретному пользователю (по membership). | `([]ListBoardsByUserRow, error)` |
+| `ListBoardsByUser` | `ctx`, `userID int32` | Доски, доступные конкретному пользователю (по membership). | `([]ListBoardsByUserRow, error)` |
 
 #### Пример использования ListBoardsByUser
 
@@ -217,7 +231,7 @@ ownerBoards, err := q.ListBoardsByUserAndRole(ctx, db.ListBoardsByUserAndRolePar
 
 | Имя                     | Параметры                                         | Описание                              | Возвращает             |
 | ----------------------- | ------------------------------------------------- | ------------------------------------- | ---------------------- |
-| `UpdateBoardMemberRole` | `ctx`, `arg {BoardID, UserID int32; Role string}` | Меняет роль участника (owner/member). | `(BoardMember, error)` |
+| `UpdateBoardMemberRole` | `ctx`, `arg {BoardID, UserID int32; Role string}` | Меняет роль участника (owner/member). | `(BoardMember, error)` |
 
 #### Пример использования UpdateBoardMemberRole
 
@@ -235,13 +249,13 @@ updated, err := q.UpdateBoardMemberRole(ctx, db.UpdateBoardMemberRoleParams{
 
 | Имя          | Параметры                                                  | Описание                 | Возвращает      |
 | ------------ | ---------------------------------------------------------- | ------------------------ | --------------- |
-| `CreateList` | `ctx`, `arg {BoardID int32; Title string; Position int32}` | Создаёт колонку в доске. | `(List, error)` |
+| `CreateList` | `ctx`, `arg {BoardID int32; Title string; Position int32}` | Создаёт колонку в доске. | `(List, error)` |
 
 #### Пример использования CreateList
 
 ```go
 list, _ := q.CreateList(ctx, db.CreateListParams{
-    BoardID: 1, Title: "To Do", Position: 1,
+    BoardID: 1, Title: "To Do", Position: 1,
 })
 ```
 
@@ -249,7 +263,7 @@ list, _ := q.CreateList(ctx, db.CreateListParams{
 
 | Имя               | Параметры                                    | Описание                                                            | Возвращает |
 | ----------------- | -------------------------------------------- | ------------------------------------------------------------------- | ---------- |
-| `DecListPosAfter` | `ctx`, `arg {BoardID int32; Position int32}` | Декрементирует `position` всех списков **после** указанной позиции. | `error`    |
+| `DecListPosAfter` | `ctx`, `arg {BoardID int32; Position int32}` | Декрементирует `position` всех списков **после** указанной позиции. | `error`    |
 
 #### Пример использования DecListPosAfter
 
@@ -261,7 +275,7 @@ _ = q.DecListPosAfter(ctx, db.DecListPosAfterParams{BoardID: 1, Position: 3})
 
 | Имя               | Параметры                                    | Описание                                                         | Возвращает |
 | ----------------- | -------------------------------------------- | ---------------------------------------------------------------- | ---------- |
-| `IncListPosAfter` | `ctx`, `arg {BoardID int32; Position int32}` | Инкрементирует `position` всех списков **от** указанной позиции. | `error`    |
+| `IncListPosAfter` | `ctx`, `arg {BoardID int32; Position int32}` | Инкрементирует `position` всех списков **от** указанной позиции. | `error`    |
 
 #### Пример использования IncListPosAfter
 
@@ -285,7 +299,7 @@ _ = q.DeleteList(ctx, list.ID)
 
 | Имя           | Параметры         | Описание               | Возвращает      |
 | ------------- | ----------------- | ---------------------- | --------------- |
-| `GetListByID` | `ctx`, `id int32` | Находит колонку по ID. | `(List, error)` |
+| `GetListByID` | `ctx`, `id int32` | Находит колонку по ID. | `(List, error)` |
 
 #### Пример использования GetListByID
 
@@ -297,7 +311,7 @@ list, _ := q.GetListByID(ctx, 10)
 
 | Имя                | Параметры              | Описание                                                  | Возвращает        |
 | ------------------ | ---------------------- | --------------------------------------------------------- | ----------------- |
-| `ListListsByBoard` | `ctx`, `boardID int32` | Все колонки конкретной доски, отсортированные по позиции. | `([]List, error)` |
+| `ListListsByBoard` | `ctx`, `boardID int32` | Все колонки конкретной доски, отсортированные по позиции. | `([]List, error)` |
 
 #### Пример использования ListListsByBoard
 
@@ -309,7 +323,7 @@ lists, _ := q.ListListsByBoard(ctx, 1)
 
 | Имя          | Параметры                                             | Описание                            | Возвращает      |
 | ------------ | ----------------------------------------------------- | ----------------------------------- | --------------- |
-| `UpdateList` | `ctx`, `arg {ID int32; Title string; Position int32}` | Обновляет название/позицию колонки. | `(List, error)` |
+| `UpdateList` | `ctx`, `arg {ID int32; Title string; Position int32}` | Обновляет название/позицию колонки. | `(List, error)` |
 
 #### Пример использования UpdateList
 
@@ -327,7 +341,7 @@ updated, _ := q.UpdateList(ctx, db.UpdateListParams{
 
 | Имя          | Параметры                                                                          | Описание                   | Возвращает      |
 | ------------ | ---------------------------------------------------------------------------------- | -------------------------- | --------------- |
-| `CreateCard` | `ctx`, `arg {ListID int32; Title string; Description pgtype.Text; Position int32}` | Создаёт карточку в списке. | `(Card, error)` |
+| `CreateCard` | `ctx`, `arg {ListID int32; Title string; Description pgtype.Text; Position int32}` | Создаёт карточку в списке. | `(Card, error)` |
 
 #### Пример использования CreateCard
 
@@ -344,7 +358,7 @@ card, err := q.CreateCard(ctx, db.CreateCardParams{
 
 | Имя               | Параметры                                   | Описание                                                             | Возвращает |
 | ----------------- | ------------------------------------------- | -------------------------------------------------------------------- | ---------- |
-| `DecCardPosAfter` | `ctx`, `arg {ListID int32; Position int32}` | Декрементирует `position` всех карточек **после** указанной позиции. | `error`    |
+| `DecCardPosAfter` | `ctx`, `arg {ListID int32; Position int32}` | Декрементирует `position` всех карточек **после** указанной позиции. | `error`    |
 
 #### Пример использования DecCardPosAfter
 
@@ -356,7 +370,7 @@ _ = q.DecCardPosAfter(ctx, db.DecCardPosAfterParams{ListID: 10, Position: 4})
 
 | Имя               | Параметры                                   | Описание                                                          | Возвращает |
 | ----------------- | ------------------------------------------- | ----------------------------------------------------------------- | ---------- |
-| `IncCardPosAfter` | `ctx`, `arg {ListID int32; Position int32}` | Инкрементирует `position` всех карточек **от** указанной позиции. | `error`    |
+| `IncCardPosAfter` | `ctx`, `arg {ListID int32; Position int32}` | Инкрементирует `position` всех карточек **от** указанной позиции. | `error`    |
 
 #### Пример использования IncCardPosAfter
 
@@ -380,7 +394,7 @@ _ = q.DeleteCard(ctx, card.ID)
 
 | Имя           | Параметры         | Описание                 | Возвращает      |
 | ------------- | ----------------- | ------------------------ | --------------- |
-| `GetCardByID` | `ctx`, `id int32` | Получает карточку по ID. | `(Card, error)` |
+| `GetCardByID` | `ctx`, `id int32` | Получает карточку по ID. | `(Card, error)` |
 
 #### Пример использования GetCardByID
 
@@ -392,7 +406,7 @@ card, _ = q.GetCardByID(ctx, 101)
 
 | Имя               | Параметры             | Описание                               | Возвращает        |
 | ----------------- | --------------------- | -------------------------------------- | ----------------- |
-| `ListCardsByList` | `ctx`, `listID int32` | Все карточки списка в порядке позиции. | `([]Card, error)` |
+| `ListCardsByList` | `ctx`, `listID int32` | Все карточки списка в порядке позиции. | `([]Card, error)` |
 
 #### Пример использования ListCardsByList
 
@@ -404,7 +418,7 @@ cards, _ := q.ListCardsByList(ctx, 10)
 
 | Имя          | Параметры                                                                              | Описание                                        | Возвращает      |
 | ------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------- | --------------- |
-| `UpdateCard` | `ctx`, `arg {ID, ListID int32; Title string; Description pgtype.Text; Position int32}` | Обновляет контент, позицию или список карточки. | `(Card, error)` |
+| `UpdateCard` | `ctx`, `arg {ID, ListID int32; Title string; Description pgtype.Text; Position int32}` | Обновляет контент, позицию или список карточки. | `(Card, error)` |
 
 #### Пример использования UpdateCard
 
@@ -422,7 +436,7 @@ updated, _ := q.UpdateCard(ctx, db.UpdateCardParams{
 
 | Имя          | Параметры                                       | Описание                     | Возвращает      |
 | ------------ | ----------------------------------------------- | ---------------------------- | --------------- |
-| `CreateUser` | `ctx`, `arg {Name, Email, PasswordHash string}` | Создаёт нового пользователя. | `(User, error)` |
+| `CreateUser` | `ctx`, `arg {Name, Email, PasswordHash string}` | Создаёт нового пользователя. | `(User, error)` |
 
 #### Пример использования CreateUser
 
@@ -448,7 +462,7 @@ _ = q.DeleteUser(ctx, u.ID)
 
 | Имя              | Параметры             | Описание                       | Возвращает      |
 | ---------------- | --------------------- | ------------------------------ | --------------- |
-| `GetUserByEmail` | `ctx`, `email string` | Находит пользователя по email. | `(User, error)` |
+| `GetUserByEmail` | `ctx`, `email string` | Находит пользователя по email. | `(User, error)` |
 
 #### Пример использования GetUserByEmail
 
@@ -460,7 +474,7 @@ user, _ := q.GetUserByEmail(ctx, "alice@example.com")
 
 | Имя           | Параметры         | Описание                     | Возвращает      |
 | ------------- | ----------------- | ---------------------------- | --------------- |
-| `GetUserByID` | `ctx`, `id int32` | Получает пользователя по ID. | `(User, error)` |
+| `GetUserByID` | `ctx`, `id int32` | Получает пользователя по ID. | `(User, error)` |
 
 #### Пример использования GetUserByID
 
@@ -472,7 +486,7 @@ user, _ := q.GetUserByID(ctx, 1)
 
 | Имя                  | Параметры                                    | Описание                          | Возвращает      |
 | -------------------- | -------------------------------------------- | --------------------------------- | --------------- |
-| `UpdatePasswordHash` | `ctx`, `arg {ID int32; PasswordHash string}` | Изменяет хеш пароля пользователя. | `(User, error)` |
+| `UpdatePasswordHash` | `ctx`, `arg {ID int32; PasswordHash string}` | Изменяет хеш пароля пользователя. | `(User, error)` |
 
 #### Пример использования UpdatePasswordHash
 
@@ -486,13 +500,13 @@ _, _ = q.UpdatePasswordHash(ctx, db.UpdatePasswordHashParams{
 
 | Имя          | Параметры                                   | Описание                            | Возвращает      |
 | ------------ | ------------------------------------------- | ----------------------------------- | --------------- |
-| `UpdateUser` | `ctx`, `arg {ID int32; Name, Email string}` | Обновляет имя и email пользователя. | `(User, error)` |
+| `UpdateUser` | `ctx`, `arg {ID int32; Name, Email string}` | Обновляет имя и email пользователя. | `(User, error)` |
 
 #### Пример использования UpdateUser
 
 ```go
 usr, err := q.UpdateUser(ctx, db.UpdateUserParams{
-    ID: 1, Name: "Alice B.", Email: "alice.b@example.com",
+    ID: 1, Name: "Alice B.", Email: "alice.b@example.com",
 })
 ```
 
