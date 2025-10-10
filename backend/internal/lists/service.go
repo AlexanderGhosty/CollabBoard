@@ -35,17 +35,31 @@ func (s *Service) Create(ctx context.Context, userID, boardID int32, title strin
 		return db.List{}, ErrNotMember
 	}
 
+	lists, err := s.repo.ListByBoard(ctx, boardID)
+	if err != nil {
+		return db.List{}, err
+	}
+
+	nextSlot := int32(len(lists) + 1)
+	sanitizedPosition := position
+	if sanitizedPosition < 1 {
+		sanitizedPosition = 1
+	}
+	if sanitizedPosition > nextSlot {
+		sanitizedPosition = nextSlot
+	}
+
 	logger.WithContext(ctx).Info("Creating list",
 		"user_id", userID,
 		"board_id", boardID,
 		"title", title,
-		"position", position,
+		"position", sanitizedPosition,
 	)
 
-        if err := s.repo.ShiftRight(ctx, boardID, position); err != nil {
-                return db.List{}, err
-        }
-        lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: position})
+	if err := s.repo.ShiftRight(ctx, boardID, sanitizedPosition); err != nil {
+		return db.List{}, err
+	}
+	lst, err := s.repo.Create(ctx, db.CreateListParams{BoardID: boardID, Title: title, Position: sanitizedPosition})
 	if err == nil {
 		logger.WithContext(ctx).Info("List created successfully",
 			"list_id", lst.ID,
