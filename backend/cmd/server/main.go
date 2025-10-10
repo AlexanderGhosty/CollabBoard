@@ -1,24 +1,24 @@
 // Package main CollabBoard API
 //
-//	@title			CollabBoard API
-//	@version		1.0
-//	@description	Collaborative Kanban board application with real-time updates
-//	@termsOfService	http://swagger.io/terms/
+//	@title                  CollabBoard API
+//	@version                1.0
+//	@description    Collaborative Kanban board application with real-time updates
+//	@termsOfService http://swagger.io/terms/
 //
-//	@contact.name	API Support
-//	@contact.url	http://www.swagger.io/support
-//	@contact.email	support@swagger.io
+//	@contact.name   API Support
+//	@contact.url    http://www.swagger.io/support
+//	@contact.email  support@swagger.io
 //
-//	@license.name	Apache 2.0
-//	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
+//	@license.name   Apache 2.0
+//	@license.url    http://www.apache.org/licenses/LICENSE-2.0.html
 //
-//	@host		localhost:8080
-//	@BasePath	/
+//	@host           localhost:8080
+//	@BasePath       /
 //
-//	@securityDefinitions.apikey	BearerAuth
-//	@in							header
-//	@name						Authorization
-//	@description				Type "Bearer" followed by a space and JWT token.
+//	@securityDefinitions.apikey     BearerAuth
+//	@in                                                     header
+//	@name                                           Authorization
+//	@description                            Type "Bearer" followed by a space and JWT token.
 package main
 
 import (
@@ -50,25 +50,31 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func main() {
-	cfg := config.Load()
+// ServerDeps captures the runtime dependencies required to construct the HTTP
+// server and router. Tests can supply fakes for each dependency to exercise the
+// wiring without touching external systems.
+type ServerDeps struct {
+	DB                       db.DBTX
+	CloseDB                  func()
+	Hub                      *websocket.Hub
+	HubRunner                websocket.HubRunner
+	NormalizerFactory        func(*lists.Service, *db.Queries) jobs.Normalizer
+	NormalizerStartLogFields []any
+}
 
-	// Initialize structured logging
-	if err := logger.Initialize(cfg.Log); err != nil {
-		log.Fatalf("failed to initialize logger: %v", err)
+func buildServer(cfg *config.Config, deps ServerDeps) (*http.Server, *gin.Engine, func()) {
+	if cfg == nil {
+		log.Fatal("config must not be nil")
 	}
-	logger.Info("Starting CollabBoard server", "version", "1.0.0", "log_level", cfg.Log.Level)
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	pool, err := pgxpool.New(dbCtx, cfg.DBUrl)
-	cancel()
-	if err != nil {
-		logger.Fatal("cannot connect to DB", "error", err)
+	if deps.DB == nil {
+		log.Fatal("database dependency must not be nil")
 	}
-	defer pool.Close()
-	logger.Info("Database connection established")
-
-	queries := db.New(pool)
+	if deps.Hub == nil {
+		log.Fatal("websocket hub must not be nil")
+	}
+	if deps.HubRunner == nil {
+		log.Fatal("hub runner must not be nil")
+	}
 
 	if strings.EqualFold(cfg.Log.Level, "DEBUG") {
 		gin.SetMode(gin.DebugMode)
@@ -104,6 +110,8 @@ func main() {
 	docs.SwaggerInfo.BasePath = "/"
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	queries := db.New(deps.DB)
+
 	// Auth routes (public + /auth/me)
 	authRepo := auth.NewRepository(queries)
 	authSvc := auth.NewService(authRepo, cfg.JWTSecret)
@@ -113,58 +121,88 @@ func main() {
 	api := r.Group("/api")
 	api.Use(middleware.Auth(cfg.JWTSecret))
 
-	hub := websocket.NewHub()
-	go hub.Run()
+	deps.HubRunner(deps.Hub)
 
 	boardsRepo := boards.NewRepository(queries)
-	boardsSvc := boards.NewService(boardsRepo, hub)
+	boardsSvc := boards.NewService(boardsRepo, deps.Hub)
 	boards.RegisterRoutes(api, boardsSvc)
 
 	listsRepo := lists.NewRepository(queries)
-	listsSvc := lists.NewService(listsRepo, listsRepo, hub)
+	listsSvc := lists.NewService(listsRepo, listsRepo, deps.Hub)
 	lists.RegisterRoutes(api, listsSvc)
 
 	cardsRepo := cards.NewRepository(queries)
-	cardsSvc := cards.NewService(cardsRepo, listsRepo, boardsRepo, hub)
+	cardsSvc := cards.NewService(cardsRepo, listsRepo, boardsRepo, deps.Hub)
 	cards.RegisterRoutes(api, cardsSvc)
 
-	// User profile endpoint
-	// getUserProfile gets the current user's profile
-	//
-	//	@Summary		Get user profile
-	//	@Description	Get the profile information of the currently authenticated user
-	//	@Tags			User
-	//	@Produce		json
-	//	@Security		BearerAuth
-	//	@Success		200	{object}	auth.UserPublic	"User profile information"
-	//	@Failure		401	{object}	map[string]string	"Unauthorized"
-	//	@Failure		500	{object}	map[string]string	"Internal server error"
-	//	@Router			/api/me [get]
-	api.GET("/me", func(c *gin.Context) {
-		user, err := authSvc.GetUserByID(c.Request.Context(), int32(c.GetInt("userID")))
-		if err != nil {
-			c.JSON(500, gin.H{"error": "failed to get user profile"})
-			return
-		}
-		c.JSON(200, user)
-	})
-
-	// WS route (no auth middleware – inside handler)
 	r.GET("/ws/board/:id", func(c *gin.Context) {
-		websocket.ServeBoardWS(c, hub, queries, cfg.JWTSecret)
+		websocket.ServeBoardWS(c, deps.Hub, queries, cfg.JWTSecret)
 	})
 
-	// Start the position normalizer background job
-	// Run every 30 minutes to check and fix any position conflicts
-	positionNormalizer := jobs.NewPositionNormalizer(listsSvc, queries, 30*time.Minute)
-	positionNormalizer.Start()
-	defer positionNormalizer.Stop()
-	logger.Info("Position normalizer background job started", "interval", "30m")
+	var cleanupFuncs []func()
+
+	if deps.NormalizerFactory != nil {
+		if normalizer := deps.NormalizerFactory(listsSvc, queries); normalizer != nil {
+			normalizer.Start()
+			cleanupFuncs = append(cleanupFuncs, normalizer.Stop)
+			if len(deps.NormalizerStartLogFields) > 0 {
+				logger.Info("Position normalizer background job started", deps.NormalizerStartLogFields...)
+			} else {
+				logger.Info("Position normalizer background job started")
+			}
+		}
+	}
+
+	if deps.CloseDB != nil {
+		cleanupFuncs = append(cleanupFuncs, deps.CloseDB)
+	}
+
+	cleanup := func() {
+		for i := len(cleanupFuncs) - 1; i >= 0; i-- {
+			cleanupFuncs[i]()
+		}
+	}
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort("", cfg.Port),
 		Handler: r,
 	}
+
+	return srv, r, cleanup
+}
+
+func main() {
+	cfg := config.Load()
+
+	// Initialize structured logging
+	if err := logger.Initialize(cfg.Log); err != nil {
+		log.Fatalf("failed to initialize logger: %v", err)
+	}
+	logger.Info("Starting CollabBoard server", "version", "1.0.0", "log_level", cfg.Log.Level)
+
+	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	pool, err := pgxpool.New(dbCtx, cfg.DBUrl)
+	cancel()
+	if err != nil {
+		logger.Fatal("cannot connect to DB", "error", err)
+	}
+	logger.Info("Database connection established")
+
+	hub := websocket.NewHub()
+
+	srv, _, cleanup := buildServer(cfg, ServerDeps{
+		DB:      pool,
+		CloseDB: pool.Close,
+		Hub:     hub,
+		HubRunner: func(h *websocket.Hub) {
+			go h.Run()
+		},
+		NormalizerFactory: func(listsSvc *lists.Service, queries *db.Queries) jobs.Normalizer {
+			return jobs.NewPositionNormalizer(listsSvc, queries, 30*time.Minute)
+		},
+		NormalizerStartLogFields: []any{"interval", "30m"},
+	})
+	defer cleanup()
 
 	// Start server in background so we can listen for shutdown signals
 	serverErrCh := make(chan error, 1)
