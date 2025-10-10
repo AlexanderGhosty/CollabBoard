@@ -17,6 +17,7 @@
 - **Zod** — валидация схем данных
 
 **Принципы архитектуры:**
+
 - **Atomic Design** — организация компонентов по уровням (atoms → molecules → organisms → templates → pages)
 - **Feature-based** — группировка по функциональности
 - **Separation of Concerns** — разделение логики, состояния и представления
@@ -102,7 +103,7 @@ frontend/
 
 ### Предварительные требования
 
-- **Node.js 18+** — [Установка Node.js](https://nodejs.org/)
+- **Node.js 20+** — [Установка Node.js](https://nodejs.org/)
 - **npm** или **yarn** — менеджер пакетов
 - **Backend API** — запущенный сервер CollabBoard
 
@@ -417,16 +418,19 @@ import { Button } from '@/components/atoms/Button';
 ### Утилиты и хелперы
 
 #### API утилиты
+
 - `normalizeEntities` — нормализация данных для состояния
 - `errorHandling` — обработка ошибок API
 - `apiEndpoints` — централизованные эндпоинты
 
 #### Board утилиты
+
 - `permissions` — проверка прав доступа
 - `sorting` — сортировка списков и карточек
 - `idNormalization` — нормализация ID
 
 #### Валидация
+
 - Zod схемы для валидации форм
 - Клиентская валидация перед отправкой
 - Типобезопасная валидация
@@ -434,12 +438,14 @@ import { Button } from '@/components/atoms/Button';
 ### Соглашения по коду
 
 #### Именование файлов и компонентов
+
 - **Компоненты**: PascalCase (`Button.tsx`, `CardItem.tsx`)
 - **Хуки**: camelCase с префиксом `use` (`useAuthStore.ts`)
 - **Утилиты**: camelCase (`normalizeEntities.ts`)
 - **Константы**: UPPER_SNAKE_CASE (`API_ENDPOINTS.ts`)
 
 #### Структура импортов
+
 ```typescript
 // 1. React и библиотеки
 import React, { useState, useEffect } from 'react';
@@ -454,6 +460,7 @@ import type { Board, Card } from '@/types';
 ```
 
 #### Комментарии
+
 - Все комментарии в коде на английском языке
 - Пользовательские сообщения (toast, ошибки) на русском языке
 - JSDoc для публичных функций и компонентов
@@ -556,7 +563,7 @@ npm run test:coverage
 
 ### Структура тестов
 
-```
+```text
 src/
 ├── components/
 │   ├── atoms/

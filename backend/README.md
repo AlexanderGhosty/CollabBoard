@@ -5,7 +5,8 @@
 ## 🏗️ Архитектура
 
 **Технологический стек:**
-- **Go 1.23** — современный язык программирования с высокой производительностью
+
+- **Go 1.24** — современный язык программирования с высокой производительностью
 - **Gin Framework** — быстрый HTTP веб-фреймворк для Go
 - **PostgreSQL 16** — надежная реляционная база данных
 - **WebSockets** — двунаправленная связь в реальном времени
@@ -15,6 +16,7 @@
 - **Structured Logging** — JSON логирование с настраиваемыми уровнями
 
 **Принципы архитектуры:**
+
 - Clean Architecture с разделением на слои
 - Dependency Injection для тестируемости
 - Repository Pattern для работы с данными
@@ -91,7 +93,7 @@ docker-compose down
 
 #### Предварительные требования
 
-- **Go 1.23+** — [Установка Go](https://golang.org/doc/install)
+- **Go 1.24+** — [Установка Go](https://golang.org/doc/install)
 - **PostgreSQL 16+** — [Установка PostgreSQL](https://www.postgresql.org/download/)
 - **golang-migrate** — [Установка migrate](https://github.com/golang-migrate/migrate)
 - **Docker** (опционально) — [Установка Docker](https://docs.docker.com/get-docker/)
@@ -505,7 +507,7 @@ Dockerfile использует многоэтапную сборку для о�
 
 ```dockerfile
 # Этап сборки
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 # ... сборка приложения
 
 # Продакшн образ
