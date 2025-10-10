@@ -4,6 +4,7 @@ import Button from '@/components/atoms/Button';
 import EditableText from '@/components/molecules/EditableText';
 import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import { useListsStore } from '@/store/board';
+import { logger } from '@/utils/logger';
 
 interface Props {
   list: List;
@@ -18,7 +19,7 @@ export default function ListHeader({ list, onAddCard }: Props) {
   const updateList = useListsStore(state => state.updateList);
 
   const handleAddCard = () => {
-    console.log(`Add card button clicked for list:`, list);
+    logger.debug(`Add card button clicked for list:`, list);
     onAddCard();
   };
 

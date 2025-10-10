@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/useAuthStore';
+import { logger } from '@/utils/logger';
 
 /** Сообщение, которое мы шлём / получаем по сокету */
 export type WSMessage<T = unknown> = {
@@ -49,19 +50,19 @@ class WebSocketClient {
 
     // если уже подключены к этой же доске — выходим
     if (this.socket && this.boardId === normalizedBoardId) {
-      console.log(`Already connected to WebSocket for board ${normalizedBoardId}`);
+      logger.debug(`Already connected to WebSocket for board ${normalizedBoardId}`);
       return;
     }
 
     // если было старое соединение — закрываем
     if (this.socket) {
-      console.log(`Closing existing WebSocket connection for board ${this.boardId}`);
+      logger.debug(`Closing existing WebSocket connection for board ${this.boardId}`);
       this.socket.close();
     }
 
     // Set the board ID
     this.boardId = normalizedBoardId;
-    console.log(`Connecting to WebSocket for board ${this.boardId}`);
+    logger.debug(`Connecting to WebSocket for board ${this.boardId}`);
     this.openSocket();
   }
 
@@ -101,11 +102,11 @@ class WebSocketClient {
   private openSocket() {
     const token = useAuthStore.getState().token;
     const url = `${import.meta.env.VITE_WS_URL}/${this.boardId}?token=${token}`;
-    console.log(`Opening WebSocket connection to: ${url}`);
+    logger.debug(`Opening WebSocket connection to: ${url}`);
     this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
-      console.log(`WebSocket connection established for board ${this.boardId}`);
+      logger.debug(`WebSocket connection established for board ${this.boardId}`);
       // запускаем heartbeat (ping‑pong)
       this.heartbeatId = window.setInterval(() => {
         if (this.socket?.readyState === WebSocket.OPEN) {
@@ -117,7 +118,7 @@ class WebSocketClient {
     this.socket.onmessage = (e) => {
       try {
         const msg: WSMessage = JSON.parse(e.data);
-        console.log(`WebSocket message received: ${msg.event}`, msg.data);
+        logger.debug(`WebSocket message received: ${msg.event}`, msg.data);
 
         // Mark the data as coming from WebSocket to help prevent duplicate notifications
         const dataWithSource = typeof msg.data === 'object' && msg.data !== null
@@ -132,7 +133,7 @@ class WebSocketClient {
     };
 
     this.socket.onclose = (event) => {
-      console.log(`WebSocket connection closed for board ${this.boardId}. Code: ${event.code}, Reason: ${event.reason}`);
+      logger.debug(`WebSocket connection closed for board ${this.boardId}. Code: ${event.code}, Reason: ${event.reason}`);
       this.cleanup();
       // пытаемся переподключиться раз в 3 сек
       this.reconnectId = window.setTimeout(() => this.openSocket(), 3_000);

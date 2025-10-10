@@ -4,6 +4,7 @@ import { ApiCard, normalizeCard } from '@/utils/api/normalizeEntities';
 import { handleApiError } from '@/utils/api/errorHandling';
 import { WebSocketEventType, sendCardEvent, sendCardDeletedEvent } from '@/utils/websocket/events';
 import { Card } from '@/services/boardService';
+import { logger } from '@/utils/logger';
 
 /**
  * Card service - handles card-related operations
@@ -12,9 +13,9 @@ export const cardService = {
   /** Получить карточки для списка */
   async fetchListCards(listId: string): Promise<Card[]> {
     try {
-      console.log(`Fetching cards for list ${listId}`);
+      logger.debug(`Fetching cards for list ${listId}`);
       const { data } = await api.get<ApiCard[]>(CARD_ENDPOINTS.cards(listId));
-      console.log(`Raw cards data for list ${listId}:`, data);
+      logger.debug(`Raw cards data for list ${listId}:`, data);
 
       // Check if data is an array
       if (!Array.isArray(data)) {
@@ -33,7 +34,7 @@ export const cardService = {
   /** Создать карточку */
   async createCard(listId: string, title: string, description: string = '', position: number): Promise<Card> {
     try {
-      console.log("Creating card with params:", { listId, title, description, position });
+      logger.debug("Creating card with params:", { listId, title, description, position });
 
       const { data } = await api.post<ApiCard>(CARD_ENDPOINTS.cards(listId), {
         title,
@@ -41,7 +42,7 @@ export const cardService = {
         position
       });
 
-      console.log("Raw card data from API:", data);
+      logger.debug("Raw card data from API:", data);
 
       // Ensure we have a valid response
       if (!data) {
@@ -50,7 +51,7 @@ export const cardService = {
 
       // Normalize the card data
       const normalizedCard = normalizeCard(data, listId);
-      console.log("Normalized card:", normalizedCard);
+      logger.debug("Normalized card:", normalizedCard);
 
       // Send WebSocket event
       sendCardEvent(WebSocketEventType.CARD_CREATED, normalizedCard);
@@ -65,14 +66,14 @@ export const cardService = {
   /** Обновить карточку */
   async updateCard(cardId: string, listId: string, updates: { title?: string; description?: string }): Promise<Card> {
     try {
-      console.log(`Updating card ${cardId} in list ${listId}:`, updates);
+      logger.debug(`Updating card ${cardId} in list ${listId}:`, updates);
 
       const { data } = await api.put<ApiCard>(CARD_ENDPOINTS.card(listId, cardId), updates);
-      console.log("Raw updated card data from API:", data);
+      logger.debug("Raw updated card data from API:", data);
 
       // Normalize the card data
       const normalizedCard = normalizeCard(data, listId);
-      console.log("Card updated successfully:", normalizedCard);
+      logger.debug("Card updated successfully:", normalizedCard);
 
       // Send WebSocket event
       sendCardEvent(WebSocketEventType.CARD_UPDATED, normalizedCard);
@@ -87,7 +88,7 @@ export const cardService = {
   /** Переместить карточку (между списками или внутри списка) */
   async moveCard(cardId: string, toListId: string, toPos: number): Promise<void> {
     try {
-      console.log(`Moving card ${cardId} to list ${toListId} at position ${toPos}`);
+      logger.debug(`Moving card ${cardId} to list ${toListId} at position ${toPos}`);
 
       // Convert listId to number for the backend
       const listIdNum = parseInt(toListId);
@@ -98,7 +99,7 @@ export const cardService = {
         position: toPos
       });
 
-      console.log("Card moved successfully");
+      logger.debug("Card moved successfully");
 
       // No need to send WebSocket event here
       // The backend will broadcast the event to all clients including this one
@@ -111,9 +112,9 @@ export const cardService = {
   /** Удалить карточку */
   async deleteCard(cardId: string, listId: string): Promise<void> {
     try {
-      console.log(`Deleting card ${cardId} from list ${listId}`);
+      logger.debug(`Deleting card ${cardId} from list ${listId}`);
       await api.delete(CARD_ENDPOINTS.card(listId, cardId));
-      console.log("Card deleted successfully");
+      logger.debug("Card deleted successfully");
       
       // Send WebSocket event
       sendCardDeletedEvent(cardId);
@@ -126,13 +127,13 @@ export const cardService = {
   /** Дублировать карточку */
   async duplicateCard(cardId: string): Promise<Card> {
     try {
-      console.log(`Duplicating card ${cardId}`);
+      logger.debug(`Duplicating card ${cardId}`);
       const { data } = await api.post<ApiCard>(CARD_ENDPOINTS.duplicateCard(cardId));
-      console.log("Raw duplicated card data from API:", data);
+      logger.debug("Raw duplicated card data from API:", data);
 
       // Normalize the card data
       const normalizedCard = normalizeCard(data);
-      console.log("Card duplicated successfully:", normalizedCard);
+      logger.debug("Card duplicated successfully:", normalizedCard);
 
       // Send WebSocket event
       sendCardEvent(WebSocketEventType.CARD_CREATED, normalizedCard);

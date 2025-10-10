@@ -1,6 +1,7 @@
 import { sendWS } from '@/services/websocket';
 import { Board, Card, List } from '@/services/boardService';
 import { BoardMember } from '@/utils/api/normalizeEntities';
+import { logger } from '@/utils/logger';
 
 /**
  * WebSocket event types
@@ -35,7 +36,7 @@ export enum WebSocketEventType {
  * Send a board-related WebSocket event
  */
 export function sendBoardEvent(type: WebSocketEventType, data: Board): void {
-  console.log(`Sending WebSocket event: ${type}`, data);
+  logger.debug(`Sending WebSocket event: ${type}`, data);
   sendWS({ event: type, data });
 }
 
@@ -43,7 +44,7 @@ export function sendBoardEvent(type: WebSocketEventType, data: Board): void {
  * Send a list-related WebSocket event
  */
 export function sendListEvent(type: WebSocketEventType, data: List): void {
-  console.log(`Sending WebSocket event: ${type}`, data);
+  logger.debug(`Sending WebSocket event: ${type}`, data);
   sendWS({ event: type, data });
 }
 
@@ -51,7 +52,7 @@ export function sendListEvent(type: WebSocketEventType, data: List): void {
  * Send a card-related WebSocket event
  */
 export function sendCardEvent(type: WebSocketEventType, data: Card): void {
-  console.log(`Sending WebSocket event: ${type}`, data);
+  logger.debug(`Sending WebSocket event: ${type}`, data);
   sendWS({ event: type, data });
 }
 
@@ -59,7 +60,7 @@ export function sendCardEvent(type: WebSocketEventType, data: Card): void {
  * Send a list deletion WebSocket event
  */
 export function sendListDeletedEvent(listId: string, boardId: string): void {
-  console.log(`Sending WebSocket event: ${WebSocketEventType.LIST_DELETED}`, { id: listId, boardId });
+  logger.debug(`Sending WebSocket event: ${WebSocketEventType.LIST_DELETED}`, { id: listId, boardId });
   sendWS({
     event: WebSocketEventType.LIST_DELETED,
     data: {
@@ -73,7 +74,7 @@ export function sendListDeletedEvent(listId: string, boardId: string): void {
  * Send a card deletion WebSocket event
  */
 export function sendCardDeletedEvent(cardId: string): void {
-  console.log(`Sending WebSocket event: ${WebSocketEventType.CARD_DELETED}`, { cardId });
+  logger.debug(`Sending WebSocket event: ${WebSocketEventType.CARD_DELETED}`, { cardId });
   sendWS({
     event: WebSocketEventType.CARD_DELETED,
     data: { cardId }
@@ -84,6 +85,6 @@ export function sendCardDeletedEvent(cardId: string): void {
  * Send a member-related WebSocket event
  */
 export function sendMemberEvent(type: WebSocketEventType, data: BoardMember | { boardId: string, userId: string }): void {
-  console.log(`Sending WebSocket event: ${type}`, data);
+  logger.debug(`Sending WebSocket event: ${type}`, data);
   sendWS({ event: type, data });
 }

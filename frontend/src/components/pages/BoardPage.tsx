@@ -6,6 +6,7 @@ import Header from '@/components/organisms/Header';
 import { useBoardStore } from '@/store/board';
 import { subscribeWS } from '@/services/websocket';
 import './BoardPage.css';
+import { logger } from '@/utils/logger';
 
 export default function BoardPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,11 +45,11 @@ export default function BoardPage() {
 
       // Subscribe to board_updated event to handle real-time board name updates
       const unsubscribeUpdated = subscribeWS('board_updated', (data: any) => {
-        console.log('BoardPage received board_updated event:', data);
+        logger.debug('BoardPage received board_updated event:', data);
         const updatedBoardId = String(data.id || data.ID || '');
         if (updatedBoardId === id) {
           // The board store will handle the update automatically via the applyWS method
-          console.log('Current board was updated via WebSocket');
+          logger.debug('Current board was updated via WebSocket');
         }
       });
 

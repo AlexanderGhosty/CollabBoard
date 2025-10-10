@@ -3,6 +3,7 @@ import { BOARD_ENDPOINTS } from '@/utils/api/apiEndpoints';
 import { ApiBoardMember, BoardMember, normalizeBoardMember } from '@/utils/api/normalizeEntities';
 import { handleApiError } from '@/utils/api/errorHandling';
 import { WebSocketEventType, sendMemberEvent } from '@/utils/websocket/events';
+import { logger } from '@/utils/logger';
 
 /**
  * Member service - handles board member-related operations
@@ -11,9 +12,9 @@ export const memberService = {
   /** Получить список участников доски */
   async getBoardMembers(boardId: string): Promise<BoardMember[]> {
     try {
-      console.log(`Fetching members for board ${boardId}`);
+      logger.debug(`Fetching members for board ${boardId}`);
       const { data } = await api.get<ApiBoardMember[]>(BOARD_ENDPOINTS.boardMembers(boardId));
-      console.log("Raw board members data from API:", data);
+      logger.debug("Raw board members data from API:", data);
 
       // Check if data is an array
       if (!Array.isArray(data)) {
@@ -23,7 +24,7 @@ export const memberService = {
 
       // Normalize the members data
       const normalizedMembers = data.map(member => normalizeBoardMember(member, boardId));
-      console.log("Normalized members:", normalizedMembers);
+      logger.debug("Normalized members:", normalizedMembers);
 
       return normalizedMembers;
     } catch (error) {
@@ -35,7 +36,7 @@ export const memberService = {
   /** Пригласить пользователя на доску по email */
   async inviteMemberByEmail(boardId: string, email: string, role: 'owner' | 'member' = 'member'): Promise<BoardMember> {
     try {
-      console.log(`Inviting user ${email} to board ${boardId} with role ${role}`);
+      logger.debug(`Inviting user ${email} to board ${boardId} with role ${role}`);
 
       // Validate email format before sending to API
       if (!email || !email.includes('@')) {
@@ -43,11 +44,11 @@ export const memberService = {
       }
 
       const { data } = await api.post<ApiBoardMember>(BOARD_ENDPOINTS.inviteMember(boardId), { email, role });
-      console.log("Invitation successful:", data);
+      logger.debug("Invitation successful:", data);
 
       // Normalize the member data
       const normalizedMember = normalizeBoardMember(data, boardId);
-      console.log("Normalized invitation data:", normalizedMember);
+      logger.debug("Normalized invitation data:", normalizedMember);
 
       // Send WebSocket event
       sendMemberEvent(WebSocketEventType.MEMBER_ADDED, normalizedMember);
@@ -62,9 +63,9 @@ export const memberService = {
   /** Удалить участника с доски */
   async removeMember(boardId: string, userId: string): Promise<void> {
     try {
-      console.log(`Removing user ${userId} from board ${boardId}`);
+      logger.debug(`Removing user ${userId} from board ${boardId}`);
       await api.delete(BOARD_ENDPOINTS.removeMember(boardId, userId));
-      console.log("Member removed successfully");
+      logger.debug("Member removed successfully");
 
       // Send WebSocket event
       sendMemberEvent(WebSocketEventType.MEMBER_REMOVED, { boardId, userId });
@@ -77,9 +78,9 @@ export const memberService = {
   /** Покинуть доску (для участников) */
   async leaveBoard(boardId: string): Promise<void> {
     try {
-      console.log(`Leaving board ${boardId}`);
+      logger.debug(`Leaving board ${boardId}`);
       await api.post(BOARD_ENDPOINTS.leaveBoard(boardId));
-      console.log("Left board successfully");
+      logger.debug("Left board successfully");
 
       // No need to send WebSocket event here as the backend will broadcast it
     } catch (error) {

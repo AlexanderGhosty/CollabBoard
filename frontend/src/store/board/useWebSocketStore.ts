@@ -9,6 +9,7 @@ import { useListsStore } from './useListsStore';
 import { useCardsStore } from './useCardsStore';
 import { useMembersStore } from './useMembersStore';
 import { listService } from '@/services/listService';
+import { logger } from '@/utils/logger';
 import {
   normalizeId,
   extractBoardId,
@@ -46,7 +47,7 @@ export const useWebSocketStore = create<WebSocketState>()(
     },
 
     handleCardCreated(data) {
-      console.log("Handling card_created event with data:", data);
+      logger.debug("Handling card_created event with data:", data);
 
       const cardId = extractCardId(data);
       const listId = normalizeId(data.ListID || data.listId);
@@ -65,7 +66,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         position: data.Position || data.position || 0
       };
 
-      console.log("Normalized card from WebSocket:", normalizedCard);
+      logger.debug("Normalized card from WebSocket:", normalizedCard);
 
       // Update the cards store
       const cardsStore = useCardsStore.getState();
@@ -86,19 +87,19 @@ export const useWebSocketStore = create<WebSocketState>()(
           }
         });
 
-        console.log(`Added new card ${cardId} to list ${listId} via WebSocket`);
+        logger.debug(`Added new card ${cardId} to list ${listId} via WebSocket`);
 
         // Debug the state after update
         setTimeout(() => {
           const updatedState = useCardsStore.getState();
-          console.log(`After WebSocket update - Cards for list ${listId}:`,
+          logger.debug(`After WebSocket update - Cards for list ${listId}:`,
             updatedState.getCardsByListId(listId));
 
           // Force a state update to trigger UI refresh
           useCardsStore.setState(state => ({ ...state }));
         }, 0);
       } else {
-        console.log(`Card ${cardId} already exists in store, skipping`);
+        logger.debug(`Card ${cardId} already exists in store, skipping`);
       }
     },
 
@@ -133,7 +134,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         state.cards[cardId] = normalizedCard;
       });
 
-      console.log(`Updated card ${cardId} in list ${listId} via WebSocket`);
+      logger.debug(`Updated card ${cardId} in list ${listId} via WebSocket`);
     },
 
     handleCardMoved(data) {
@@ -184,7 +185,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         };
       });
 
-      console.log(`Card ${cardId} moved from list ${fromListId} to list ${toListId} at position ${toPos} via WebSocket`);
+      logger.debug(`Card ${cardId} moved from list ${fromListId} to list ${toListId} at position ${toPos} via WebSocket`);
     },
 
     handleCardDeleted(data) {
@@ -217,7 +218,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         }
       });
 
-      console.log(`Removed card ${cardId} from list ${listId} via WebSocket`);
+      logger.debug(`Removed card ${cardId} from list ${listId} via WebSocket`);
     },
 
     handleListCreated(data) {
@@ -227,7 +228,7 @@ export const useWebSocketStore = create<WebSocketState>()(
       // Проверка на случай, если boardId в сообщении неверный
       const activeBoardId = useBoardStore.getState().activeBoard;
       if (activeBoardId && (!boardId || boardId !== activeBoardId)) {
-        console.log(`Correcting boardId from ${boardId} to active board ${activeBoardId}`);
+        logger.debug(`Correcting boardId from ${boardId} to active board ${activeBoardId}`);
         boardId = activeBoardId;
       }
 
@@ -236,7 +237,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         return;
       }
 
-      console.log(`Processing list_created event for list ${listId} on board ${boardId}`);
+      logger.debug(`Processing list_created event for list ${listId} on board ${boardId}`);
 
       // Create a normalized list object
       const normalizedList = {
@@ -252,7 +253,7 @@ export const useWebSocketStore = create<WebSocketState>()(
 
       // Check if list already exists to prevent duplicates
       if (!listsStore.lists[listId]) {
-        console.log(`Adding new list ${listId} to board ${boardId}`);
+        logger.debug(`Adding new list ${listId} to board ${boardId}`);
         useListsStore.setState(state => {
           // Add to lists record
           state.lists[listId] = normalizedList;
@@ -267,9 +268,9 @@ export const useWebSocketStore = create<WebSocketState>()(
           }
         });
 
-        console.log(`Added new list ${listId} to board ${boardId} via WebSocket`);
+        logger.debug(`Added new list ${listId} to board ${boardId} via WebSocket`);
       } else {
-        console.log(`List ${listId} already exists in store, skipping`);
+        logger.debug(`List ${listId} already exists in store, skipping`);
       }
     },
 
@@ -298,7 +299,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         };
       });
 
-      console.log(`Updated list ${listId} title via WebSocket`);
+      logger.debug(`Updated list ${listId} title via WebSocket`);
     },
 
     handleListMoved(data) {
@@ -348,7 +349,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         });
       });
 
-      console.log(`List ${listId} moved to position ${position} via WebSocket`);
+      logger.debug(`List ${listId} moved to position ${position} via WebSocket`);
     },
 
     handleListDeleted(data) {
@@ -361,7 +362,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         return;
       }
 
-      console.log(`Processing list_deleted event for list ${listId}`);
+      logger.debug(`Processing list_deleted event for list ${listId}`);
 
       // Get the current list
       const listsStore = useListsStore.getState();
@@ -370,12 +371,12 @@ export const useWebSocketStore = create<WebSocketState>()(
       // If the list is not found, it might have been already deleted locally
       // In this case, we can't do much except log it and refresh the board data
       if (!list) {
-        console.log(`List ${listId} not found in store, might have been already deleted`);
+        logger.debug(`List ${listId} not found in store, might have been already deleted`);
 
         // Get the board ID from the event data if available
         const boardId = data.boardId || data.BoardID || useBoardStore.getState().activeBoard;
         if (boardId) {
-          console.log(`Refreshing lists for board ${boardId} after list deletion`);
+          logger.debug(`Refreshing lists for board ${boardId} after list deletion`);
           // Force a refresh of the lists for this board
           listService.fetchBoardLists(boardId).then(lists => {
             if (Array.isArray(lists)) {
@@ -415,7 +416,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         });
       });
 
-      console.log(`Removed list ${listId} from board ${boardId} via WebSocket`);
+      logger.debug(`Removed list ${listId} from board ${boardId} via WebSocket`);
     },
 
     handleBoardCreated(data) {
@@ -441,25 +442,25 @@ export const useWebSocketStore = create<WebSocketState>()(
         // Add to boards record if it doesn't exist
         if (!state.boards[boardId]) {
           state.boards[boardId] = normalizedBoard;
-          console.log(`Added board ${boardId} with name "${boardName}" to boards list via WebSocket`);
+          logger.debug(`Added board ${boardId} with name "${boardName}" to boards list via WebSocket`);
         } else {
           // Update existing board
           state.boards[boardId] = {
             ...state.boards[boardId],
             ...normalizedBoard
           };
-          console.log(`Updated board ${boardId} in boards list via WebSocket`);
+          logger.debug(`Updated board ${boardId} in boards list via WebSocket`);
         }
       });
     },
 
     handleBoardUpdated(data) {
-      console.log("Handling board_updated event with data:", data);
+      logger.debug("Handling board_updated event with data:", data);
 
       const boardId = extractBoardId(data);
       const boardName = data.Name || data.name || '';
 
-      console.log(`Extracted boardId: ${boardId}, boardName: ${boardName}`);
+      logger.debug(`Extracted boardId: ${boardId}, boardName: ${boardName}`);
 
       if (!boardId) {
         console.error("Received board_updated event without ID:", data);
@@ -470,9 +471,9 @@ export const useWebSocketStore = create<WebSocketState>()(
       useBoardStore.setState(state => {
         if (state.boards[boardId]) {
           state.boards[boardId].name = boardName || state.boards[boardId].name;
-          console.log(`Updated board ${boardId} name to "${boardName}" via WebSocket`);
+          logger.debug(`Updated board ${boardId} name to "${boardName}" via WebSocket`);
         } else {
-          console.warn(`Board ${boardId} not found in store during WebSocket update`);
+          logger.warn(`Board ${boardId} not found in store during WebSocket update`);
         }
       });
     },
@@ -504,7 +505,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         }
       });
 
-      console.log(`Removed board ${boardId} from boards list via WebSocket`);
+      logger.debug(`Removed board ${boardId} from boards list via WebSocket`);
 
       // If this is the active board, show a toast notification
       if (isActiveBoard) {
@@ -528,7 +529,7 @@ export const useWebSocketStore = create<WebSocketState>()(
 
       // If we're on the board where the member was added, refresh the members list
       if (isActiveBoard) {
-        console.log("Member added to current board, refreshing members list");
+        logger.debug("Member added to current board, refreshing members list");
 
         // Refresh the members list
         const membersStore = useMembersStore.getState();
@@ -575,7 +576,7 @@ export const useWebSocketStore = create<WebSocketState>()(
       if (currentUserId && userId === currentUserId) {
         // We've been removed from this board
         useToastStore.getState().error("Вы были удалены с доски");
-        console.log("Current user was removed from this board, redirecting to home");
+        logger.debug("Current user was removed from this board, redirecting to home");
 
         // Clean up WebSocket connection
         wsClient.disconnect();
@@ -619,7 +620,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         }
       } else if (isActiveBoard) {
         // Someone else was removed from this board, refresh the members list
-        console.log("Another user was removed from this board, refreshing members list");
+        logger.debug("Another user was removed from this board, refreshing members list");
 
         // Find the removed member's name if available
         const membersStore = useMembersStore.getState();
@@ -670,13 +671,13 @@ export const useWebSocketStore = create<WebSocketState>()(
       if (isCurrentUser) {
         // This should not normally happen as the client initiates the leave
         // But handle it just in case the event comes back to the same client
-        console.log(`Current user (${userId}) left board ${boardId}`);
+        logger.debug(`Current user (${userId}) left board ${boardId}`);
 
         // No need to do anything as the client-side state should already be updated
         // by the leaveBoard function in useMembersStore
       } else if (isActiveBoard) {
         // Someone else left the board
-        console.log(`Member ${userId} left the current board`);
+        logger.debug(`Member ${userId} left the current board`);
 
         // Find the member's name if available
         const membersStore = useMembersStore.getState();

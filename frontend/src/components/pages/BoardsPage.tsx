@@ -6,6 +6,7 @@ import Header from '@/components/organisms/Header';
 import { useBoardStore } from '@/store/board';
 import { subscribeWS } from '@/services/websocket';
 import { Board } from '@/services/boardService';
+import { logger } from '@/utils/logger';
 
 export default function BoardsPage() {
   // Get state and actions from the store
@@ -30,31 +31,31 @@ export default function BoardsPage() {
 
     // Subscribe to board_created, board_updated, and board_deleted events for real-time updates
     const unsubscribeCreated = subscribeWS('board_created', (data: any) => {
-      console.log('BoardsPage received board_created event:', data);
+      logger.debug('BoardsPage received board_created event:', data);
       // Refresh the boards list to show the new board
       fetchBoardsByRole();
     });
 
     const unsubscribeUpdated = subscribeWS('board_updated', (data: any) => {
-      console.log('BoardsPage received board_updated event:', data);
+      logger.debug('BoardsPage received board_updated event:', data);
       // Refresh the boards list to show updated board names
       fetchBoardsByRole();
     });
 
     const unsubscribeDeleted = subscribeWS('board_deleted', (data: any) => {
-      console.log('BoardsPage received board_deleted event:', data);
+      logger.debug('BoardsPage received board_deleted event:', data);
       // Refresh the boards list to remove the deleted board
       fetchBoardsByRole();
     });
 
     const unsubscribeMemberAdded = subscribeWS('member_added', (data: any) => {
-      console.log('BoardsPage received member_added event:', data);
+      logger.debug('BoardsPage received member_added event:', data);
       // Refresh the boards list to show newly shared boards
       fetchBoardsByRole();
     });
 
     const unsubscribeMemberRemoved = subscribeWS('member_removed', (data: any) => {
-      console.log('BoardsPage received member_removed event:', data);
+      logger.debug('BoardsPage received member_removed event:', data);
       // Refresh the boards list to remove unshared boards
       fetchBoardsByRole();
     });

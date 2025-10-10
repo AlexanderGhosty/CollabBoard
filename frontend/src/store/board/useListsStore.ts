@@ -6,6 +6,7 @@ import { useToastStore } from '@/store/useToastStore';
 import { ListsState } from './types';
 import { useBoardStore } from './useBoardStore';
 import { sortLists, getNextListPosition } from '@/utils/board/sorting';
+import { logger } from '@/utils/logger';
 
 export const useListsStore = create<ListsState>()(
   immer((set, get) => ({
@@ -28,7 +29,7 @@ export const useListsStore = create<ListsState>()(
 
     // Utility methods
     setLists(lists, boardId) {
-      console.log(`Setting ${lists.length} lists for board ${boardId}`);
+      logger.debug(`Setting ${lists.length} lists for board ${boardId}`);
 
       set((s) => {
         // Clear existing lists for this board to prevent duplicates
@@ -63,7 +64,7 @@ export const useListsStore = create<ListsState>()(
         }
       });
 
-      console.log(`Successfully set ${lists.length} lists for board ${boardId}`);
+      logger.debug(`Successfully set ${lists.length} lists for board ${boardId}`);
     },
 
     // List operations
@@ -71,16 +72,16 @@ export const useListsStore = create<ListsState>()(
       set((s) => { s.loading = true; s.error = null; });
 
       try {
-        console.log(`Creating new list "${title}" for board ${boardId}`);
+        logger.debug(`Creating new list "${title}" for board ${boardId}`);
 
         // Calculate position for the new list (at the end)
         const lists = get().getListsByBoardId(boardId);
         const position = getNextListPosition(lists);
-        console.log(`Calculated position for new list: ${position}`);
+        logger.debug(`Calculated position for new list: ${position}`);
 
         // Create the list
         const list = await listService.createList(boardId, title, position);
-        console.log("List created successfully:", list);
+        logger.debug("List created successfully:", list);
 
         // Ensure the list has a valid ID
         if (!list.id) {
@@ -90,7 +91,7 @@ export const useListsStore = create<ListsState>()(
 
         // Убедимся, что boardId в списке соответствует текущей доске
         if (list.boardId !== boardId) {
-          console.log(`Correcting list.boardId from ${list.boardId} to ${boardId}`);
+          logger.debug(`Correcting list.boardId from ${list.boardId} to ${boardId}`);
           list.boardId = boardId;
         }
 
@@ -111,7 +112,7 @@ export const useListsStore = create<ListsState>()(
           s.loading = false;
         });
 
-        console.log(`List ${list.id} added to store for board ${boardId}`);
+        logger.debug(`List ${list.id} added to store for board ${boardId}`);
 
         // Show success toast notification
         useToastStore.getState().success("Список создан");
