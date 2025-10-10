@@ -29,6 +29,9 @@ class WebSocketClient {
   /** id таймера реконнекта */
   private reconnectId: number | null = null;
 
+  /** Нужно ли пытаться переподключаться после закрытия соединения */
+  private shouldReconnect = true;
+
   private constructor() {} // приватный ctor
 
   /** Получить singleton */
@@ -60,6 +63,9 @@ class WebSocketClient {
       this.socket.close();
     }
 
+    // включаем авто-реконнект для новой доски
+    this.shouldReconnect = true;
+
     // Set the board ID
     this.boardId = normalizedBoardId;
     logger.debug(`Connecting to WebSocket for board ${this.boardId}`);
@@ -68,6 +74,9 @@ class WebSocketClient {
 
   /** Отключиться от сервера и очистить все ресурсы */
   disconnect() {
+    // отключаем авто-реконнект, т.к. соединение закрываем намеренно
+    this.shouldReconnect = false;
+
     if (this.socket) {
       this.socket.close();
     }
@@ -102,6 +111,11 @@ class WebSocketClient {
   }
 
   private openSocket() {
+    if (!this.boardId) {
+      logger.debug('Skip opening WebSocket: boardId is not set');
+      return;
+    }
+
     const token = useAuthStore.getState().token;
     const url = `${import.meta.env.VITE_WS_URL}/${this.boardId}?token=${token}`;
     logger.debug(`Opening WebSocket connection to: ${url}`);
@@ -135,10 +149,13 @@ class WebSocketClient {
     };
 
     this.socket.onclose = (event) => {
-      logger.debug(`WebSocket connection closed for board ${this.boardId}. Code: ${event.code}, Reason: ${event.reason}`);
+      const closedBoardId = this.boardId;
+      logger.debug(`WebSocket connection closed for board ${closedBoardId}. Code: ${event.code}, Reason: ${event.reason}`);
       this.cleanup();
-      // пытаемся переподключиться раз в 3 сек
-      this.reconnectId = window.setTimeout(() => this.openSocket(), 3_000);
+      // пытаемся переподключиться раз в 3 сек, если это не ручное отключение
+      if (this.shouldReconnect && this.boardId) {
+        this.reconnectId = window.setTimeout(() => this.openSocket(), 3_000);
+      }
     };
 
     this.socket.onerror = (error) => {
