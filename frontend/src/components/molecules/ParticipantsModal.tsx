@@ -6,7 +6,6 @@ import ConfirmDialog from '@/components/molecules/ConfirmDialog';
 import { useMembersStore } from '@/store/board';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
-import { BoardMember } from '@/store/board/types';
 import { isValidEmail } from '@/utils/validate';
 
 interface ParticipantsModalProps {
@@ -33,8 +32,6 @@ export default function ParticipantsModal({ isOpen, onClose, boardId }: Particip
 
   // Members store
   const {
-    members,
-    boardMembers,
     fetchBoardMembers,
     inviteMember,
     removeMember,

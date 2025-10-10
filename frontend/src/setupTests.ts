@@ -30,12 +30,12 @@ const ensureDialogPrototype = () => {
   const attachMocks = (DialogClass: typeof HTMLDialogElement) => {
     DialogClass.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
       this.setAttribute('open', '');
-      (this as any).open = true;
+      this.open = true;
     });
 
     DialogClass.prototype.close = vi.fn(function (this: HTMLDialogElement) {
       this.removeAttribute('open');
-      (this as any).open = false;
+      this.open = false;
     });
   };
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { subscribeWS, WSMessage, wsClient } from '@/services/websocket';
+import { subscribeWS, wsClient } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { WebSocketState } from './types';
@@ -18,12 +18,12 @@ import {
   extractUserId,
   extractDescription
 } from '@/utils/board/idNormalization';
-import { sortLists, sortCards } from '@/utils/board/sorting';
 
 export const useWebSocketStore = create<WebSocketState>()(
   immer((set, get) => ({
     // WebSocket event handlers
     setupBoardSubscriptions(boardId) {
+      logger.debug(`Setting up WebSocket subscriptions for board ${boardId}`);
       // Subscribe to all WebSocket events
       const unsubscribers = [
         subscribeWS('card_created', (data) => get().handleCardCreated(data)),
@@ -516,7 +516,7 @@ export const useWebSocketStore = create<WebSocketState>()(
     handleMemberAdded(data) {
       const boardId = normalizeId(data.BoardID || data.boardId || data.board_id);
       const userId = extractUserId(data);
-      const email = data.Email || data.email || '';
+      const memberEmail = data.Email || data.email || '';
 
       if (!boardId || !userId) {
         console.error("Received member_added event with missing data:", data);
@@ -536,9 +536,6 @@ export const useWebSocketStore = create<WebSocketState>()(
         setTimeout(() => membersStore.fetchBoardMembers(boardId), 0);
 
         // Get the current user
-        const currentUser = useAuthStore.getState().user;
-        const currentUserId = currentUser ? normalizeId(currentUser.id) : null;
-
         // Only show notification if the invitation was not initiated by the current user
         // We can determine this by checking if the event came from a WebSocket broadcast
         // and not from our own action (which would have already shown a notification in ParticipantsModal)
@@ -547,7 +544,8 @@ export const useWebSocketStore = create<WebSocketState>()(
         // If this is an external event (not triggered by the current user's action)
         // or if we can't determine the source, show a notification
         if (isExternalEvent) {
-          useToastStore.getState().info("Новый участник добавлен на доску");
+          const participantLabel = memberEmail || 'Новый участник';
+          useToastStore.getState().info(`${participantLabel} добавлен на доску`);
         }
       }
     },

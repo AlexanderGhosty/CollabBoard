@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { Card } from '@/services/boardService';
 import { cardService } from '@/services/cardService';
 import { useToastStore } from '@/store/useToastStore';
 import { CardsState } from './types';
@@ -116,6 +115,15 @@ export const useCardsStore = create<CardsState>()(
       try {
         // Call API to update the card
         const updatedCard = await cardService.updateCard(cardId, card.listId, updates);
+
+        set((s) => {
+          if (s.cards[cardId]) {
+            s.cards[cardId] = {
+              ...s.cards[cardId],
+              ...updatedCard
+            };
+          }
+        });
       } catch (error) {
         console.error(`Error updating card ${cardId}:`, error);
 

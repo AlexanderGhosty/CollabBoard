@@ -8,6 +8,14 @@ import { useToastStore } from '@/store/useToastStore';
 import { passwordSchema } from '@/utils/validate';
 import { authService } from '@/services/authService';
 
+type PasswordFormState = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+type PasswordFormErrors = Partial<Record<keyof PasswordFormState, string>>;
+
 // Schema for password change form
 const passwordChangeSchema = z.object({
   currentPassword: z.string().min(1, 'Требуется текущий пароль'),
@@ -23,17 +31,13 @@ export default function AccountSettingsPage() {
   const { success, error: showError } = useToastStore();
 
   // Password change form state
-  const [passwordForm, setPasswordForm] = useState({
+  const [passwordForm, setPasswordForm] = useState<PasswordFormState>({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
 
-  const [errors, setErrors] = useState<{
-    currentPassword?: string;
-    newPassword?: string;
-    confirmPassword?: string;
-  }>({});
+  const [errors, setErrors] = useState<PasswordFormErrors>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,9 +48,12 @@ export default function AccountSettingsPage() {
     const result = passwordChangeSchema.safeParse(passwordForm);
 
     if (!result.success) {
-      const formattedErrors: Record<string, string> = {};
-      result.error.errors.forEach((err) => {
-        formattedErrors[err.path[0] as string] = err.message;
+      const formattedErrors: PasswordFormErrors = {};
+      result.error.errors.forEach((validationError) => {
+        const field = validationError.path[0];
+        if (typeof field === 'string') {
+          formattedErrors[field as keyof PasswordFormState] = validationError.message;
+        }
       });
       setErrors(formattedErrors);
       return;
@@ -70,8 +77,8 @@ export default function AccountSettingsPage() {
       });
 
       success('Пароль успешно изменен', 5000);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to change password';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to change password';
       showError(errorMessage, 5000);
 
       // Set specific error for incorrect current password

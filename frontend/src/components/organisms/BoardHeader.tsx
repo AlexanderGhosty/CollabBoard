@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import Button from '@/components/atoms/Button';
 import EditableText from '@/components/molecules/EditableText';
-import { useBoardStore, useListsStore } from '@/store/board';
+import { useBoardStore } from '@/store/board';
 import { useNavigate } from 'react-router-dom';
 import { boardNameSchema } from '@/utils/validate';
 import ParticipantsModal from '@/components/molecules/ParticipantsModal';
@@ -13,7 +13,6 @@ export default function BoardHeader() {
   // Use specific selectors for each piece of state/action needed
   const activeBoard = useBoardStore(state => state.activeBoard);
   const boards = useBoardStore(state => state.boards);
-  const createList = useListsStore(state => state.createList);
   const updateBoardName = useBoardStore(state => state.updateBoardName);
 
   // Get the active board object
@@ -23,11 +22,6 @@ export default function BoardHeader() {
   const handleBackClick = useCallback(() => {
     navigate('/');
   }, [navigate]);
-
-  // Define the createList callback here, not inside JSX
-  const handleCreateList = useCallback(() => {
-    createList('Новый список');
-  }, [createList]);
 
   // Handle board name update
   const handleBoardNameUpdate = useCallback(async (newName: string) => {
@@ -67,7 +61,7 @@ export default function BoardHeader() {
           ← Назад
         </Button>
         <div className="bg-white/70 dark:bg-dark-blue-50/70 px-4 py-2 rounded-xl shadow-sm dark:shadow-dark-card backdrop-blur-sm transition-colors duration-300">
-          {board.role === 'owner' ? (
+          {isOwner ? (
             <EditableText
               value={board.name}
               onSave={handleBoardNameUpdate}
@@ -83,11 +77,11 @@ export default function BoardHeader() {
         </div>
         {board.role && (
           <span className={`text-xs px-3 py-1.5 rounded-full transition-colors duration-300 ${
-            board.role === 'owner'
+            isOwner
               ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
               : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
           }`}>
-            {board.role === 'owner' ? 'Владелец' : 'Участник'}
+            {isOwner ? 'Владелец' : 'Участник'}
           </span>
         )}
       </div>

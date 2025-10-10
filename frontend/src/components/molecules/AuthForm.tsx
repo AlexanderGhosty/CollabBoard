@@ -13,6 +13,8 @@ const loginSchema = z.object({ email: emailSchema, password: passwordSchema });
 const registerSchema = z.object({ name: nameSchema, email: emailSchema, password: passwordSchema });
 
 type Mode = 'login' | 'register';
+type FormState = { name: string; email: string; password: string };
+type FormErrors = Partial<Record<keyof FormState, string>>;
 
 /**
  * Map backend authentication error messages to user-friendly Russian messages
@@ -40,8 +42,8 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
   const navigate = useNavigate();
   const auth = useAuthStore();
   const { error: showErrorToast } = useToastStore();
-  const [form, set] = useState({ name: '', email: '', password: '' });
-  const [err, setErr] = useState<{ name?: string; email?: string; password?: string }>({});
+  const [form, setForm] = useState<FormState>({ name: '', email: '', password: '' });
+  const [err, setErr] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
 
   const handle = async () => {
@@ -50,8 +52,13 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
     const res = schema.safeParse(form);
 
     if (!res.success) {
-      const zErr: any = {};
-      res.error.errors.forEach((e) => (zErr[e.path[0]] = e.message));
+      const zErr: FormErrors = {};
+      res.error.errors.forEach((validationError) => {
+        const field = validationError.path[0];
+        if (typeof field === 'string') {
+          zErr[field as keyof FormErrors] = validationError.message;
+        }
+      });
       setErr(zErr);
       return;
     }
@@ -92,7 +99,7 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
           value={form.name}
           error={err.name}
           autoComplete="name"
-          onChange={(e) => set({ ...form, name: e.target.value })}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
       )}
       <Input
@@ -101,7 +108,7 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
         value={form.email}
         error={err.email}
         autoComplete={mode === 'login' ? 'username' : 'email'}
-        onChange={(e) => set({ ...form, email: e.target.value })}
+        onChange={(e) => setForm({ ...form, email: e.target.value })}
       />
       <Input
         placeholder="Пароль"
@@ -109,7 +116,7 @@ export default function AuthForm({ mode = 'login' }: { mode?: Mode }) {
         value={form.password}
         error={err.password}
         autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-        onChange={(e) => set({ ...form, password: e.target.value })}
+        onChange={(e) => setForm({ ...form, password: e.target.value })}
       />
       <Button type="submit" variant="primary" loading={loading}>
         {mode === 'login' ? 'Войти' : 'Зарегистрироваться'}

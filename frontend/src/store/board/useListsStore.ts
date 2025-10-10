@@ -4,7 +4,6 @@ import { List } from '@/services/boardService';
 import { listService } from '@/services/listService';
 import { useToastStore } from '@/store/useToastStore';
 import { ListsState } from './types';
-import { useBoardStore } from './useBoardStore';
 import { sortLists, getNextListPosition } from '@/utils/board/sorting';
 import { logger } from '@/utils/logger';
 
@@ -17,18 +16,18 @@ export const useListsStore = create<ListsState>()(
     error: null,
 
     // Selectors
-    getListsByBoardId(boardId) {
+    getListsByBoardId(boardId: string): List[] {
       const boardLists = get().boardLists[boardId] || [];
       return boardLists.map(listId => get().lists[listId]).filter(Boolean);
     },
 
-    getSortedListsByBoardId(boardId) {
+    getSortedListsByBoardId(boardId: string): List[] {
       const lists = get().getListsByBoardId(boardId);
       return sortLists(lists);
     },
 
     // Utility methods
-    setLists(lists, boardId) {
+    setLists(lists: List[], boardId: string) {
       logger.debug(`Setting ${lists.length} lists for board ${boardId}`);
 
       set((s) => {
@@ -68,7 +67,7 @@ export const useListsStore = create<ListsState>()(
     },
 
     // List operations
-    async createList(boardId, title) {
+    async createList(boardId: string, title: string) {
       set((s) => { s.loading = true; s.error = null; });
 
       try {
@@ -131,7 +130,7 @@ export const useListsStore = create<ListsState>()(
       }
     },
 
-    async updateList(listId, title) {
+    async updateList(listId: string, title: string) {
       const list = get().lists[listId];
 
       if (!list) {
@@ -152,6 +151,15 @@ export const useListsStore = create<ListsState>()(
       try {
         // Call API to update the list
         const updatedList = await listService.updateList(listId, title);
+
+        set((s) => {
+          if (s.lists[listId]) {
+            s.lists[listId] = {
+              ...s.lists[listId],
+              ...updatedList
+            };
+          }
+        });
       } catch (error) {
         console.error(`Error updating list ${listId}:`, error);
 
@@ -168,7 +176,7 @@ export const useListsStore = create<ListsState>()(
       }
     },
 
-    async moveList(listId, position) {
+    async moveList(listId: string, position: number) {
       const list = get().lists[listId];
 
       if (!list) {
@@ -247,7 +255,7 @@ export const useListsStore = create<ListsState>()(
       }
     },
 
-    async deleteList(listId) {
+    async deleteList(listId: string) {
       const list = get().lists[listId];
 
       if (!list) {

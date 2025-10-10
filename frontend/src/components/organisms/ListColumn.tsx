@@ -1,6 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useState, useEffect } from 'react';
 import { List } from '@/services/boardService';
 import CardItem from '@/components/molecules/CardItem';

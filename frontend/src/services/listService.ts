@@ -1,6 +1,6 @@
 import { api } from '@/services/api';
-import { LIST_ENDPOINTS, CARD_ENDPOINTS } from '@/utils/api/apiEndpoints';
-import { ApiList, normalizeList, ApiCard, normalizeCard } from '@/utils/api/normalizeEntities';
+import { LIST_ENDPOINTS } from '@/utils/api/apiEndpoints';
+import { ApiList, normalizeList } from '@/utils/api/normalizeEntities';
 import { handleApiError } from '@/utils/api/errorHandling';
 import { WebSocketEventType, sendListEvent, sendListDeletedEvent } from '@/utils/websocket/events';
 import { List, Card } from '@/services/boardService';
@@ -29,9 +29,6 @@ export const listService = {
 
       // Normalize the lists data
       const normalizedLists = data.map(list => normalizeList(list, boardId));
-
-      // Get the cards store to update it with the fetched cards
-      const cardsStore = useCardsStore.getState();
 
       // For each list, fetch its cards
       for (const list of normalizedLists) {

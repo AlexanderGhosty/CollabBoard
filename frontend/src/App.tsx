@@ -1,6 +1,6 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { Suspense, lazy, Component, ErrorInfo, ReactNode, useEffect } from 'react';
+import { Component, ErrorInfo, ReactNode, useEffect } from 'react';
 import WelcomePage   from '@/components/pages/WelcomePage';
 import LoginPage     from '@/components/pages/LoginPage';
 import RegisterPage  from '@/components/pages/RegisterPage';
@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 import { initializeTheme } from '@/store/useThemeStore';
 import Toast, { ToastContainer } from '@/components/molecules/Toast';
-import useNavigateAndReload, { setNavigateFunction } from '@/hooks/useNavigateAndReload';
+import { setNavigateFunction } from '@/hooks/useNavigateAndReload';
 import './App.css';
 
 // Error boundary component to catch errors in child components

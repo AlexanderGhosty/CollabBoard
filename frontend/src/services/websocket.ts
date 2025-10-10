@@ -21,7 +21,7 @@ class WebSocketClient {
   private boardId: string | null = null;
 
   /** Список подписок: { event: Set<handlers> } */
-  private subscriptions = new Map<string, Set<WSEventHandler<any>>>();
+  private subscriptions = new Map<string, Set<WSEventHandler<unknown>>>();
 
   /** id таймера ping‑pong */
   private heartbeatId: number | null = null;
@@ -88,13 +88,15 @@ class WebSocketClient {
     if (!this.subscriptions.has(event)) {
       this.subscriptions.set(event, new Set());
     }
-    this.subscriptions.get(event)!.add(handler);
+    const handlers = this.subscriptions.get(event)!;
+    const storedHandler = handler as WSEventHandler<unknown>;
+    handlers.add(storedHandler);
 
     // Return a safe unsubscribe function that checks if the subscription set exists
     return () => {
       const handlers = this.subscriptions.get(event);
       if (handlers) {
-        handlers.delete(handler);
+        handlers.delete(storedHandler);
       }
     };
   }
@@ -121,7 +123,7 @@ class WebSocketClient {
         logger.debug(`WebSocket message received: ${msg.event}`, msg.data);
 
         // Mark the data as coming from WebSocket to help prevent duplicate notifications
-        const dataWithSource = typeof msg.data === 'object' && msg.data !== null
+        const dataWithSource: unknown = typeof msg.data === 'object' && msg.data !== null
           ? { ...msg.data, _source: 'ws' }
           : { data: msg.data, _source: 'ws' };
 

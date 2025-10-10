@@ -1,9 +1,21 @@
+import { ReactNode } from 'react';
 import { act, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
+type DragData = {
+  type: 'card' | 'list';
+  card?: typeof cardOne;
+  list?: typeof listOne;
+};
+
+type MockDragEvent = {
+  active: { id: string; data: { current: DragData | null } };
+  over: { id: string; data: { current: DragData | null } } | null;
+};
+
 const dndHandlers: {
-  onDragEnd?: (event: any) => void;
-  onDragStart?: (event: any) => void;
+  onDragEnd?: (event: MockDragEvent) => void;
+  onDragStart?: (event: MockDragEvent) => void;
 } = {};
 
 const listOne = { id: 'list-1', title: 'Бэклог', position: 1, boardId: 'board-1' };
@@ -50,7 +62,15 @@ const listsState = createListsState();
 const cardsState = createCardsState();
 
 vi.mock('@dnd-kit/core', () => ({
-  DndContext: ({ children, onDragEnd, onDragStart }: any) => {
+  DndContext: ({
+    children,
+    onDragEnd,
+    onDragStart,
+  }: {
+    children: ReactNode;
+    onDragEnd?: (event: MockDragEvent) => void;
+    onDragStart?: (event: MockDragEvent) => void;
+  }) => {
     dndHandlers.onDragEnd = onDragEnd;
     dndHandlers.onDragStart = onDragStart;
     return <div data-testid="dnd-context">{children}</div>;
@@ -60,7 +80,9 @@ vi.mock('@dnd-kit/core', () => ({
   useSensors: vi.fn(() => []),
   closestCenter: vi.fn(() => []),
   rectIntersection: vi.fn(() => []),
-  DragOverlay: ({ children }: any) => <div data-testid="mock-drag-overlay">{children}</div>,
+  DragOverlay: ({ children }: { children: ReactNode }) => (
+    <div data-testid="mock-drag-overlay">{children}</div>
+  ),
   useDroppable: vi.fn(() => ({
     isOver: false,
     setNodeRef: vi.fn(),
@@ -75,7 +97,7 @@ vi.mock('@dnd-kit/core', () => ({
 }));
 
 vi.mock('@dnd-kit/sortable', () => ({
-  SortableContext: ({ children }: any) => <div>{children}</div>,
+  SortableContext: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   horizontalListSortingStrategy: vi.fn(),
   verticalListSortingStrategy: vi.fn(),
   useSortable: vi.fn(() => ({

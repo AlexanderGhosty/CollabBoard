@@ -2,11 +2,9 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { boardService, Board } from '@/services/boardService';
 import { listService } from '@/services/listService';
-import { memberService } from '@/services/memberService';
 import { wsClient } from '@/services/websocket';
 import { useToastStore } from '@/store/useToastStore';
 import { BoardState } from './types';
-import { normalizeId, extractBoardId } from '@/utils/board/idNormalization';
 import { setupWebSocketSubscriptions } from './useWebSocketStore';
 import { useListsStore } from './useListsStore';
 import { useMembersStore } from './useMembersStore';
@@ -360,6 +358,15 @@ export const useBoardStore = create<BoardState>()(
         // Call the API to update the board
         const updatedBoard = await boardService.updateBoard(boardId, name);
 
+        set((s) => {
+          if (s.boards[boardId]) {
+            s.boards[boardId] = {
+              ...s.boards[boardId],
+              ...updatedBoard
+            };
+          }
+        });
+
         // Show success toast
         useToastStore.getState().success("Название доски обновлено");
       } catch (error) {
@@ -379,7 +386,7 @@ export const useBoardStore = create<BoardState>()(
     },
 
     // WebSocket event handling
-    applyWS(msg) {
+    applyWS() {
       // This will be implemented in useWebSocketStore.ts
       // and will be called from there
     },

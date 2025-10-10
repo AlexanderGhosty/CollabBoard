@@ -8,6 +8,11 @@ import { subscribeWS } from '@/services/websocket';
 import { Board } from '@/services/boardService';
 import { logger } from '@/utils/logger';
 
+type BoardSyncEvent = {
+  id?: string | number;
+  ID?: string | number;
+};
+
 export default function BoardsPage() {
   // Get state and actions from the store
   const fetchBoardsByRole = useBoardStore(state => state.fetchBoardsByRole);
@@ -30,31 +35,31 @@ export default function BoardsPage() {
     fetchBoardsByRole();
 
     // Subscribe to board_created, board_updated, and board_deleted events for real-time updates
-    const unsubscribeCreated = subscribeWS('board_created', (data: any) => {
+    const unsubscribeCreated = subscribeWS<BoardSyncEvent>('board_created', (data) => {
       logger.debug('BoardsPage received board_created event:', data);
       // Refresh the boards list to show the new board
       fetchBoardsByRole();
     });
 
-    const unsubscribeUpdated = subscribeWS('board_updated', (data: any) => {
+    const unsubscribeUpdated = subscribeWS<BoardSyncEvent>('board_updated', (data) => {
       logger.debug('BoardsPage received board_updated event:', data);
       // Refresh the boards list to show updated board names
       fetchBoardsByRole();
     });
 
-    const unsubscribeDeleted = subscribeWS('board_deleted', (data: any) => {
+    const unsubscribeDeleted = subscribeWS<BoardSyncEvent>('board_deleted', (data) => {
       logger.debug('BoardsPage received board_deleted event:', data);
       // Refresh the boards list to remove the deleted board
       fetchBoardsByRole();
     });
 
-    const unsubscribeMemberAdded = subscribeWS('member_added', (data: any) => {
+    const unsubscribeMemberAdded = subscribeWS<BoardSyncEvent>('member_added', (data) => {
       logger.debug('BoardsPage received member_added event:', data);
       // Refresh the boards list to show newly shared boards
       fetchBoardsByRole();
     });
 
-    const unsubscribeMemberRemoved = subscribeWS('member_removed', (data: any) => {
+    const unsubscribeMemberRemoved = subscribeWS<BoardSyncEvent>('member_removed', (data) => {
       logger.debug('BoardsPage received member_removed event:', data);
       // Refresh the boards list to remove unshared boards
       fetchBoardsByRole();
