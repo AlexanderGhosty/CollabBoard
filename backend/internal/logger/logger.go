@@ -18,7 +18,7 @@ var (
 func Initialize(cfg config.LogConfig) error {
 	// Parse log level
 	level := parseLogLevel(cfg.Level)
-	
+
 	// Setup output writer
 	var writer io.Writer
 	switch strings.ToLower(cfg.Output) {
@@ -33,7 +33,7 @@ func Initialize(cfg config.LogConfig) error {
 	// Setup handler based on format
 	var handler slog.Handler
 	opts := &slog.HandlerOptions{
-		Level: level,
+		Level:     level,
 		AddSource: level == slog.LevelDebug, // Add source info for debug level
 	}
 
@@ -78,22 +78,22 @@ func Get() *slog.Logger {
 // WithContext returns a logger with context values
 func WithContext(ctx context.Context) *slog.Logger {
 	logger := Get()
-	
+
 	// Add request ID if available
 	if reqID := GetRequestID(ctx); reqID != "" {
 		logger = logger.With("request_id", reqID)
 	}
-	
+
 	// Add user ID if available
 	if userID := GetUserID(ctx); userID != 0 {
 		logger = logger.With("user_id", userID)
 	}
-	
+
 	// Add board ID if available
 	if boardID := GetBoardID(ctx); boardID != 0 {
 		logger = logger.With("board_id", boardID)
 	}
-	
+
 	return logger
 }
 

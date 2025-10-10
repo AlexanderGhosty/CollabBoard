@@ -50,3 +50,6 @@ docker-compose.override.yml
 
 #
 info
+
+# k6 results
+/backend/perf/k6/summary.json

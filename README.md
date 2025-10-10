@@ -326,6 +326,10 @@ go test -cover ./...
 cd frontend
 npm run test
 npm run test -- --coverage
+
+# Нагрузочные тесты backend (k6)
+cd ..
+make k6-load-test
 ```
 
 ## 🤝 Участие в разработке

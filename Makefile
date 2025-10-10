@@ -7,8 +7,9 @@ SERVER_PKG    := ./cmd/server
 BIN_DIR       := $(BACKEND_DIR)/bin
 MIGRATION_DIR := $(BACKEND_DIR)/internal/db/migrations
 GO            := go
+K6_SCRIPT     := backend/perf/k6/board-workflow.js
 
-.PHONY: backend docker-up docker-down migrate-up migrate-down lint test format
+.PHONY: backend docker-up docker-down migrate-up migrate-down lint test format k6-load-test
 
 backend:
 	@echo "→ Building $(APP_NAME)…"
@@ -46,6 +47,13 @@ lint:
 	cd $(BACKEND_DIR) && golangci-lint run ./...
 
 format:
-	@echo "→ Formatting backend code…"
-	cd $(BACKEND_DIR) && $(GO) fmt ./...
-	cd $(BACKEND_DIR) && $(GO) vet ./...
+		@echo "→ Formatting backend code…"
+		cd $(BACKEND_DIR) && $(GO) fmt ./...
+		cd $(BACKEND_DIR) && $(GO) vet ./...
+
+k6-load-test:
+		@command -v k6 >/dev/null 2>&1 || { \
+				echo "k6 binary not found. Install k6: https://k6.io/docs/getting-started/installation/"; \
+				exit 1; \
+		}
+		k6 run $(K6_SCRIPT)
