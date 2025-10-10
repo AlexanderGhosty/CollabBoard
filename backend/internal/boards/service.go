@@ -17,9 +17,16 @@ func NewService(repo *Repository, hub *websocket.Hub) *Service {
 	return &Service{repo: repo, hub: hub}
 }
 
+func (s *Service) broadcast(boardID int32, msg websocket.EventMessage) {
+	if s.hub != nil {
+		s.hub.Broadcast(boardID, msg)
+	}
+}
+
 var (
-	ErrForbidden    = errors.New("forbidden: insufficient permissions")
-	ErrUserNotFound = errors.New("user not found")
+	ErrForbidden        = errors.New("forbidden: insufficient permissions")
+	ErrUserNotFound     = errors.New("user not found")
+	ErrOwnerCannotLeave = errors.New("owners cannot leave their own board")
 )
 
 func (s *Service) CreateBoard(ctx context.Context, ownerID int32, name string) (db.Board, error) {
@@ -33,7 +40,7 @@ func (s *Service) CreateBoard(ctx context.Context, ownerID int32, name string) (
 	// Create board data with role information for WebSocket broadcast
 	boardData := newBoardEventPayload(b)
 	boardData.Role = "owner" // Creator is always the owner
-	s.hub.Broadcast(b.ID, websocket.EventMessage{Event: "board_created", Data: boardData})
+	s.broadcast(b.ID, websocket.EventMessage{Event: "board_created", Data: boardData})
 	return b, nil
 }
 
@@ -56,7 +63,7 @@ func (s *Service) UpdateBoard(ctx context.Context, userID int32, arg db.UpdateBo
 	b, err := s.repo.Update(ctx, arg)
 	if err == nil {
 		payload := newBoardEventPayload(b)
-		s.hub.Broadcast(b.ID, websocket.EventMessage{Event: "board_updated", Data: payload})
+		s.broadcast(b.ID, websocket.EventMessage{Event: "board_updated", Data: payload})
 	}
 	return b, err
 }
@@ -69,7 +76,7 @@ func (s *Service) DeleteBoard(ctx context.Context, userID, boardID int32) error 
 	if err := s.repo.Delete(ctx, boardID); err != nil {
 		return err
 	}
-	s.hub.Broadcast(boardID, websocket.EventMessage{Event: "board_deleted", Data: BoardEventPayload{ID: boardID}})
+	s.broadcast(boardID, websocket.EventMessage{Event: "board_deleted", Data: BoardEventPayload{ID: boardID}})
 	return nil
 }
 
@@ -107,7 +114,7 @@ func (s *Service) AddMember(
 		BoardID: boardID, UserID: newUserID, Role: role,
 	})
 	if err == nil {
-		s.hub.Broadcast(boardID, websocket.EventMessage{
+		s.broadcast(boardID, websocket.EventMessage{
 			Event: "member_added", Data: m,
 		})
 	}
@@ -123,12 +130,21 @@ func (s *Service) RemoveMember(
 	if err != nil || owner.Role != "owner" {
 		return ErrForbidden
 	}
+	target, err := s.repo.GetBoardMember(ctx, db.GetBoardMemberParams{
+		BoardID: boardID, UserID: memberID,
+	})
+	if err != nil {
+		return err
+	}
+	if target.Role == "owner" {
+		return ErrOwnerCannotLeave
+	}
 	if err := s.repo.DeleteMember(ctx, db.DeleteBoardMemberParams{
 		BoardID: boardID, UserID: memberID,
 	}); err != nil {
 		return err
 	}
-	s.hub.Broadcast(boardID, websocket.EventMessage{
+	s.broadcast(boardID, websocket.EventMessage{
 		Event: "member_removed", Data: map[string]int32{"userId": memberID},
 	})
 	return nil
@@ -148,7 +164,7 @@ func (s *Service) LeaveBoard(
 
 	// Owners cannot leave their own board
 	if member.Role == "owner" {
-		return errors.New("owners cannot leave their own board")
+		return ErrOwnerCannotLeave
 	}
 
 	// Delete the member
@@ -159,7 +175,7 @@ func (s *Service) LeaveBoard(
 	}
 
 	// Broadcast the event
-	s.hub.Broadcast(boardID, websocket.EventMessage{
+	s.broadcast(boardID, websocket.EventMessage{
 		Event: "member_left", Data: map[string]int32{"userId": userID},
 	})
 	return nil
@@ -192,7 +208,7 @@ func (s *Service) AddMemberByEmail(
 		BoardID: boardID, UserID: user.ID, Role: role,
 	})
 	if err == nil {
-		s.hub.Broadcast(boardID, websocket.EventMessage{
+		s.broadcast(boardID, websocket.EventMessage{
 			Event: "member_added", Data: m,
 		})
 	}
