@@ -5,7 +5,8 @@
 ## 🏗️ Архитектура
 
 **Технологический стек:**
-- **Go 1.23** — современный язык программирования с высокой производительностью
+
+- **Go 1.24** — современный язык программирования с высокой производительностью
 - **Gin Framework** — быстрый HTTP веб-фреймворк для Go
 - **PostgreSQL 16** — надежная реляционная база данных
 - **WebSockets** — двунаправленная связь в реальном времени
@@ -15,6 +16,7 @@
 - **Structured Logging** — JSON логирование с настраиваемыми уровнями
 
 **Принципы архитектуры:**
+
 - Clean Architecture с разделением на слои
 - Dependency Injection для тестируемости
 - Repository Pattern для работы с данными
@@ -23,7 +25,7 @@
 
 ## 📁 Структура проекта
 
-```
+```text
 backend/
 ├── cmd/
 │   └── server/              # Точка входа приложения
@@ -91,7 +93,7 @@ docker-compose down
 
 #### Предварительные требования
 
-- **Go 1.23+** — [Установка Go](https://golang.org/doc/install)
+- **Go 1.24+** — [Установка Go](https://golang.org/doc/install)
 - **PostgreSQL 16+** — [Установка PostgreSQL](https://www.postgresql.org/download/)
 - **golang-migrate** — [Установка migrate](https://github.com/golang-migrate/migrate)
 - **Docker** (опционально) — [Установка Docker](https://docs.docker.com/get-docker/)
@@ -187,7 +189,8 @@ docker-compose logs -f api
 ### Аутентификация
 
 Все защищенные эндпоинты требуют JWT токен в заголовке:
-```
+
+```text
 Authorization: Bearer <your_jwt_token>
 ```
 
@@ -291,13 +294,15 @@ curl -X POST http://localhost:8080/api/lists \
 ### Подключение
 
 WebSocket соединения устанавливаются по адресу:
-```
+
+```text
 ws://localhost:8080/ws/board/:boardId?token=YOUR_JWT_TOKEN
 ```
 
 ### Схема событий
 
 Все WebSocket сообщения следуют единой схеме:
+
 ```json
 {
   "event": "event_type",
@@ -448,7 +453,7 @@ api.Use(middleware.Auth(cfg.JWTSecret))
 
 Проект следует принципам Clean Architecture:
 
-```
+```text
 internal/
 ├── auth/           # Домен аутентификации
 │   ├── handler.go  # HTTP слой (контроллеры)
@@ -505,7 +510,7 @@ Dockerfile использует многоэтапную сборку для о�
 
 ```dockerfile
 # Этап сборки
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 # ... сборка приложения
 
 # Продакшн образ
@@ -534,7 +539,8 @@ docker-compose down
 ### Health Check
 
 Эндпоинт для проверки состояния сервера:
-```
+
+```text
 GET /health
 ```
 
@@ -584,6 +590,7 @@ LOG_OUTPUT=stdout       # stdout, file
 ### Метрики
 
 В Docker Compose настроена проверка состояния PostgreSQL:
+
 ```yaml
 healthcheck:
   test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
