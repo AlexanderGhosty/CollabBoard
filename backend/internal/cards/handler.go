@@ -37,7 +37,11 @@ func RegisterRoutes(r *gin.RouterGroup, svc *Service) {
 //	@Router			/api/lists/{listId}/cards [post]
 func createCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		listID, _ := strconv.Atoi(c.Param("listId"))
+		listID, err := strconv.Atoi(c.Param("listId"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid list id"})
+			return
+		}
 		var req CreateCardRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -67,7 +71,11 @@ func createCardHandler(svc *Service) gin.HandlerFunc {
 //	@Router			/api/lists/{listId}/cards [get]
 func listCardsHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		listID, _ := strconv.Atoi(c.Param("listId"))
+		listID, err := strconv.Atoi(c.Param("listId"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid list id"})
+			return
+		}
 		userID := int32(c.GetInt("userID"))
 
 		cs, err := svc.ListByList(c.Request.Context(), userID, int32(listID))
@@ -97,7 +105,11 @@ func listCardsHandler(svc *Service) gin.HandlerFunc {
 //	@Router			/api/lists/{listId}/cards/{id} [put]
 func updateCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid card id"})
+			return
+		}
 		userID := int32(c.GetInt("userID"))
 
 		var req UpdateCardRequest
@@ -170,7 +182,11 @@ func moveCardHandler(svc *Service) gin.HandlerFunc {
 //	@Router			/api/lists/{listId}/cards/{id} [delete]
 func deleteCardHandler(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, _ := strconv.Atoi(c.Param("id"))
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid card id"})
+			return
+		}
 		userID := int32(c.GetInt("userID"))
 
 		if err := svc.Delete(c.Request.Context(), userID, int32(id)); err != nil {
