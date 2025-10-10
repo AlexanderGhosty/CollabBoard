@@ -123,7 +123,12 @@ func buildServer(cfg *config.Config, deps ServerDeps) (*http.Server, *gin.Engine
 
 	deps.HubRunner(deps.Hub)
 
-	boardsRepo := boards.NewRepository(queries)
+	var txBeginner boards.TxBeginner
+	if candidate, ok := deps.DB.(boards.TxBeginner); ok {
+		txBeginner = candidate
+	}
+
+	boardsRepo := boards.NewRepository(queries, txBeginner)
 	boardsSvc := boards.NewService(boardsRepo, deps.Hub)
 	boards.RegisterRoutes(api, boardsSvc)
 

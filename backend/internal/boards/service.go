@@ -30,18 +30,44 @@ var (
 )
 
 func (s *Service) CreateBoard(ctx context.Context, ownerID int32, name string) (db.Board, error) {
-	b, err := s.repo.Create(ctx, db.CreateBoardParams{Name: name, OwnerID: ownerID})
-	if err != nil {
+	var board db.Board
+	err := s.repo.RunInTransaction(ctx, func(r *Repository) error {
+		var err error
+		board, err = r.Create(ctx, db.CreateBoardParams{Name: name, OwnerID: ownerID})
+		if err != nil {
+			return err
+		}
+
+		_, err = r.AddMember(ctx, db.AddBoardMemberParams{BoardID: board.ID, UserID: ownerID, Role: "owner"})
+		return err
+	})
+
+	switch {
+	case err == nil:
+		// transaction succeeded, board is ready for broadcasting
+	case errors.Is(err, ErrTransactionUnsupported):
+		var memberErr error
+
+		board, err = s.repo.Create(ctx, db.CreateBoardParams{Name: name, OwnerID: ownerID})
+		if err != nil {
+			return db.Board{}, err
+		}
+
+		_, memberErr = s.repo.AddMember(ctx, db.AddBoardMemberParams{BoardID: board.ID, UserID: ownerID, Role: "owner"})
+		if memberErr != nil {
+			if delErr := s.repo.Delete(ctx, board.ID); delErr != nil {
+				return db.Board{}, errors.Join(memberErr, delErr)
+			}
+			return db.Board{}, memberErr
+		}
+	default:
 		return db.Board{}, err
 	}
-	// owner automatically added as board_member inside migration trigger or here
-	_, _ = s.repo.AddMember(ctx, db.AddBoardMemberParams{BoardID: b.ID, UserID: ownerID, Role: "owner"})
 
-	// Create board data with role information for WebSocket broadcast
-	boardData := newBoardEventPayload(b)
+	boardData := newBoardEventPayload(board)
 	boardData.Role = "owner" // Creator is always the owner
-	s.broadcast(b.ID, websocket.EventMessage{Event: "board_created", Data: boardData})
-	return b, nil
+	s.broadcast(board.ID, websocket.EventMessage{Event: "board_created", Data: boardData})
+	return board, nil
 }
 
 func (s *Service) ListBoards(ctx context.Context, userID int32) ([]db.ListBoardsByUserRow, error) {
