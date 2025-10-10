@@ -503,6 +503,7 @@ usr, err := q.UpdateUser(ctx, db.UpdateUserParams{
 Пакет содержит следующие основные структуры данных:
 
 ### User
+
 ```go
 type User struct {
     ID           int32
@@ -514,6 +515,7 @@ type User struct {
 ```
 
 ### Board
+
 ```go
 type Board struct {
     ID        int32
@@ -524,6 +526,7 @@ type Board struct {
 ```
 
 ### BoardMember
+
 ```go
 type BoardMember struct {
     BoardID int32
@@ -533,6 +536,7 @@ type BoardMember struct {
 ```
 
 ### List
+
 ```go
 type List struct {
     ID        int32
@@ -544,6 +548,7 @@ type List struct {
 ```
 
 ### Card
+
 ```go
 type Card struct {
     ID          int32

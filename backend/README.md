@@ -25,7 +25,7 @@
 
 ## 📁 Структура проекта
 
-```
+```text
 backend/
 ├── cmd/
 │   └── server/              # Точка входа приложения
@@ -189,7 +189,8 @@ docker-compose logs -f api
 ### Аутентификация
 
 Все защищенные эндпоинты требуют JWT токен в заголовке:
-```
+
+```text
 Authorization: Bearer <your_jwt_token>
 ```
 
@@ -293,13 +294,15 @@ curl -X POST http://localhost:8080/api/lists \
 ### Подключение
 
 WebSocket соединения устанавливаются по адресу:
-```
+
+```text
 ws://localhost:8080/ws/board/:boardId?token=YOUR_JWT_TOKEN
 ```
 
 ### Схема событий
 
 Все WebSocket сообщения следуют единой схеме:
+
 ```json
 {
   "event": "event_type",
@@ -450,7 +453,7 @@ api.Use(middleware.Auth(cfg.JWTSecret))
 
 Проект следует принципам Clean Architecture:
 
-```
+```text
 internal/
 ├── auth/           # Домен аутентификации
 │   ├── handler.go  # HTTP слой (контроллеры)
@@ -536,7 +539,8 @@ docker-compose down
 ### Health Check
 
 Эндпоинт для проверки состояния сервера:
-```
+
+```text
 GET /health
 ```
 
@@ -586,6 +590,7 @@ LOG_OUTPUT=stdout       # stdout, file
 ### Метрики
 
 В Docker Compose настроена проверка состояния PostgreSQL:
+
 ```yaml
 healthcheck:
   test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
