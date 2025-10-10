@@ -20,6 +20,7 @@ export const useBoardStore = create<BoardState>()(
     memberBoardIds: [],
     activeBoard: null,
     boardMembers: {},
+    wsSubscriptionCleanup: null,
     isCardModalOpen: false,
     loading: false,
     error: null,
@@ -131,6 +132,20 @@ export const useBoardStore = create<BoardState>()(
       const normalizedId = id.trim();
       console.log(`Loading board with ID: ${normalizedId}`);
 
+      // Always dispose previous WebSocket subscriptions before loading a new board
+      const existingCleanup = get().wsSubscriptionCleanup;
+      if (existingCleanup) {
+        try {
+          existingCleanup();
+        } catch (cleanupError) {
+          console.error('Error cleaning up previous WebSocket subscriptions:', cleanupError);
+        }
+
+        set((s) => {
+          s.wsSubscriptionCleanup = null;
+        });
+      }
+
       set((s) => { s.loading = true; s.error = null; });
 
       try {
@@ -221,7 +236,11 @@ export const useBoardStore = create<BoardState>()(
         wsClient.connect(normalizedId);
 
         // Setup WebSocket subscriptions
-        setupWebSocketSubscriptions(normalizedId);
+        const disposer = setupWebSocketSubscriptions(normalizedId);
+
+        set((s) => {
+          s.wsSubscriptionCleanup = disposer;
+        });
 
       } catch (error) {
         console.error("Failed to load board:", error);
@@ -360,6 +379,19 @@ export const useBoardStore = create<BoardState>()(
 
     // Cleanup method
     cleanup() {
+      const existingCleanup = get().wsSubscriptionCleanup;
+      if (existingCleanup) {
+        try {
+          existingCleanup();
+        } catch (cleanupError) {
+          console.error('Error cleaning up WebSocket subscriptions during cleanup:', cleanupError);
+        }
+
+        set((s) => {
+          s.wsSubscriptionCleanup = null;
+        });
+      }
+
       // Disconnect WebSocket
       wsClient.disconnect();
 
