@@ -39,6 +39,7 @@ export interface BoardState extends BaseState {
   memberBoardIds: string[];
   activeBoard: string | null;
   boardMembers: Record<string, BoardMember>;
+  wsSubscriptionCleanup: (() => void) | null;
 
   // UI state
   isCardModalOpen: boolean;
