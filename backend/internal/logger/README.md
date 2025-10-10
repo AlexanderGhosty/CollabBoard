@@ -74,6 +74,7 @@ logger.LogServiceError(ctx, "boards", "create", err, "name", "My Board")
 ## Формат логов
 
 ### JSON (production)
+
 ```json
 {
   "time": "2025-05-25T15:28:14.495Z",
@@ -90,7 +91,8 @@ logger.LogServiceError(ctx, "boards", "create", err, "name", "My Board")
 ```
 
 ### Text (development)
-```
+
+```text
 time=2025-05-25T15:28:14.495+03:00 level=INFO msg="HTTP request completed" request_id=req-abc123 user_id=42 board_id=1 method=POST path=/api/boards status_code=201 duration_ms=150
 ```
 
