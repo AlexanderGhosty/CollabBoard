@@ -21,6 +21,7 @@ export const useBoardStore = create<BoardState>()(
     activeBoard: null,
     boardMembers: {},
     isCardModalOpen: false,
+    isMemberModalOpen: false,
     loading: false,
     error: null,
 
@@ -28,6 +29,11 @@ export const useBoardStore = create<BoardState>()(
     setCardModalOpen(isOpen) {
       set((s) => {
         s.isCardModalOpen = isOpen;
+      });
+    },
+    setMemberModalOpen(isOpen) {
+      set((s) => {
+        s.isMemberModalOpen = isOpen;
       });
     },
 
