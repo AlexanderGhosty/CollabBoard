@@ -29,11 +29,26 @@ func (s *Service) Create(ctx context.Context, userID, listID int32, title string
 	if _, err := s.members.GetBoardMember(ctx, db.GetBoardMemberParams{BoardID: lst.BoardID, UserID: userID}); err != nil {
 		return db.Card{}, errors.New("not a member")
 	}
-        if err := s.cards.ShiftRight(ctx, listID, position); err != nil {
-                return db.Card{}, err
-        }
-        card, err := s.cards.Create(ctx, db.CreateCardParams{ListID: listID, Title: title, Description: pgtype.Text{String: description, Valid: description != ""}, Position: position})
-	if err == nil {
+	cards, err := s.cards.ListByList(ctx, listID)
+	if err != nil {
+		return db.Card{}, err
+	}
+
+	sanitizedPosition := position
+	if sanitizedPosition < 1 {
+		sanitizedPosition = 1
+	}
+
+	maxPosition := len(cards) + 1
+	if sanitizedPosition > int32(maxPosition) {
+		sanitizedPosition = int32(maxPosition)
+	}
+
+	if err := s.cards.ShiftRight(ctx, listID, sanitizedPosition); err != nil {
+		return db.Card{}, err
+	}
+	card, err := s.cards.Create(ctx, db.CreateCardParams{ListID: listID, Title: title, Description: pgtype.Text{String: description, Valid: description != ""}, Position: sanitizedPosition})
+	if err == nil && s.hub != nil {
 		s.hub.Broadcast(lst.BoardID, websocket.EventMessage{Event: "card_created", Data: card})
 	}
 	return card, err
