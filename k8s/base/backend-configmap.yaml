@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collabboard-backend-config
+  labels:
+    app.kubernetes.io/name: collabboard
+    app.kubernetes.io/component: backend
+  namespace: collabboard
+data:
+  API_PORT: "8080"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  LOG_OUTPUT: "stdout"
+  POSTGRES_HOST: "collabboard-postgres"
+  POSTGRES_PORT: "5432"

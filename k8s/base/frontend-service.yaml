@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: collabboard-frontend
+  namespace: collabboard
+  labels:
+    app.kubernetes.io/name: collabboard
+    app.kubernetes.io/component: frontend
+spec:
+  selector:
+    app.kubernetes.io/name: collabboard
+    app.kubernetes.io/component: frontend
+  ports:
+    - name: http
+      port: 5173
+      targetPort: http
+      protocol: TCP
+  type: ClusterIP

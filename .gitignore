@@ -53,3 +53,7 @@ info
 
 # k6 results
 /backend/perf/k6/summary.json
+
+# Local Kubernetes secrets
+/k8s/overlays/dev-minikube/db-secret.env
+/k8s/overlays/dev-minikube/backend-secret.env

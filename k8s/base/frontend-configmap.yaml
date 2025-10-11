@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collabboard-frontend-config
+  labels:
+    app.kubernetes.io/name: collabboard
+    app.kubernetes.io/component: frontend
+  namespace: collabboard
+data:
+  VITE_API_URL: "http://collabboard.local/api"
+  VITE_WS_URL: "ws://collabboard.local/ws/board"

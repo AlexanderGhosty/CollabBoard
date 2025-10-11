@@ -204,6 +204,73 @@ curl http://localhost:8080/health
 docker compose down
 ```
 
+## ☸️ Kubernetes (Minikube)
+
+### Подготовка окружения
+
+1. Установите [Minikube](https://minikube.sigs.k8s.io/docs/start/), `kubectl` и `kustomize` (входит в kubectl 1.14+).
+2. Скопируйте шаблоны секретов и задайте собственные значения:
+
+   ```bash
+   cp k8s/overlays/dev-minikube/db-secret.env.example k8s/overlays/dev-minikube/db-secret.env
+   cp k8s/overlays/dev-minikube/backend-secret.env.example k8s/overlays/dev-minikube/backend-secret.env
+   # Отредактируйте файлы и укажите пароли/JWT
+   ```
+
+### Запуск кластера и образов
+
+```bash
+# Старт локального кластера и включение Ingress
+make k8s-start
+
+# Вариант A: собирать внутри демона Docker Minikube
+make k8s-build
+
+# Вариант B: собирать локально и загрузить в Minikube
+docker build -t collabboard-backend:local backend
+docker build -t collabboard-frontend:local frontend
+make k8s-load
+
+# Применить манифесты
+kubectl apply -k k8s/overlays/dev-minikube
+```
+
+Ingress использует хост `collabboard.local`. Добавьте его в `/etc/hosts`:
+
+```bash
+echo "$(minikube ip) collabboard.local" | sudo tee -a /etc/hosts
+```
+
+После применения манифестов:
+
+- Веб-интерфейс: <http://collabboard.local>
+- API и Swagger: <http://collabboard.local/swagger/>
+
+### Управление и отладка
+
+```bash
+# Статус объектов
+make k8s-status
+
+# Поток логов backend (по умолчанию)
+make k8s-logs
+
+# Проверка генерации YAML без применения
+kubectl kustomize k8s/overlays/dev-minikube | less
+
+# Удаление ресурсов
+make k8s-delete
+```
+
+Если Ingress не отвечает:
+
+- Убедитесь, что контроллер включен: `kubectl get pods -n ingress-nginx`.
+- Проверьте события в namespace: `kubectl get events -n collabboard --sort-by=.lastTimestamp`.
+- Посмотрите эндпоинты сервиса: `kubectl describe svc collabboard-backend -n collabboard`.
+- При необходимости используйте `kubectl port-forward svc/collabboard-backend 8080:8080 -n collabboard`.
+
+> ℹ️ Kubernetes манифесты отражают конфигурацию Docker Compose: PostgreSQL разворачивается через StatefulSet с PVC, API и frontend запускаются в Deployment с конфигами из ConfigMap/Secret, а HTTP-доступ предоставляется через NGINX Ingress.
+
 ## 🚀 Инструкции по развертыванию
 
 ### Локальная разработка
